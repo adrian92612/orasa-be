@@ -2,8 +2,9 @@ package com.orasa.backend.domain;
 
 import com.orasa.backend.common.SubscriptionStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
 
@@ -11,6 +12,11 @@ import java.time.OffsetDateTime;
 @Table(name = "businesses")
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@SQLDelete(sql = "UPDATE businesses SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 public class Business extends BaseEntity {
 
     @Column(nullable = false)
