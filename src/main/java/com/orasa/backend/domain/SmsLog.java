@@ -2,13 +2,19 @@ package com.orasa.backend.domain;
 
 import com.orasa.backend.common.SmsStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "sms_logs")
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@SQLDelete(sql = "UPDATE sms_logs SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 public class SmsLog extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -2,14 +2,21 @@ package com.orasa.backend.domain;
 
 import com.orasa.backend.common.AppointmentStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "appointments")
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@SQLDelete(sql = "UPDATE appointments SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 public class Appointment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -35,6 +42,7 @@ public class Appointment extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private AppointmentStatus status = AppointmentStatus.SCHEDULED;
 
     @Column(columnDefinition = "TEXT")
