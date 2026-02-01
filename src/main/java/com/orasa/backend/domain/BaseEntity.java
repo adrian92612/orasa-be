@@ -21,6 +21,12 @@ public abstract class BaseEntity { // Made abstract so it can't be instantiated 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "created_by")
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 

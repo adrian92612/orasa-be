@@ -27,5 +27,6 @@ public class ScheduledSmsTask extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private SmsTaskStatus status = SmsTaskStatus.PENDING;
 }

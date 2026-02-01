@@ -36,5 +36,6 @@ public class Service extends BaseEntity {
     private Integer durationMinutes;
 
     @Column(name = "is_available_globally")
+    @Builder.Default
     private boolean isAvailableGlobally = true;
 }

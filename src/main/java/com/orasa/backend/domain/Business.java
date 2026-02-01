@@ -26,13 +26,16 @@ public class Business extends BaseEntity {
     private String slug;
 
     @Column(name = "free_sms_credits", nullable = false)
+    @Builder.Default
     private int freeSmsCredits = 100;
 
     @Column(name = "paid_sms_credits", nullable = false)
+    @Builder.Default
     private int paidSmsCredits = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_status", nullable = false)
+    @Builder.Default
     private SubscriptionStatus subscriptionStatus = SubscriptionStatus.PENDING;
 
     @Column(name = "subscription_start_date")

@@ -42,6 +42,7 @@ public class Appointment extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private AppointmentStatus status = AppointmentStatus.SCHEDULED;
 
     @Column(columnDefinition = "TEXT")

@@ -30,6 +30,7 @@ public class BranchService extends BaseEntity{
     @Column(name = "custom_price")
     private BigDecimal customPrice;
 
+    @Builder.Default
     @Column(name = "is_active")
     private boolean isActive = true;
 

@@ -23,5 +23,6 @@ public class BusinessReminderConfig extends BaseEntity {
     private String messageTemplate;
 
     @Column(name = "is_enabled")
+    @Builder.Default
     private boolean isEnabled = true;
 }
