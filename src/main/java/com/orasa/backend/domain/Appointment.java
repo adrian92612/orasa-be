@@ -27,18 +27,17 @@ public class Appointment extends BaseEntity {
     @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "staff_id")
-    private User staff;
-
     @Column(name = "customer_name", nullable = false)
     private String customerName;
 
     @Column(name = "customer_phone", nullable = false)
     private String customerPhone;
 
-    @Column(name = "appointment_time", nullable = false)
-    private OffsetDateTime appointmentTime;
+    @Column(name = "start_date_time", nullable = false)
+    private OffsetDateTime startDateTime;
+
+    @Column(name = "end_date_time", nullable = false)
+    private OffsetDateTime endDateTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
