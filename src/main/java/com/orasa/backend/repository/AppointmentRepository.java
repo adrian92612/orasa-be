@@ -14,7 +14,7 @@ import com.orasa.backend.domain.Appointment;
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
   Page<Appointment> findByBranchId(UUID branchId, Pageable pageable);
   Page<Appointment> findByBusinessId(UUID businessId, Pageable pageable);
-  Page<Appointment> findByBranchIdAndAppointmentTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
+  Page<Appointment> findByBranchIdAndStartDateTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
 
     @Query("""
       SELECT a
@@ -24,8 +24,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
         LOWER(a.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR
         LOWER(a.customerPhone) LIKE LOWER(CONCAT('%', :search, '%')) OR
         LOWER(a.notes) LIKE LOWER(CONCAT('%', :search, '%')))
-      AND (:startOfDay IS NULL OR a.appointmentTime >= :startOfDay)
-      AND (:endOfDay IS NULL OR a.appointmentTime <= :endOfDay)
+      AND (:startOfDay IS NULL OR a.startDateTime >= :startOfDay)
+      AND (:endOfDay IS NULL OR a.endDateTime <= :endOfDay)
       """)
   Page<Appointment> searchAppointments(
     @Param("branchId") UUID branchId,
