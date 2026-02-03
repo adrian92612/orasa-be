@@ -23,7 +23,7 @@ import org.hibernate.annotations.SQLRestriction;
 public class User extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "business_id", nullable = false)
+    @JoinColumn(name = "business_id", nullable = true)
     private Business business;
 
     @ManyToMany

@@ -1,7 +1,6 @@
 package com.orasa.backend.dto.appointment;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 import com.orasa.backend.common.AppointmentStatus;
 
