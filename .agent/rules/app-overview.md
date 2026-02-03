@@ -105,6 +105,59 @@ Role determines:
 
 ---
 
+## Google OAuth Flow (Owner Sign-In)
+
+### Server-Side Authorization Code Flow
+
+```
+1. Frontend: User clicks "Sign in with Google"
+   → Redirects to GET /api/auth/google
+
+2. Backend: Redirects to Google consent screen
+   → https://accounts.google.com/o/oauth2/auth?client_id=...
+
+3. Google: User logs in and consents
+   → Redirects to /api/auth/google/callback?code=xxx
+
+4. Backend: Exchanges code for user info using CLIENT_SECRET
+   → Creates new Owner (if first login) or finds existing
+   → Sets HTTP-only cookie with JWT
+   → Redirects to frontend
+
+5. Frontend: Receives redirect
+   → businessId exists? → /dashboard
+   → businessId null? → /onboarding
+```
+
+### New Owner Onboarding Flow
+
+When a new Owner signs in via Google (no `businessId`):
+
+1. **Create Business** - Business name, contact info
+2. **Create First Branch** - Branch name, address
+3. **Create Services** - At least 1 service with duration
+4. **Create Staff** (optional) - Skip or add staff members
+5. **Complete** → Redirect to Dashboard
+
+### Technical Details
+
+- **OAuth Provider:** Google (Authorization Code Flow)
+- **Required Config:**
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `GOOGLE_REDIRECT_URI`
+- **Cookie:** HTTP-only, Secure, SameSite=None (for cross-origin)
+- **JWT Claims:** userId, role, businessId (nullable), branchIds
+
+### Owner States
+
+| State | businessId | Redirect | Access |
+|-------|------------|----------|--------|
+| New Owner | `null` | `/onboarding` | Only onboarding endpoints |
+| Registered Owner | UUID | `/dashboard` | Full dashboard access |
+
+---
+
 ## Appointment Model
 
 All appointments:
