@@ -39,6 +39,10 @@ public class Appointment extends BaseEntity {
     @Column(name = "end_date_time", nullable = false)
     private OffsetDateTime endDateTime;
 
+    @Column(name = "reminders_enabled", nullable = false)
+    @Builder.Default
+    private boolean remindersEnabled = true;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

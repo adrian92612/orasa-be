@@ -2,5 +2,8 @@ package com.orasa.backend.common;
 
 public enum SmsTaskStatus {
     PENDING,
-    COMPLETED
+    COMPLETED,
+    FAILED,
+    SKIPPED,
+    CANCELLED
 }

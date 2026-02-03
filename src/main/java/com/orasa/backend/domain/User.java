@@ -4,6 +4,10 @@ import com.orasa.backend.common.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -22,9 +26,14 @@ public class User extends BaseEntity {
     @JoinColumn(name = "business_id", nullable = false)
     private Business business;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id")
-    private Branch branch;
+    @ManyToMany
+    @JoinTable(
+        name = "user_branches",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns= @JoinColumn(name = "branch_id")
+    )
+    @Builder.Default
+    private Set<Branch> branches = new HashSet<>();
 
     @NotBlank
     @Column(unique = true, nullable = false)
