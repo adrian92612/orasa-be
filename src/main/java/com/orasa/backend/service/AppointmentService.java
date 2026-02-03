@@ -1,7 +1,6 @@
 package com.orasa.backend.service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
@@ -115,6 +114,13 @@ public class AppointmentService {
 
     Appointment saved = appointmentRepository.save(appointment);
     return new UpdateResult(mapToResponse(saved), true);
+  }
+
+  public AppointmentResponse getAppointmentById(UUID id) {
+    Appointment appointment = appointmentRepository.findById(id)
+      .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+      
+    return mapToResponse(appointment);
   }
 
   public Page<AppointmentResponse> getAppointmentsByBranch(UUID branchId, Pageable pageable) {
