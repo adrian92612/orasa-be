@@ -25,6 +25,7 @@ import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.BranchService;
 import com.orasa.backend.service.BranchServiceService;
+import com.orasa.backend.common.RequiresActiveSubscription;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class BranchController extends BaseController {
     private final BranchServiceService branchServiceService;
 
     @PostMapping
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchResponse>> createBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -86,6 +88,7 @@ public class BranchController extends BaseController {
     }
 
     @PostMapping("/{branchId}/services")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchServiceResponse>> assignServiceToBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -120,6 +123,7 @@ public class BranchController extends BaseController {
     }
 
     @PutMapping("/{branchId}/services/{branchServiceId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchServiceResponse>> updateBranchService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -139,6 +143,7 @@ public class BranchController extends BaseController {
     }
 
     @DeleteMapping("/{branchId}/services/{branchServiceId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> removeServiceFromBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,

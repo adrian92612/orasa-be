@@ -15,6 +15,8 @@ import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +28,7 @@ public class BusinessService {
     private final BusinessRepository businessRepository;
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
+    private final SubscriptionService subscriptionService;
 
     /**
      * Creates a new business with its first branch atomically.
@@ -74,11 +77,23 @@ public class BusinessService {
     /**
      * Gets a business by ID.
      */
+    @Transactional
     public BusinessResponse getBusinessById(UUID businessId) {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+        
+        subscriptionService.checkAndRefreshCredits(business);
 
         return mapToResponse(business, null);
+    }
+
+    @Transactional
+    public Page<BusinessResponse> getAllBusinesses(Pageable pageable) {
+        return businessRepository.findAll(pageable)
+                .map(business -> {
+                    subscriptionService.checkAndRefreshCredits(business);
+                    return mapToResponse(business, null);
+                });
     }
 
     /**

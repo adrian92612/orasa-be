@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
 import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateAppointmentRequest;
@@ -36,6 +37,7 @@ public class AppointmentController {
   private final AppointmentService appointmentService;
   
   @PostMapping
+  @RequiresActiveSubscription
   public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(
     @Valid @RequestBody CreateAppointmentRequest request
   ) {
@@ -44,6 +46,7 @@ public class AppointmentController {
   }
 
   @PutMapping("/{id}")
+  @RequiresActiveSubscription
   public ResponseEntity<ApiResponse<AppointmentResponse>> updateAppointment(
     @PathVariable UUID id,
     @Valid @RequestBody UpdateAppointmentRequest request
@@ -92,6 +95,7 @@ public class AppointmentController {
   }
 
   @DeleteMapping("/{id}")
+  @RequiresActiveSubscription
   public ResponseEntity<ApiResponse<Void>> deleteAppointment(
     @PathVariable UUID id
   ) {

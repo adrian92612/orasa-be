@@ -57,10 +57,25 @@ public class GlobalExceptionHandler {
           .body(ApiResponse.error("Invalid username or password"));
   }
 
+  @ExceptionHandler(SubscriptionExpiredException.class)
+  public ResponseEntity<ApiResponse<SubscriptionErrorData>> handleSubscriptionExpired(SubscriptionExpiredException ex) {
+    log.warn("Subscription enforcement triggered: {}", ex.getMessage());
+    
+    SubscriptionErrorData errorData = new SubscriptionErrorData(
+            ex.getSubscriptionStatus(),
+            ex.getMessage() 
+    );
+    
+    return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED) // 402
+            .body(ApiResponse.error(ex.getMessage(), errorData));
+  }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
     log.error("Unexpected error: {}", ex);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Unexpected error occured"));
   }
+
+  
+  public record SubscriptionErrorData(String subscriptionStatus, String message) {}
 }

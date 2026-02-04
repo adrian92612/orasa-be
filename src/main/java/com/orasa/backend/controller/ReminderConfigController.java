@@ -22,6 +22,7 @@ import com.orasa.backend.dto.sms.ReminderConfigResponse;
 import com.orasa.backend.dto.sms.UpdateReminderConfigRequest;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.ReminderConfigService;
+import com.orasa.backend.common.RequiresActiveSubscription;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class ReminderConfigController extends BaseController {
     private final ReminderConfigService reminderConfigService;
 
     @PostMapping
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<ReminderConfigResponse>> createConfig(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -51,6 +53,7 @@ public class ReminderConfigController extends BaseController {
     }
 
     @PutMapping("/{configId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<ReminderConfigResponse>> updateConfig(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -82,6 +85,7 @@ public class ReminderConfigController extends BaseController {
     }
 
     @DeleteMapping("/{configId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteConfig(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
