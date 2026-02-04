@@ -31,6 +31,7 @@ import com.orasa.backend.repository.AppointmentRepository;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
+import com.orasa.backend.service.sms.SmsService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +44,7 @@ public class AppointmentService {
   private final BusinessRepository businessRepository;
   private final UserRepository userRepository;
   private final ActivityLogService activityLogService;
+  private final SmsService smsService;
 
   @Transactional
   public AppointmentResponse createAppointment(UUID userId, CreateAppointmentRequest request) {
@@ -75,12 +77,24 @@ public class AppointmentService {
         .endDateTime(request.getEndDateTime())
         .status(request.isWalkin() ? AppointmentStatus.WALK_IN : AppointmentStatus.SCHEDULED)
         .notes(request.getNotes())
+        .reminderLeadTimeOverride(request.getReminderLeadTimeOverride())
         .build();
 
     Appointment saved = appointmentRepository.save(appointment);
     
     // Log the activity asynchronously
     activityLogService.logAppointmentCreated(user, saved);
+
+    // Schedule reminders if not walk-in
+    if (!request.isWalkin()) {
+        try {
+            smsService.scheduleRemindersForAppointment(saved);
+        } catch (Exception e) {
+            // Log but don't fail the appointment creation
+            // Future improvement: retry queue
+            System.err.println("Failed to schedule reminders: " + e.getMessage());
+        }
+    }
 
     return mapToResponse(saved);
   }
@@ -163,6 +177,15 @@ public class AppointmentService {
       appointment.setStatus(request.getStatus());
     }
 
+    if (request.getReminderLeadTimeOverride() != null && !request.getReminderLeadTimeOverride().equals(appointment.getReminderLeadTimeOverride())) {
+        changes.add(FieldChange.builder()
+            .field("Reminder Lead Time")
+            .before(appointment.getReminderLeadTimeOverride() != null ? appointment.getReminderLeadTimeOverride().toString() : "(default)")
+            .after(request.getReminderLeadTimeOverride().toString())
+            .build());
+        appointment.setReminderLeadTimeOverride(request.getReminderLeadTimeOverride());
+    }
+
     if (changes.isEmpty()) {
       return new UpdateResult(mapToResponse(appointment), false);
     }
@@ -177,6 +200,20 @@ public class AppointmentService {
       activityLogService.logAppointmentStatusChanged(user, saved, beforeStatus.name(), request.getStatus().name());
     } else {
       activityLogService.logAppointmentUpdated(user, saved, details);
+    }
+    
+    // Handle Reminder Updates
+    boolean timeChanged = request.getStartDateTime() != null && !request.getStartDateTime().equals(beforeStartDateTime);
+    boolean statusCancelledOrCompleted = saved.getStatus() == AppointmentStatus.CANCELLED || saved.getStatus() == AppointmentStatus.COMPLETED;
+    
+    // 1. If appointment is Cancelled or Completed -> Cancel all reminders
+    if (statusCancelledOrCompleted) {
+        smsService.cancelRemindersForAppointment(saved.getId());
+    }
+    // 2. If it is still SCHEDULED and time changed -> Reschedule
+    else if (saved.getStatus() == AppointmentStatus.SCHEDULED && timeChanged) {
+        smsService.cancelRemindersForAppointment(saved.getId());
+        smsService.scheduleRemindersForAppointment(saved);
     }
 
     return new UpdateResult(mapToResponse(saved), true);
@@ -267,6 +304,9 @@ public class AppointmentService {
 
     // Log before deletion (so we have access to appointment data)
     activityLogService.logAppointmentDeleted(user, appointment);
+
+    // Cancel pending reminders
+    smsService.cancelRemindersForAppointment(id);
 
     appointmentRepository.delete(appointment);
   }
