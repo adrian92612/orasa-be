@@ -49,8 +49,7 @@ public class AuthService {
       user.getId(),
       user.getUsername(),
       user.getRole().name(),
-      user.getBusiness().getId(),
-      branchIds
+      user.getBusiness().getId()
     );
 
     AuthResponse response = AuthResponse.builder()
@@ -86,8 +85,7 @@ public class AuthService {
         user.getId(),
         user.getUsername(),
         user.getRole().name(),
-        businessId,
-        branchIds
+        businessId
     );
 
     return new LoginResult(token, AuthResponse.builder()

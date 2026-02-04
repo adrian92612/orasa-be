@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.common.AppointmentStatus;
+import com.orasa.backend.common.UserRole;
 import com.orasa.backend.domain.Appointment;
 import com.orasa.backend.domain.Branch;
 import com.orasa.backend.domain.Business;
@@ -23,6 +24,7 @@ import com.orasa.backend.dto.appointment.AppointmentResponse;
 import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateResult;
+import com.orasa.backend.exception.ForbiddenException;
 import com.orasa.backend.exception.InvalidAppointmentException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.AppointmentRepository;
@@ -56,6 +58,9 @@ public class AppointmentService {
     if (!branch.getBusiness().getId().equals(request.getBusinessId())) {
       throw new InvalidAppointmentException("Branch does not belong to the specified business");
     }
+
+    // Validate user access to branch
+    validateBranchAccess(user, branch);
 
     if (!request.isWalkin() && request.getStartDateTime().isBefore(OffsetDateTime.now())) {
       throw new InvalidAppointmentException("Appointment time must be in the future");
@@ -177,33 +182,79 @@ public class AppointmentService {
     return new UpdateResult(mapToResponse(saved), true);
   }
 
-  public AppointmentResponse getAppointmentById(UUID id) {
+  public AppointmentResponse getAppointmentById(UUID userId, UUID id) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     Appointment appointment = appointmentRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+    
+    validateBranchAccess(user, appointment.getBranch());
 
     return mapToResponse(appointment);
   }
 
-  public Page<AppointmentResponse> getAppointmentsByBranch(UUID branchId, Pageable pageable) {
+  public Page<AppointmentResponse> getAppointmentsByBranch(UUID userId, UUID branchId, Pageable pageable) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    
+    Branch branch = branchRepository.findById(branchId)
+        .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
+
+    validateBranchAccess(user, branch);
+
     return appointmentRepository.findByBranchId(branchId, pageable).map(this::mapToResponse);
   }
 
-  public Page<AppointmentResponse> getAppointmentsByBusiness(UUID businessId, Pageable pageable) {
+  public Page<AppointmentResponse> getAppointmentsByBusiness(UUID userId, UUID businessId, Pageable pageable) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    
+    // Check if user is OWNER and owns this business
+    if (user.getRole() != UserRole.OWNER || !user.getBusiness().getId().equals(businessId)) {
+        throw new ForbiddenException("You do not have permission to access appointments for this business");
+    }
+
     return appointmentRepository.findByBusinessId(businessId, pageable).map(this::mapToResponse);
   }
 
   public Page<AppointmentResponse> searchAppointments(
+      UUID userId,
       UUID branchId,
       String search,
       LocalDate startDate,
       LocalDate endDate,
       Pageable pageable) {
+    
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    
+    Branch branch = branchRepository.findById(branchId)
+        .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
+
+    validateBranchAccess(user, branch);
+
     ZoneId zoneId = ZoneId.of("Asia/Manila");
     OffsetDateTime start = startDate.atStartOfDay(zoneId).toOffsetDateTime();
     OffsetDateTime end = endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime();
 
     return appointmentRepository.searchAppointments(branchId, search, start, end, pageable)
         .map(this::mapToResponse);
+  }
+
+  private void validateBranchAccess(User user, Branch branch) {
+    if (user.getRole() == UserRole.OWNER) {
+      if (!branch.getBusiness().getId().equals(user.getBusiness().getId())) {
+        throw new ForbiddenException("You do not have permission to access this branch");
+      }
+    } else if (user.getRole() == UserRole.STAFF) {
+      boolean hasAccess = user.getBranches().stream()
+          .anyMatch(b -> b.getId().equals(branch.getId()));
+      if (!hasAccess) {
+        throw new ForbiddenException("You are not assigned to this branch");
+      }
+    } else {
+        throw new ForbiddenException("User role not authorized");
+    }
   }
 
   @Transactional

@@ -23,14 +23,13 @@ public class JwtService {
   @Value("${jwt.secret}")
   private String secretKey;
 
-  @Value("${jwt.expiration}")
+    @Value("${jwt.expiration}")
   private long jwtExpiration;
 
-  public String generateToken(UUID userId, String username, String role, UUID businessId, List<UUID> branchIds) {
+  public String generateToken(UUID userId, String username, String role, UUID businessId) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("username", username);
     claims.put("role", role);
-    claims.put("branchIds", branchIds.stream().map(UUID::toString).toList());
     
     if (businessId != null) {
         claims.put("businessId", businessId.toString());
@@ -56,11 +55,6 @@ public class JwtService {
   public String extractBusinessId(String token) {
     return extractClaim(token, claims -> claims.get("businessId", String.class));
   }
-
-  @SuppressWarnings("unchecked")
-  public List<String> extractBranchIds(String token) {
-    return extractClaim(token, claims -> claims.get("branchIds", List.class));
-}
 
   public boolean isTokenValid(String token) {
     try {

@@ -1,6 +1,6 @@
 package com.orasa.backend.controller;
 
-import java.util.List;
+
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.orasa.backend.domain.Branch;
+
 import com.orasa.backend.domain.User;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
@@ -91,16 +91,12 @@ public class BusinessController {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
-        List<UUID> branchIds = user.getBranches() != null
-                ? user.getBranches().stream().map(Branch::getId).toList()
-                : List.of();
 
         String newToken = jwtService.generateToken(
                 user.getId(),
                 user.getUsername(),
                 user.getRole().name(),
-                businessId,
-                branchIds
+                businessId
         );
 
         ResponseCookie cookie = ResponseCookie.from("token", newToken)

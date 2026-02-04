@@ -62,39 +62,43 @@ public class AppointmentController {
 
   @GetMapping("/branch/{branchId}")
   public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getAppointmentsByBranch(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID branchId,
     @PageableDefault(size = 20) Pageable pageable
   ) {
-    Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByBranch(branchId, pageable);
+    Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByBranch(authenticatedUser.userId(), branchId, pageable);
     return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments));
   }
 
   @GetMapping("/business/{businessId}")
   public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getAppointmentsByBusiness(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID businessId,
     @PageableDefault(size = 20) Pageable pageable
   ) {
-    Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByBusiness(businessId, pageable);
+    Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByBusiness(authenticatedUser.userId(), businessId, pageable);
     return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments)); 
   }
 
   @GetMapping("/branch/{branchId}/search")
   public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> searchAppointmentsByBranch(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID branchId,
     @RequestParam(required = false, defaultValue = "") String search,
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
     @PageableDefault(size = 20) Pageable pageable
   ) {
-    Page<AppointmentResponse> appointments = appointmentService.searchAppointments(branchId, search, startDate, endDate, pageable);
+    Page<AppointmentResponse> appointments = appointmentService.searchAppointments(authenticatedUser.userId(), branchId, search, startDate, endDate, pageable);
     return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments));
   }
 
   @GetMapping("/{id}")
   public ResponseEntity<ApiResponse<AppointmentResponse>> getAppointmentById(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID id
   ) {
-    AppointmentResponse appointment = appointmentService.getAppointmentById(id);
+    AppointmentResponse appointment = appointmentService.getAppointmentById(authenticatedUser.userId(), id);
     return ResponseEntity.ok(ApiResponse.success("Appointment retrieved successfully", appointment));
   }
 
