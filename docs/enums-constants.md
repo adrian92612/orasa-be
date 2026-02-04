@@ -107,6 +107,59 @@ enum SmsTaskStatus {
 
 ---
 
+## Activity Action
+
+Actions that are logged in the activity log for audit purposes:
+
+```typescript
+enum ActivityAction {
+  // Appointment actions
+  APPOINTMENT_CREATED = "APPOINTMENT_CREATED",
+  APPOINTMENT_UPDATED = "APPOINTMENT_UPDATED",
+  APPOINTMENT_DELETED = "APPOINTMENT_DELETED",
+  APPOINTMENT_STATUS_CHANGED = "APPOINTMENT_STATUS_CHANGED",
+
+  // Staff actions
+  STAFF_CREATED = "STAFF_CREATED",
+  STAFF_UPDATED = "STAFF_UPDATED",
+  STAFF_PASSWORD_RESET = "STAFF_PASSWORD_RESET",
+  STAFF_DEACTIVATED = "STAFF_DEACTIVATED",
+
+  // Branch actions
+  BRANCH_CREATED = "BRANCH_CREATED",
+  BRANCH_UPDATED = "BRANCH_UPDATED",
+
+  // Service actions
+  SERVICE_CREATED = "SERVICE_CREATED",
+  SERVICE_UPDATED = "SERVICE_UPDATED",
+  SERVICE_DELETED = "SERVICE_DELETED",
+
+  // Business settings
+  REMINDER_CONFIG_UPDATED = "REMINDER_CONFIG_UPDATED",
+
+  // Authentication
+  USER_LOGIN = "USER_LOGIN",
+  USER_LOGOUT = "USER_LOGOUT",
+}
+```
+
+| Action                     | Logged By    | Description                         |
+| -------------------------- | ------------ | ----------------------------------- |
+| APPOINTMENT_CREATED        | Owner, Staff | New appointment created             |
+| APPOINTMENT_UPDATED        | Owner, Staff | Appointment details changed         |
+| APPOINTMENT_STATUS_CHANGED | Owner, Staff | Status transition (e.g., COMPLETED) |
+| APPOINTMENT_DELETED        | Owner        | Appointment soft-deleted            |
+| STAFF_CREATED              | Owner        | New staff account created           |
+| STAFF_UPDATED              | Owner        | Staff details/branches changed      |
+| STAFF_PASSWORD_RESET       | Owner, Staff | Password was reset                  |
+| STAFF_DEACTIVATED          | Owner        | Staff account deactivated           |
+| BRANCH_CREATED             | Owner        | New branch added                    |
+| SERVICE_CREATED            | Owner        | New service catalog item            |
+| SERVICE_UPDATED            | Owner        | Service details changed             |
+| SERVICE_DELETED            | Owner        | Service removed from catalog        |
+
+---
+
 ## Subscription Status
 
 ```typescript
@@ -255,6 +308,24 @@ type SmsStatus =
   | "INSUFFICIENT_CREDIT";
 type SubscriptionStatus = "PENDING" | "ACTIVE" | "EXPIRED" | "CANCELLED";
 
+type ActivityAction =
+  | "APPOINTMENT_CREATED"
+  | "APPOINTMENT_UPDATED"
+  | "APPOINTMENT_DELETED"
+  | "APPOINTMENT_STATUS_CHANGED"
+  | "STAFF_CREATED"
+  | "STAFF_UPDATED"
+  | "STAFF_PASSWORD_RESET"
+  | "STAFF_DEACTIVATED"
+  | "BRANCH_CREATED"
+  | "BRANCH_UPDATED"
+  | "SERVICE_CREATED"
+  | "SERVICE_UPDATED"
+  | "SERVICE_DELETED"
+  | "REMINDER_CONFIG_UPDATED"
+  | "USER_LOGIN"
+  | "USER_LOGOUT";
+
 // API Response
 interface ApiResponse<T> {
   success: boolean;
@@ -381,6 +452,28 @@ interface SmsBalanceResponse {
   success: boolean;
   remainingCredits: number;
   errorMessage: string | null;
+}
+
+// Activity Log
+interface ActivityLogResponse {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  businessId: string;
+  branchId: string | null;
+  branchName: string | null;
+  action: ActivityAction;
+  description: string;
+  details: string | null; // JSON string of FieldChange[]
+  createdAt: string;
+}
+
+// Field Change (for parsing details)
+interface FieldChange {
+  field: string;
+  before: string;
+  after: string;
 }
 
 // Pagination

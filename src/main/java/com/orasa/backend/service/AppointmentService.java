@@ -3,6 +3,9 @@ package com.orasa.backend.service;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -14,6 +17,8 @@ import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.domain.Appointment;
 import com.orasa.backend.domain.Branch;
 import com.orasa.backend.domain.Business;
+import com.orasa.backend.domain.User;
+import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
 import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateAppointmentRequest;
@@ -23,6 +28,7 @@ import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.AppointmentRepository;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
+import com.orasa.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,14 +39,19 @@ public class AppointmentService {
   private final AppointmentRepository appointmentRepository;
   private final BranchRepository branchRepository;
   private final BusinessRepository businessRepository;
+  private final UserRepository userRepository;
+  private final ActivityLogService activityLogService;
 
   @Transactional
-  public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
+  public AppointmentResponse createAppointment(UUID userId, CreateAppointmentRequest request) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
     Business business = businessRepository.findById(request.getBusinessId())
-        .orElseThrow(()-> new ResourceNotFoundException("Business not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
     Branch branch = branchRepository.findById(request.getBranchId())
-        .orElseThrow(()-> new ResourceNotFoundException("Branch not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
     if (!branch.getBusiness().getId().equals(request.getBusinessId())) {
       throw new InvalidAppointmentException("Branch does not belong to the specified business");
@@ -62,64 +73,114 @@ public class AppointmentService {
         .build();
 
     Appointment saved = appointmentRepository.save(appointment);
+    
+    // Log the activity asynchronously
+    activityLogService.logAppointmentCreated(user, saved);
+
     return mapToResponse(saved);
   }
 
   @Transactional
-  public UpdateResult updateAppointment(UUID id, UpdateAppointmentRequest request) {
-    Appointment appointment = appointmentRepository.findById(id)
-        .orElseThrow(()-> new ResourceNotFoundException("Appointment not found"));
+  public UpdateResult updateAppointment(UUID userId, UUID id, UpdateAppointmentRequest request) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    boolean hasChanges = false;
+    Appointment appointment = appointmentRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+
+    // Capture the before state for logging
+    String beforeCustomerName = appointment.getCustomerName();
+    String beforeCustomerPhone = appointment.getCustomerPhone();
+    OffsetDateTime beforeStartDateTime = appointment.getStartDateTime();
+    OffsetDateTime beforeEndDateTime = appointment.getEndDateTime();
+    String beforeNotes = appointment.getNotes();
+    AppointmentStatus beforeStatus = appointment.getStatus();
+
+    List<FieldChange> changes = new ArrayList<>();
 
     if (request.getCustomerName() != null && !request.getCustomerName().equals(appointment.getCustomerName())) {
+      changes.add(FieldChange.builder()
+          .field("Customer Name")
+          .before(beforeCustomerName)
+          .after(request.getCustomerName())
+          .build());
       appointment.setCustomerName(request.getCustomerName());
-      hasChanges = true;
     }
 
     if (request.getCustomerPhone() != null && !request.getCustomerPhone().equals(appointment.getCustomerPhone())) {
+      changes.add(FieldChange.builder()
+          .field("Phone")
+          .before(beforeCustomerPhone)
+          .after(request.getCustomerPhone())
+          .build());
       appointment.setCustomerPhone(request.getCustomerPhone());
-      hasChanges = true;
     }
 
     if (request.getStartDateTime() != null && !request.getStartDateTime().equals(appointment.getStartDateTime())) {
       if (request.getStartDateTime().isBefore(OffsetDateTime.now())) {
-            throw new InvalidAppointmentException("Start time must be in the future");
+        throw new InvalidAppointmentException("Start time must be in the future");
       }
+      changes.add(FieldChange.builder()
+          .field("Start Time")
+          .before(formatDateTime(beforeStartDateTime))
+          .after(formatDateTime(request.getStartDateTime()))
+          .build());
       appointment.setStartDateTime(request.getStartDateTime());
-      hasChanges = true;
     }
 
     if (request.getEndDateTime() != null && !request.getEndDateTime().equals(appointment.getEndDateTime())) {
       if (request.getEndDateTime().isBefore(OffsetDateTime.now())) {
-            throw new InvalidAppointmentException("End time must be in the future");
+        throw new InvalidAppointmentException("End time must be in the future");
       }
+      changes.add(FieldChange.builder()
+          .field("End Time")
+          .before(formatDateTime(beforeEndDateTime))
+          .after(formatDateTime(request.getEndDateTime()))
+          .build());
       appointment.setEndDateTime(request.getEndDateTime());
-      hasChanges = true;
     }
 
     if (request.getNotes() != null && !request.getNotes().equals(appointment.getNotes())) {
+      changes.add(FieldChange.builder()
+          .field("Notes")
+          .before(beforeNotes != null ? beforeNotes : "")
+          .after(request.getNotes())
+          .build());
       appointment.setNotes(request.getNotes());
-      hasChanges = true;
     }
 
     if (request.getStatus() != null && !request.getStatus().equals(appointment.getStatus())) {
+      changes.add(FieldChange.builder()
+          .field("Status")
+          .before(beforeStatus.name())
+          .after(request.getStatus().name())
+          .build());
       appointment.setStatus(request.getStatus());
-      hasChanges = true;
     }
 
-    if (!hasChanges) {
+    if (changes.isEmpty()) {
       return new UpdateResult(mapToResponse(appointment), false);
     }
 
     Appointment saved = appointmentRepository.save(appointment);
+    
+    // Build structured JSON details
+    String details = FieldChange.toJson(changes);
+    
+    // If status changed, log it as a status change for easier filtering
+    if (request.getStatus() != null && !request.getStatus().equals(beforeStatus)) {
+      activityLogService.logAppointmentStatusChanged(user, saved, beforeStatus.name(), request.getStatus().name());
+    } else {
+      activityLogService.logAppointmentUpdated(user, saved, details);
+    }
+
     return new UpdateResult(mapToResponse(saved), true);
   }
 
   public AppointmentResponse getAppointmentById(UUID id) {
     Appointment appointment = appointmentRepository.findById(id)
-      .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
-      
+        .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+
     return mapToResponse(appointment);
   }
 
@@ -132,8 +193,8 @@ public class AppointmentService {
   }
 
   public Page<AppointmentResponse> searchAppointments(
-      UUID branchId, 
-      String search, 
+      UUID branchId,
+      String search,
       LocalDate startDate,
       LocalDate endDate,
       Pageable pageable) {
@@ -142,33 +203,48 @@ public class AppointmentService {
     OffsetDateTime end = endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime();
 
     return appointmentRepository.searchAppointments(branchId, search, start, end, pageable)
-      .map(this::mapToResponse);
-
+        .map(this::mapToResponse);
   }
-  
+
   @Transactional
-  public void deleteAppointment(UUID id) {
+  public void deleteAppointment(UUID userId, UUID id) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
     Appointment appointment = appointmentRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+
+    // Log before deletion (so we have access to appointment data)
+    activityLogService.logAppointmentDeleted(user, appointment);
 
     appointmentRepository.delete(appointment);
   }
 
   // Helper methods
   private AppointmentResponse mapToResponse(Appointment appointment) {
-        return AppointmentResponse.builder()
-                .id(appointment.getId())
-                .businessId(appointment.getBusiness().getId())
-                .branchId(appointment.getBranch().getId())
-                .branchName(appointment.getBranch().getName())
-                .customerName(appointment.getCustomerName())
-                .customerPhone(appointment.getCustomerPhone())
-                .startDateTime(appointment.getStartDateTime())
-                .endDateTime(appointment.getEndDateTime())
-                .status(appointment.getStatus())
-                .notes(appointment.getNotes())
-                .createdAt(appointment.getCreatedAt())
-                .updatedAt(appointment.getUpdatedAt())
-                .build();
-    }
+    return AppointmentResponse.builder()
+        .id(appointment.getId())
+        .businessId(appointment.getBusiness().getId())
+        .branchId(appointment.getBranch().getId())
+        .branchName(appointment.getBranch().getName())
+        .customerName(appointment.getCustomerName())
+        .customerPhone(appointment.getCustomerPhone())
+        .startDateTime(appointment.getStartDateTime())
+        .endDateTime(appointment.getEndDateTime())
+        .status(appointment.getStatus())
+        .notes(appointment.getNotes())
+        .createdAt(appointment.getCreatedAt())
+        .updatedAt(appointment.getUpdatedAt())
+        .build();
+  }
+
+  private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
+  private static final DateTimeFormatter DATE_TIME_FORMATTER = 
+      DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
+
+  private String formatDateTime(OffsetDateTime dateTime) {
+    if (dateTime == null) return "(not set)";
+    return dateTime.atZoneSameInstant(MANILA_ZONE).format(DATE_TIME_FORMATTER);
+  }
 }
+
