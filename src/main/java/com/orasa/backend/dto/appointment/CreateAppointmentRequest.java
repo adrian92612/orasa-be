@@ -37,4 +37,6 @@ public class CreateAppointmentRequest {
   @NotNull(message = "Is Walk-In checkbox is required")
   @Builder.Default
   private boolean isWalkin = false;
+
+  private Integer reminderLeadTimeOverride;
 }

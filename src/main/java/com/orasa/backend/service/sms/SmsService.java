@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.common.SmsStatus;
 import com.orasa.backend.common.SmsTaskStatus;
@@ -23,6 +24,7 @@ import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.ScheduledSmsTaskRepository;
 import com.orasa.backend.repository.SmsLogRepository;
 import com.orasa.backend.service.ReminderConfigService;
+import com.orasa.backend.service.SubscriptionService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +40,7 @@ public class SmsService {
     private final ScheduledSmsTaskRepository scheduledSmsTaskRepository;
     private final BusinessRepository businessRepository;
     private final ReminderConfigService reminderConfigService;
-    private final com.orasa.backend.service.SubscriptionService subscriptionService;
+    private final SubscriptionService subscriptionService;
 
 
     @Transactional
@@ -46,6 +48,34 @@ public class SmsService {
         if (!appointment.isRemindersEnabled()) {
             log.info("Reminders disabled for appointment {}", appointment.getId());
             return;
+        }
+
+        // Explicitly skip walk-ins (though isRemindersEnabled checks this, adding explicit check for clarity/safety)
+        if (appointment.getStatus() == AppointmentStatus.WALK_IN) {
+            log.info("Skipping reminders for walk-in appointment {}", appointment.getId());
+            return;
+        }
+
+        // Check for override
+        if (appointment.getReminderLeadTimeOverride() != null) {
+            int leadTime = appointment.getReminderLeadTimeOverride();
+            OffsetDateTime scheduledAt = appointment.getStartDateTime().minusHours(leadTime);
+            
+            if (scheduledAt.isBefore(OffsetDateTime.now())) {
+                log.info("Skipping override reminder for appointment {} - scheduled time {} has passed", appointment.getId(), scheduledAt);
+                return;
+            }
+
+            ScheduledSmsTask task = ScheduledSmsTask.builder()
+                    .businessId(appointment.getBusiness().getId())
+                    .appointment(appointment)
+                    .scheduledAt(scheduledAt)
+                    .status(SmsTaskStatus.PENDING)
+                    .build();
+            
+            scheduledSmsTaskRepository.save(task);
+            log.info("Scheduled SMS reminder (override) for appointment {} at {}", appointment.getId(), scheduledAt);
+            return; // Exit after scheduling override
         }
 
         List<BusinessReminderConfig> configs = reminderConfigService.getEnabledConfigs(
