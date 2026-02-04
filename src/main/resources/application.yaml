@@ -45,3 +45,8 @@ google:
   client-id: ${GOOGLE_CLIENT_ID}
   client-secret: ${GOOGLE_CLIENT_SECRET}
   redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/google/callback}
+
+philsms:
+  api-token: ${PHILSMS_API_TOKEN}
+  sender-id: ${PHILSMS_SENDER_ID:Orasa}
+  base-url: ${PHILSMS_BASE_URL}

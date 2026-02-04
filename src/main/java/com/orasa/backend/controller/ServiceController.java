@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/services")
 @RequiredArgsConstructor
-public class ServiceController {
+public class ServiceController extends BaseController {
 
     private final ServiceService serviceService;
 
@@ -105,11 +105,5 @@ public class ServiceController {
 
         serviceService.deleteService(serviceId, authenticatedUser.businessId());
         return ResponseEntity.ok(ApiResponse.success("Service deleted successfully"));
-    }
-
-    private void validateBusinessExists(AuthenticatedUser user) {
-        if (user.businessId() == null) {
-            throw new BusinessException("Business must be created first");
-        }
     }
 }

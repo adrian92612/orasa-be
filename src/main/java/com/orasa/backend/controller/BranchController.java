@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/branches")
 @RequiredArgsConstructor
-public class BranchController {
+public class BranchController extends BaseController {
 
     private final BranchService branchService;
     private final BranchServiceService branchServiceService;
@@ -149,12 +149,6 @@ public class BranchController {
 
         branchServiceService.removeServiceFromBranch(branchServiceId, authenticatedUser.businessId());
         return ResponseEntity.ok(ApiResponse.success("Service removed from branch successfully"));
-    }
-
-    private void validateBusinessExists(AuthenticatedUser user) {
-        if (user.businessId() == null) {
-            throw new BusinessException("Business must be created first");
-        }
     }
 }
 
