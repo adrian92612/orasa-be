@@ -48,4 +48,8 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
+
+    @Column(name = "must_change_password")
+    @Builder.Default
+    private boolean mustChangePassword = false;
 }
