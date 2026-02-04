@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             AuthenticatedUser principal = new AuthenticatedUser(
                 UUID.fromString(userId),
-                UUID.fromString(businessId),
+                businessId != null ? UUID.fromString(businessId) : null,
                 role,
                 branchIds
             );
