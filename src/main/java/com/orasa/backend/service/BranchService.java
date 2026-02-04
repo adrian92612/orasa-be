@@ -27,10 +27,6 @@ public class BranchService {
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
 
-    /**
-     * Creates a new branch for the owner's business.
-     * The businessId is taken from the authenticated user's JWT.
-     */
     @Transactional
     public BranchResponse createBranch(UUID ownerId, UUID businessId, CreateBranchRequest request) {
         Business business = businessRepository.findById(businessId)
@@ -45,7 +41,6 @@ public class BranchService {
 
         Branch saved = branchRepository.save(branch);
 
-        // Add branch to owner's accessible branches
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
         owner.getBranches().add(saved);
@@ -54,18 +49,12 @@ public class BranchService {
         return mapToResponse(saved);
     }
 
-    /**
-     * Gets all branches for a business.
-     */
     public List<BranchResponse> getBranchesByBusiness(UUID businessId) {
         return branchRepository.findByBusinessId(businessId).stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    /**
-     * Gets a specific branch by ID.
-     */
     public BranchResponse getBranchById(UUID branchId) {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
