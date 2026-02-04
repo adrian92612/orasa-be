@@ -21,7 +21,7 @@ import com.orasa.backend.dto.staff.ChangePasswordRequest;
 import com.orasa.backend.dto.staff.CreateStaffRequest;
 import com.orasa.backend.dto.staff.StaffResponse;
 import com.orasa.backend.dto.staff.UpdateStaffRequest;
-import com.orasa.backend.exception.BusinessException;
+
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.StaffService;
 
@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/staff")
 @RequiredArgsConstructor
-public class StaffController {
+public class StaffController extends BaseController {
 
     private final StaffService staffService;
 
@@ -113,11 +113,5 @@ public class StaffController {
     ) {
         staffService.changePassword(authenticatedUser.userId(), request);
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
-    }
-
-    private void validateBusinessExists(AuthenticatedUser user) {
-        if (user.businessId() == null) {
-            throw new BusinessException("Business must be created first");
-        }
     }
 }
