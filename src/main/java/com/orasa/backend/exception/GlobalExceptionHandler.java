@@ -32,6 +32,12 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
   }
 
+  @ExceptionHandler(BusinessException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
+    log.warn("Business exception: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(ex.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationErrors(MethodArgumentNotValidException ex) {
     Map<String, String> errors = new HashMap<>();
