@@ -43,4 +43,21 @@ public class Business extends BaseEntity {
 
     @Column(name = "subscription_end_date")
     private OffsetDateTime subscriptionEndDate;
+
+    @Column(name = "next_credit_reset_date")
+    private OffsetDateTime nextCreditResetDate;
+
+    /**
+     * Checks if subscription is currently active.
+     * Note: This is a simple check. Use SubscriptionService for full validation with auto-expiry.
+     */
+    public boolean hasActiveSubscription() {
+        if (subscriptionStatus != SubscriptionStatus.ACTIVE) {
+            return false;
+        }
+        if (subscriptionEndDate != null && subscriptionEndDate.isBefore(OffsetDateTime.now())) {
+            return false;
+        }
+        return true;
+    }
 }

@@ -23,7 +23,7 @@ public class CustomUserDetails implements UserDetails{
 
   public CustomUserDetails(User user) {
     this.id = user.getId();
-    this.businessId = user.getBusiness().getId();
+    this.businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
     this.username = user.getUsername();
     this.password = user.getPasswordHash();
     this.authorities = List.of(

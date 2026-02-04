@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.common.SmsStatus;
 import com.orasa.backend.common.SmsTaskStatus;
 import com.orasa.backend.domain.Appointment;
@@ -37,6 +38,7 @@ public class SmsService {
     private final ScheduledSmsTaskRepository scheduledSmsTaskRepository;
     private final BusinessRepository businessRepository;
     private final ReminderConfigService reminderConfigService;
+    private final com.orasa.backend.service.SubscriptionService subscriptionService;
 
 
     @Transactional
@@ -106,7 +108,11 @@ public class SmsService {
     }
 
     @Transactional
+    @RequiresActiveSubscription
     public SmsLog sendSms(Business business, Appointment appointment, String recipientPhone, String message) {
+        // Enforce credit consumption logic
+        subscriptionService.consumeSmsCredit(business);
+
         PhilSmsProvider.SendSmsResult result = philSmsProvider.sendSms(recipientPhone, message);
 
         SmsLog smsLog = SmsLog.builder()
@@ -145,6 +151,13 @@ public class SmsService {
 
         Business business = businessRepository.findById(task.getBusinessId())
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+
+        if (!business.hasActiveSubscription()) {
+            log.warn("Skipping reminder for appointment {} - Business {} subscription expired", appointment.getId(), business.getId());
+            task.setStatus(SmsTaskStatus.SKIPPED);
+            scheduledSmsTaskRepository.save(task);
+            return;
+        }
 
         SmsLog smsLog = sendSms(business, appointment, appointment.getCustomerPhone(), message);
 

@@ -23,6 +23,7 @@ import com.orasa.backend.dto.service.UpdateServiceRequest;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.ServiceService;
+import com.orasa.backend.common.RequiresActiveSubscription;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class ServiceController extends BaseController {
     private final ServiceService serviceService;
 
     @PostMapping
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<ServiceResponse>> createService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -52,6 +54,7 @@ public class ServiceController extends BaseController {
     }
 
     @PutMapping("/{serviceId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<ServiceResponse>> updateService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -96,6 +99,7 @@ public class ServiceController extends BaseController {
     }
 
     @DeleteMapping("/{serviceId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,

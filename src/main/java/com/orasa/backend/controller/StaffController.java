@@ -24,6 +24,7 @@ import com.orasa.backend.dto.staff.UpdateStaffRequest;
 
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.StaffService;
+import com.orasa.backend.common.RequiresActiveSubscription;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class StaffController extends BaseController {
     private final StaffService staffService;
 
     @PostMapping
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<StaffResponse>> createStaff(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -53,6 +55,7 @@ public class StaffController extends BaseController {
     }
 
     @PutMapping("/{staffId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<StaffResponse>> updateStaff(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -94,6 +97,7 @@ public class StaffController extends BaseController {
     }
 
     @DeleteMapping("/{staffId}")
+    @RequiresActiveSubscription
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteStaff(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
