@@ -13,10 +13,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.UUID;
+
 import com.orasa.backend.common.UserRole;
+import com.orasa.backend.domain.Branch;
+
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.AuthService;
 import com.orasa.backend.service.GoogleOAuthService;
@@ -32,6 +38,7 @@ public class AuthController {
   
   private final AuthService authService;
   private final GoogleOAuthService googleOAuthService;
+  private final UserRepository userRepository;
 
   @Value("${jwt.expiration}")
   private long jwtExpiration;
@@ -68,11 +75,16 @@ public class AuthController {
   public ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser(
     @AuthenticationPrincipal AuthenticatedUser user
   ) {
+    // Fetch fresh branchIds from database
+    List<UUID> branchIds = userRepository.findById(user.userId())
+        .map(u -> u.getBranches().stream().map(Branch::getId).toList())
+        .orElse(List.of());
+
     AuthResponse userData = AuthResponse.builder()
       .userId(user.userId())
       .businessId(user.businessId())
       .role(UserRole.valueOf(user.role()))
-      .branchIds(user.branchIds())
+      .branchIds(branchIds)
       .build();
     return ResponseEntity.ok(ApiResponse.success(userData));
   }

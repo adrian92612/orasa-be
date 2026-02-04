@@ -39,17 +39,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String userId = jwtService.extractUserId(jwt);
             String role = jwtService.extractRole(jwt);
             String businessId = jwtService.extractBusinessId(jwt);
-            List<String> branchIdStrings = jwtService.extractBranchIds(jwt);
-            
-            List<UUID> branchIds = branchIdStrings.stream()
-                .map(UUID::fromString)
-                .toList();
 
             AuthenticatedUser principal = new AuthenticatedUser(
                 UUID.fromString(userId),
                 businessId != null ? UUID.fromString(businessId) : null,
-                role,
-                branchIds
+                role
             );
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

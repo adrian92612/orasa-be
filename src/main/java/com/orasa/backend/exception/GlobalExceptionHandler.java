@@ -57,6 +57,13 @@ public class GlobalExceptionHandler {
           .body(ApiResponse.error("Invalid username or password"));
   }
 
+  @ExceptionHandler(ForbiddenException.class)
+  public ResponseEntity<ApiResponse<Void>> handleForbiddenException(ForbiddenException ex) {
+      log.warn("Access denied: {}", ex.getMessage());
+      return ResponseEntity.status(HttpStatus.FORBIDDEN)
+          .body(ApiResponse.error(ex.getMessage()));
+  }
+
   @ExceptionHandler(SubscriptionExpiredException.class)
   public ResponseEntity<ApiResponse<SubscriptionErrorData>> handleSubscriptionExpired(SubscriptionExpiredException ex) {
     log.warn("Subscription enforcement triggered: {}", ex.getMessage());

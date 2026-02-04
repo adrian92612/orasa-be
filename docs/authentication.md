@@ -85,10 +85,7 @@ POST /auth/staff/login
     "userId": "550e8400-e29b-41d4-a716-446655440000",
     "role": "STAFF",
     "businessId": "550e8400-e29b-41d4-a716-446655440001",
-    "branchIds": [
-      "550e8400-e29b-41d4-a716-446655440002",
-      "550e8400-e29b-41d4-a716-446655440003"
-    ]
+
   }
 }
 ```
@@ -103,7 +100,7 @@ Staff accounts are created with a temporary password. The frontend should check 
 
 ## Get Current User
 
-Retrieves the authenticated user's information from the JWT.
+Retrieves the authenticated user's information. Identity is derived from the JWT, while current branch access is fetched fresh from the database.
 
 ```http
 GET /auth/me
@@ -118,8 +115,7 @@ GET /auth/me
   "data": {
     "userId": "550e8400-e29b-41d4-a716-446655440000",
     "role": "OWNER",
-    "businessId": "550e8400-e29b-41d4-a716-446655440001",
-    "branchIds": ["550e8400-e29b-41d4-a716-446655440002"]
+    "businessId": "550e8400-e29b-41d4-a716-446655440001"
   }
 }
 ```

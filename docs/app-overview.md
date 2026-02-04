@@ -228,7 +228,7 @@ All endpoints enforce that the authenticated owner can only manage resources wit
   - `GOOGLE_CLIENT_SECRET`
   - `GOOGLE_REDIRECT_URI`
 - **Cookie:** HTTP-only, Secure, SameSite=None (for cross-origin)
-- **JWT Claims:** userId, role, businessId (nullable), branchIds
+- **JWT Claims:** userId, role, businessId (nullable)
 
 ### Owner States
 
