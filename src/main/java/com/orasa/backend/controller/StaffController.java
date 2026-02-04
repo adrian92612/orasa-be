@@ -46,6 +46,7 @@ public class StaffController extends BaseController {
         validateBusinessExists(authenticatedUser);
 
         StaffResponse staff = staffService.createStaff(
+                authenticatedUser.userId(),
                 authenticatedUser.businessId(),
                 request
         );
@@ -65,6 +66,7 @@ public class StaffController extends BaseController {
         validateBusinessExists(authenticatedUser);
 
         StaffResponse staff = staffService.updateStaff(
+                authenticatedUser.userId(),
                 staffId,
                 authenticatedUser.businessId(),
                 request
@@ -105,7 +107,7 @@ public class StaffController extends BaseController {
     ) {
         validateBusinessExists(authenticatedUser);
 
-        staffService.deleteStaff(staffId, authenticatedUser.businessId());
+        staffService.deleteStaff(authenticatedUser.userId(), staffId, authenticatedUser.businessId());
         return ResponseEntity.ok(ApiResponse.success("Staff member deleted successfully"));
     }
 

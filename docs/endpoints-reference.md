@@ -498,3 +498,92 @@ GET /appointments/branch/{branchId}/search?search=john&startDate=2026-02-01&endD
   }
 }
 ```
+
+---
+
+## Activity Logs (`/activity-logs`)
+
+Activity logs provide an audit trail of all actions performed within your business. Logs are automatically created when users perform operations like creating appointments, updating staff, etc.
+
+| Method | Endpoint                                      | Auth | Role         | Description                |
+| ------ | --------------------------------------------- | ---- | ------------ | -------------------------- |
+| `GET`  | `/activity-logs/business/{businessId}`        | ✅   | OWNER, ADMIN | Get all logs for business  |
+| `GET`  | `/activity-logs/branch/{branchId}`            | ✅   | OWNER, ADMIN | Get logs for branch        |
+| `GET`  | `/activity-logs/user/{userId}`                | ✅   | OWNER, ADMIN | Get logs for specific user |
+| `GET`  | `/activity-logs/business/{businessId}/search` | ✅   | OWNER, ADMIN | Search logs with filters   |
+
+### GET /activity-logs/business/{businessId}
+
+**Query Parameters:**
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `page` | ❌ | Page number (default: 0) |
+| `size` | ❌ | Page size (default: 20) |
+| `sort` | ❌ | Sort field (default: createdAt,desc) |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "content": [
+      {
+        "id": "uuid",
+        "userId": "uuid",
+        "userName": "owner@example.com",
+        "userRole": "OWNER",
+        "businessId": "uuid",
+        "branchId": "uuid",
+        "branchName": "Main Branch",
+        "action": "APPOINTMENT_UPDATED",
+        "description": "Updated appointment for John Doe",
+        "details": "[{\"field\":\"Start Time\",\"before\":\"Feb 4, 2026 3:00 PM\",\"after\":\"Feb 5, 2026 4:00 PM\"}]",
+        "createdAt": "2026-02-04T10:00:00+08:00"
+      }
+    ],
+    "totalElements": 100,
+    "totalPages": 5,
+    "number": 0,
+    "size": 20
+  }
+}
+```
+
+### GET /activity-logs/business/{businessId}/search
+
+**Query Parameters:**
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `branchId` | ❌ | Filter by specific branch |
+| `action` | ❌ | Filter by action type (e.g., APPOINTMENT_CREATED) |
+| `startDate` | ❌ | Filter logs from this date (YYYY-MM-DD) |
+| `endDate` | ❌ | Filter logs until this date (YYYY-MM-DD) |
+| `page` | ❌ | Page number (default: 0) |
+| `size` | ❌ | Page size (default: 20) |
+
+**Example:**
+
+```
+GET /activity-logs/business/{businessId}/search?action=APPOINTMENT_CREATED&startDate=2026-02-01&endDate=2026-02-28
+```
+
+### Details Field Structure
+
+The `details` field contains a JSON array of field changes for update operations. This enables frontend to display expandable before/after comparisons:
+
+```json
+[
+  {
+    "field": "Customer Name",
+    "before": "John Doe",
+    "after": "Jane Smith"
+  },
+  {
+    "field": "Start Time",
+    "before": "Feb 4, 2026 3:00 PM",
+    "after": "Feb 5, 2026 4:00 PM"
+  }
+]
+```

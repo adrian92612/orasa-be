@@ -45,6 +45,7 @@ public class ServiceController extends BaseController {
         validateBusinessExists(authenticatedUser);
 
         ServiceResponse service = serviceService.createService(
+                authenticatedUser.userId(),
                 authenticatedUser.businessId(),
                 request
         );
@@ -64,6 +65,7 @@ public class ServiceController extends BaseController {
         validateBusinessExists(authenticatedUser);
 
         ServiceResponse service = serviceService.updateService(
+                authenticatedUser.userId(),
                 serviceId,
                 authenticatedUser.businessId(),
                 request
@@ -107,7 +109,7 @@ public class ServiceController extends BaseController {
     ) {
         validateBusinessExists(authenticatedUser);
 
-        serviceService.deleteService(serviceId, authenticatedUser.businessId());
+        serviceService.deleteService(authenticatedUser.userId(), serviceId, authenticatedUser.businessId());
         return ResponseEntity.ok(ApiResponse.success("Service deleted successfully"));
     }
 }

@@ -25,7 +25,7 @@ public class BranchService extends BaseEntity{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", nullable = false)
-    private Service service;
+    private ServiceOffering service;
 
     @Column(name = "custom_price")
     private BigDecimal customPrice;
@@ -38,3 +38,4 @@ public class BranchService extends BaseEntity{
         return (customPrice != null) ? customPrice : service.getBasePrice();
     }
 }
+

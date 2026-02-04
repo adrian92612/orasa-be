@@ -26,9 +26,13 @@ public class BranchService {
     private final BranchRepository branchRepository;
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     @Transactional
     public BranchResponse createBranch(UUID ownerId, UUID businessId, CreateBranchRequest request) {
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+        
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
@@ -41,10 +45,11 @@ public class BranchService {
 
         Branch saved = branchRepository.save(branch);
 
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
         owner.getBranches().add(saved);
         userRepository.save(owner);
+
+        // Log branch creation
+        activityLogService.logBranchCreated(owner, business, saved);
 
         return mapToResponse(saved);
     }
@@ -74,3 +79,4 @@ public class BranchService {
                 .build();
     }
 }
+

@@ -31,6 +31,18 @@ public class ActivityLog extends BaseEntity {
     @Column(nullable = false)
     private String action;
 
+    /**
+     * Short, human-readable description shown in list view
+     * Example: "Updated appointment for John Doe"
+     */
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    /**
+     * Detailed JSON or text with before/after changes, shown when expanded
+     * Example: {"customerName": {"before": "John", "after": "Jane"}, ...}
+     */
+    @Column(columnDefinition = "TEXT")
+    private String details;
 }
+

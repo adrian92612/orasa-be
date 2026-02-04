@@ -52,4 +52,14 @@ public class User extends BaseEntity {
     @Column(name = "must_change_password")
     @Builder.Default
     private boolean mustChangePassword = false;
+
+    /**
+     * Returns a user-friendly display name for activity logs
+     */
+    public String getDisplayName() {
+        if (this.email != null && !this.email.isBlank()) {
+            return this.email;
+        }
+        return this.username;
+    }
 }

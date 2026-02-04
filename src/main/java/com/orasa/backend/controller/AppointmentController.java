@@ -9,6 +9,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,7 @@ import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateResult;
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.AppointmentService;
 
 import jakarta.validation.Valid;
@@ -39,19 +41,21 @@ public class AppointmentController {
   @PostMapping
   @RequiresActiveSubscription
   public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @Valid @RequestBody CreateAppointmentRequest request
   ) {
-    AppointmentResponse response = appointmentService.createAppointment(request);
+    AppointmentResponse response = appointmentService.createAppointment(authenticatedUser.userId(), request);
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Appointment created successfully",response));
   }
 
   @PutMapping("/{id}")
   @RequiresActiveSubscription
   public ResponseEntity<ApiResponse<AppointmentResponse>> updateAppointment(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID id,
     @Valid @RequestBody UpdateAppointmentRequest request
   ) {
-    UpdateResult result = appointmentService.updateAppointment(id, request);
+    UpdateResult result = appointmentService.updateAppointment(authenticatedUser.userId(), id, request);
     String message = result.isModified() ? "Appointment updated successfully" : "No changes made";
     return ResponseEntity.ok(ApiResponse.success(message, result.getAppointment()));
   }
@@ -97,9 +101,10 @@ public class AppointmentController {
   @DeleteMapping("/{id}")
   @RequiresActiveSubscription
   public ResponseEntity<ApiResponse<Void>> deleteAppointment(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID id
   ) {
-    appointmentService.deleteAppointment(id);
+    appointmentService.deleteAppointment(authenticatedUser.userId(), id);
     return ResponseEntity.ok(ApiResponse.success("Appointment deleted successfully"));
   }
 }

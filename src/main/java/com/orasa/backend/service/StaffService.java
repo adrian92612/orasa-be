@@ -1,9 +1,11 @@
 package com.orasa.backend.service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,7 @@ import com.orasa.backend.common.UserRole;
 import com.orasa.backend.domain.Branch;
 import com.orasa.backend.domain.Business;
 import com.orasa.backend.domain.User;
+import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.staff.ChangePasswordRequest;
 import com.orasa.backend.dto.staff.CreateStaffRequest;
 import com.orasa.backend.dto.staff.StaffResponse;
@@ -34,9 +37,13 @@ public class StaffService {
     private final BusinessRepository businessRepository;
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivityLogService activityLogService;
 
     @Transactional
-    public StaffResponse createStaff(UUID businessId, CreateStaffRequest request) {
+    public StaffResponse createStaff(UUID actorUserId, UUID businessId, CreateStaffRequest request) {
+        User actor = userRepository.findById(actorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
@@ -70,16 +77,37 @@ public class StaffService {
                 .build();
 
         User saved = userRepository.save(staff);
+        
+        // Log staff creation
+        activityLogService.logStaffCreated(actor, business, saved.getUsername());
+        
         return mapToResponse(saved);
     }
 
     @Transactional
-    public StaffResponse updateStaff(UUID staffId, UUID businessId, UpdateStaffRequest request) {
+    public StaffResponse updateStaff(UUID actorUserId, UUID staffId, UUID businessId, UpdateStaffRequest request) {
+        User actor = userRepository.findById(actorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
         User staff = getStaffById(staffId, businessId);
+        
+        // Track changes
+        List<FieldChange> changes = new ArrayList<>();
+        String beforeEmail = staff.getEmail();
+        Set<String> beforeBranches = staff.getBranches().stream()
+                .map(Branch::getName)
+                .collect(Collectors.toSet());
 
         if (request.getEmail() != null) {
             if (!request.getEmail().equals(staff.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
                 throw new BusinessException("Email already exists");
+            }
+            if (!request.getEmail().equals(beforeEmail)) {
+                changes.add(FieldChange.builder()
+                        .field("Email")
+                        .before(beforeEmail != null ? beforeEmail : "(not set)")
+                        .after(request.getEmail())
+                        .build());
             }
             staff.setEmail(request.getEmail());
         }
@@ -87,6 +115,11 @@ public class StaffService {
         if (request.getNewPassword() != null) {
             staff.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
             staff.setMustChangePassword(true);
+            changes.add(FieldChange.builder()
+                    .field("Password")
+                    .before("(hidden)")
+                    .after("Reset (must change on login)")
+                    .build());
         }
 
         if (request.getBranchIds() != null) {
@@ -100,10 +133,29 @@ public class StaffService {
                 }
                 branches.add(branch);
             }
+            
+            Set<String> afterBranches = branches.stream()
+                    .map(Branch::getName)
+                    .collect(Collectors.toSet());
+            
+            if (!beforeBranches.equals(afterBranches)) {
+                changes.add(FieldChange.builder()
+                        .field("Assigned Branches")
+                        .before(String.join(", ", beforeBranches))
+                        .after(String.join(", ", afterBranches))
+                        .build());
+            }
             staff.setBranches(branches);
         }
 
         User saved = userRepository.save(staff);
+        
+        // Log staff update if there were changes
+        if (!changes.isEmpty()) {
+            String details = FieldChange.toJson(changes);
+            activityLogService.logStaffUpdated(actor, staff.getBusiness(), staff.getUsername(), details);
+        }
+        
         return mapToResponse(saved);
     }
 
@@ -120,8 +172,15 @@ public class StaffService {
     }
 
     @Transactional
-    public void deleteStaff(UUID staffId, UUID businessId) {
+    public void deleteStaff(UUID actorUserId, UUID staffId, UUID businessId) {
+        User actor = userRepository.findById(actorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
         User staff = getStaffById(staffId, businessId);
+        
+        // Log before deletion
+        activityLogService.logStaffDeactivated(actor, staff.getBusiness(), staff.getUsername());
+        
         userRepository.delete(staff);
     }
 
@@ -137,6 +196,11 @@ public class StaffService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setMustChangePassword(false);
         userRepository.save(user);
+        
+        // Log password change (self-service, so user is the actor)
+        if (user.getBusiness() != null) {
+            activityLogService.logStaffPasswordReset(user, user.getBusiness(), user.getUsername());
+        }
     }
 
     private User getStaffById(UUID staffId, UUID businessId) {
@@ -175,3 +239,4 @@ public class StaffService {
                 .build();
     }
 }
+

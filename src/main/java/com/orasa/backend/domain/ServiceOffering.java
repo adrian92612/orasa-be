@@ -19,7 +19,7 @@ import java.util.UUID;
 @Builder
 @SQLDelete(sql = "UPDATE services SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class Service extends BaseEntity {
+public class ServiceOffering extends BaseEntity {
 
     @Column(name = "business_id", nullable = false)
     private UUID businessId;
