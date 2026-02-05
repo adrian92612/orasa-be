@@ -2,6 +2,8 @@ package com.orasa.backend.repository;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import com.orasa.backend.common.AppointmentStatus;
+import com.orasa.backend.common.AppointmentType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +23,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
       FROM Appointment a
       WHERE a.branch.id = :branchId
       AND (COALESCE(:search, '') = '' OR
-        LOWER(a.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR
-        LOWER(a.customerPhone) LIKE LOWER(CONCAT('%', :search, '%')) OR
-        LOWER(a.notes) LIKE LOWER(CONCAT('%', :search, '%')))
+        LOWER(a.customerName) ILIKE LOWER(CONCAT('%', :search, '%')) OR
+        LOWER(a.customerPhone) ILIKE LOWER(CONCAT('%', :search, '%')) OR
+        LOWER(a.notes) ILIKE LOWER(CONCAT('%', :search, '%')))
       AND (:startOfDay IS NULL OR a.startDateTime >= :startOfDay)
       AND (:endOfDay IS NULL OR a.endDateTime <= :endOfDay)
       """)
@@ -34,5 +36,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     @Param("endOfDay") OffsetDateTime endOfDay,
     Pageable pageable
   );
+
+  long countByBusinessIdAndStartDateTimeBetween(UUID businessId, OffsetDateTime start, OffsetDateTime end);
+  long countByBusinessIdAndStatusAndStartDateTimeBetween(UUID businessId, AppointmentStatus status, OffsetDateTime start, OffsetDateTime end);
+  long countByBusinessIdAndTypeAndStartDateTimeBetween(UUID businessId, AppointmentType type, OffsetDateTime start, OffsetDateTime end);
   
 }
