@@ -1,6 +1,7 @@
 package com.orasa.backend.domain;
 
 import com.orasa.backend.common.AppointmentStatus;
+import com.orasa.backend.common.AppointmentType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -22,6 +23,11 @@ public class Appointment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
     private Business business;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AppointmentType type = AppointmentType.SCHEDULED;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id", nullable = false)

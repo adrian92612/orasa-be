@@ -17,6 +17,8 @@ import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 
@@ -88,12 +90,34 @@ public class BusinessService {
     }
 
     @Transactional
-    public Page<BusinessResponse> getAllBusinesses(Pageable pageable) {
-        return businessRepository.findAll(pageable)
-                .map(business -> {
+    public Page<BusinessResponse> getAllBusinesses(String search, Pageable pageable) {
+        Page<Business> page;
+        if (search != null && !search.isBlank()) {
+            page = businessRepository.findByNameContainingIgnoreCase(search, pageable);
+        } else {
+            page = businessRepository.findAll(pageable);
+        }
+        
+        return page.map(business -> {
                     subscriptionService.checkAndRefreshCredits(business);
                     return mapToResponse(business, null);
                 });
+    }
+
+    public UUID getCurrentUserBusinessId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+             throw new BusinessException("User not authenticated");
+        }
+        
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            
+        if (user.getBusiness() == null) {
+            throw new ResourceNotFoundException("User does not have a business");
+        }
+        return user.getBusiness().getId();
     }
 
     /**
