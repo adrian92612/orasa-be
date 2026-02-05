@@ -587,3 +587,68 @@ The `details` field contains a JSON array of field changes for update operations
   }
 ]
 ```
+
+---
+
+## Analytics (`/analytics`)
+
+| Method | Endpoint               | Auth | Role  | Description         |
+| ------ | ---------------------- | ---- | ----- | ------------------- |
+| `GET`  | `/analytics/dashboard` | ✅   | OWNER | Get dashboard stats |
+
+### GET /analytics/dashboard
+
+Retrieves aggregated statistics for the owner dashboard.
+
+**Query Parameters:**
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `startDate` | ✅ | Start date (YYYY-MM-DD) |
+| `endDate` | ✅ | End date (YYYY-MM-DD) |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "totalAppointments": 150,
+    "scheduledCount": 120,
+    "walkInCount": 30,
+    "cancelledCount": 5,
+    "noShowCount": 2,
+    "smsSent": 115,
+    "smsFailed": 5
+  }
+}
+```
+
+---
+
+## Platform Admin (`/admin`)
+
+| Method | Endpoint                                       | Auth | Role  | Description           |
+| ------ | ---------------------------------------------- | ---- | ----- | --------------------- |
+| `GET`  | `/admin/businesses`                            | ✅   | ADMIN | List all businesses   |
+| `POST` | `/admin/businesses/{id}/subscription/activate` | ✅   | ADMIN | Activate subscription |
+| `POST` | `/admin/businesses/{id}/subscription/extend`   | ✅   | ADMIN | Extend subscription   |
+
+### GET /admin/businesses
+
+**Query Parameters:**
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `query` | ❌ | Search by business name |
+| `page` | ❌ | Page number (default: 0) |
+| `size` | ❌ | Page size (default: 20) |
+
+### POST /admin/businesses/{id}/subscription/extend
+
+**Request:**
+
+```json
+{
+  "months": 1
+}
+```

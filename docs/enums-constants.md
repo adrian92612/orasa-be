@@ -24,7 +24,7 @@ enum UserRole {
 
 ## Appointment Status
 
-```typescript
+```
 enum AppointmentStatus {
   WALK_IN = "WALK_IN", // Walk-in, no SMS reminders
   SCHEDULED = "SCHEDULED", // Initial scheduled state
@@ -32,6 +32,17 @@ enum AppointmentStatus {
   CANCELLED = "CANCELLED", // Appointment cancelled
   NO_SHOW = "NO_SHOW", // Customer didn't show up
   COMPLETED = "COMPLETED", // Successfully completed
+}
+```
+
+## Appointment Type
+
+Distinguishes how the appointment was initiated (Origin).
+
+```typescript
+enum AppointmentType {
+  SCHEDULED = "SCHEDULED", // Created in advance
+  WALK_IN = "WALK_IN", // Created as a walk-in
 }
 ```
 
