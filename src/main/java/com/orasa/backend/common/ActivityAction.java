@@ -13,6 +13,10 @@ public enum ActivityAction {
     STAFF_PASSWORD_RESET,
     STAFF_DEACTIVATED,
     
+    // Profile actions
+    PROFILE_UPDATED,
+    PASSWORD_CHANGED,
+    
     // Branch actions
     BRANCH_CREATED,
     BRANCH_UPDATED,
@@ -24,6 +28,7 @@ public enum ActivityAction {
     
     // Business settings
     REMINDER_CONFIG_UPDATED,
+    BUSINESS_UPDATED,
     
     // Authentication
     USER_LOGIN,

@@ -643,6 +643,16 @@ Retrieves aggregated statistics for the owner dashboard.
 | `page` | ❌ | Page number (default: 0) |
 | `size` | ❌ | Page size (default: 20) |
 
+### POST /admin/businesses/{id}/subscription/activate
+
+**Request:**
+
+```json
+{
+  "months": 1
+}
+```
+
 ### POST /admin/businesses/{id}/subscription/extend
 
 **Request:**
@@ -650,5 +660,58 @@ Retrieves aggregated statistics for the owner dashboard.
 ```json
 {
   "months": 1
+}
+```
+
+---
+
+## Profile (`/profile`)
+
+| Method | Endpoint                   | Auth | Role | Description           |
+| ------ | -------------------------- | ---- | ---- | --------------------- |
+| `PUT`  | `/profile/me`              | ✅   | Any  | Update username/email |
+| `POST` | `/profile/change-password` | ✅   | Any  | Change password       |
+
+### PUT /profile/me
+
+Updates user profile.
+
+**Request:**
+
+```json
+{
+  "username": "new_username",
+  "email": "new@example.com"
+}
+```
+
+> **Note:** Only OWNERS can update their email.
+
+### POST /profile/change-password
+
+**Request:**
+
+```json
+{
+  "currentPassword": "oldPassword",
+  "newPassword": "newPassword123"
+}
+```
+
+---
+
+## Business Settings (`/businesses`)
+
+| Method | Endpoint         | Auth | Role  | Description             |
+| ------ | ---------------- | ---- | ----- | ----------------------- |
+| `PUT`  | `/businesses/me` | ✅   | OWNER | Update business details |
+
+### PUT /businesses/me
+
+**Request:**
+
+```json
+{
+  "name": "New Business Name"
 }
 ```
