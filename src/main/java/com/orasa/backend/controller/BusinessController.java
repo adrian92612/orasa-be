@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RestController
 @RequestMapping("/businesses")
 @RequiredArgsConstructor
-public class BusinessController {
+public class BusinessController extends BaseController {
 
     private final BusinessService businessService;
     private final UserRepository userRepository;
@@ -90,12 +90,21 @@ public class BusinessController {
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid @RequestBody UpdateBusinessRequest request
     ) {
-        if (authenticatedUser.businessId() == null) {
-            throw new ResourceNotFoundException("No business found for user");
-        }
+        validateBusinessExists(authenticatedUser);
 
         BusinessResponse business = businessService.updateBusiness(authenticatedUser.businessId(), request);
         return ResponseEntity.ok(ApiResponse.success(business));
+    }
+
+    @PostMapping("/onboarding/complete")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<Void>> completeOnboarding(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    ) {
+        validateBusinessExists(authenticatedUser);
+
+        businessService.completeOnboarding(authenticatedUser.businessId());
+        return ResponseEntity.ok(ApiResponse.success("Onboarding completed", null));
     }
 
     /**

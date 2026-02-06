@@ -13,6 +13,7 @@ import lombok.Data;
 public class AuthResponse {
 
   private UUID userId;
+  private String username;
   private UserRole role;
   private UUID businessId;
   private List<UUID> branchIds;

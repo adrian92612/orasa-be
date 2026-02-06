@@ -23,11 +23,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.orasa.backend.dto.activity.FieldChange;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class BusinessService {
 
     private final BusinessRepository businessRepository;
@@ -128,6 +131,16 @@ public class BusinessService {
                     subscriptionService.checkAndRefreshCredits(business);
                     return mapToResponse(business, null);
                 });
+    }
+
+    @Transactional
+    public void completeOnboarding(UUID businessId) {
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+        
+        business.setOnboardingCompleted(true);
+        businessRepository.save(business);
+        log.info("Business {} completed onboarding", businessId);
     }
 
     public UUID getCurrentUserBusinessId() {

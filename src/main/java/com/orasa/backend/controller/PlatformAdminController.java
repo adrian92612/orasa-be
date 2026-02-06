@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
-public class PlatformAdminController {
+public class PlatformAdminController extends BaseController {
 
     private final BusinessService businessService;
     private final SubscriptionService subscriptionService;

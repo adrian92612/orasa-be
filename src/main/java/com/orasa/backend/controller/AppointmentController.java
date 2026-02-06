@@ -35,7 +35,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/appointments")
 @RequiredArgsConstructor
-public class AppointmentController {
+public class AppointmentController extends BaseController {
   private final AppointmentService appointmentService;
   
   @PostMapping

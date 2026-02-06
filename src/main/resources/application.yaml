@@ -24,7 +24,6 @@ spring:
           lob:
             non_contextual_creation: true
   jackson:
-    property-naming-strategy: SNAKE_CASE
     time-zone: Asia/Manila
   main:
     banner-mode: "off"

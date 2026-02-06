@@ -64,7 +64,7 @@ public class AppointmentService {
     // Validate user access to branch
     validateBranchAccess(user, branch);
 
-    if (!request.isWalkin() && request.getStartDateTime().isBefore(OffsetDateTime.now())) {
+    if (!request.getIsWalkin() && request.getStartDateTime().isBefore(OffsetDateTime.now())) {
       throw new InvalidAppointmentException("Appointment time must be in the future");
     }
 
@@ -75,7 +75,7 @@ public class AppointmentService {
         .customerPhone(request.getCustomerPhone())
         .startDateTime(request.getStartDateTime())
         .endDateTime(request.getEndDateTime())
-        .status(request.isWalkin() ? AppointmentStatus.WALK_IN : AppointmentStatus.SCHEDULED)
+        .status(request.getIsWalkin() ? AppointmentStatus.WALK_IN : AppointmentStatus.SCHEDULED)
         .notes(request.getNotes())
         .reminderLeadTimeOverride(request.getReminderLeadTimeOverride())
         .build();
@@ -86,7 +86,7 @@ public class AppointmentService {
     activityLogService.logAppointmentCreated(user, saved);
 
     // Schedule reminders if not walk-in
-    if (!request.isWalkin()) {
+    if (!request.getIsWalkin()) {
         try {
             smsService.scheduleRemindersForAppointment(saved);
         } catch (Exception e) {

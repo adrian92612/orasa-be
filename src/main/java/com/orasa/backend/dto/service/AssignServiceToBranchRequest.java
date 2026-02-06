@@ -23,5 +23,5 @@ public class AssignServiceToBranchRequest {
     private BigDecimal customPrice;
 
     @Builder.Default
-    private boolean active = true;
+    private Boolean active = true;
 }
