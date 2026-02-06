@@ -58,12 +58,23 @@ public class AuthService {
       user.getBusiness().getId()
     );
 
+    List<AuthResponse.BranchInfo> branchInfos = user.getBranches() != null
+      ? user.getBranches().stream()
+          .map(b -> AuthResponse.BranchInfo.builder()
+              .id(b.getId())
+              .name(b.getName())
+              .build())
+          .toList()
+      : List.of();
+
     AuthResponse response = AuthResponse.builder()
       .userId(user.getId())
       .username(user.getUsername())
       .role(user.getRole())
       .businessId(user.getBusiness().getId())
+      .businessName(user.getBusiness().getName())
       .branchIds(branchIds)
+      .branches(branchInfos)
       .build();
 
     return new LoginResult(token, response);
@@ -93,12 +104,23 @@ public class AuthService {
         businessId
     );
 
+    List<AuthResponse.BranchInfo> branchInfos = user.getBusiness() != null && user.getBranches() != null
+        ? user.getBranches().stream()
+            .map(b -> AuthResponse.BranchInfo.builder()
+                .id(b.getId())
+                .name(b.getName())
+                .build())
+            .toList()
+        : List.of();
+
     return new LoginResult(token, AuthResponse.builder()
         .userId(user.getId())
         .username(user.getUsername())
         .role(user.getRole())
         .businessId(businessId)
+        .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
         .branchIds(branchIds)
+        .branches(branchInfos)
         .build());
   }
 

@@ -16,5 +16,14 @@ public class AuthResponse {
   private String username;
   private UserRole role;
   private UUID businessId;
+  private String businessName;
   private List<UUID> branchIds;
+  private List<BranchInfo> branches;
+
+  @Data
+  @Builder
+  public static class BranchInfo {
+    private UUID id;
+    private String name;
+  }
 }

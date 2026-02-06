@@ -82,12 +82,21 @@ public class AuthController extends BaseController {
         .map(Branch::getId)
         .toList();
 
+    List<AuthResponse.BranchInfo> branchInfos = currentUser.getBranches().stream()
+        .map(b -> AuthResponse.BranchInfo.builder()
+            .id(b.getId())
+            .name(b.getName())
+            .build())
+        .toList();
+
     AuthResponse userData = AuthResponse.builder()
       .userId(currentUser.getId())
       .username(currentUser.getUsername())
       .businessId(currentUser.getBusiness() != null ? currentUser.getBusiness().getId() : null)
+      .businessName(currentUser.getBusiness() != null ? currentUser.getBusiness().getName() : null)
       .role(currentUser.getRole())
       .branchIds(branchIds)
+      .branches(branchInfos)
       .build();
     return ResponseEntity.ok(ApiResponse.success(userData));
   }
