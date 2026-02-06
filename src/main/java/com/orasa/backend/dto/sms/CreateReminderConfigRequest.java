@@ -22,5 +22,5 @@ public class CreateReminderConfigRequest {
     private String messageTemplate;
 
     @Builder.Default
-    private boolean enabled = true;
+    private Boolean enabled = true;
 }

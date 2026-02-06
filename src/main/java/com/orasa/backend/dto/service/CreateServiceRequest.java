@@ -30,5 +30,5 @@ public class CreateServiceRequest {
     private Integer durationMinutes;
 
     @Builder.Default
-    private boolean availableGlobally = true;
+    private Boolean availableGlobally = true;
 }

@@ -47,7 +47,7 @@ public class ServiceService {
                 .description(request.getDescription())
                 .basePrice(request.getBasePrice())
                 .durationMinutes(request.getDurationMinutes())
-                .isAvailableGlobally(request.isAvailableGlobally())
+                .isAvailableGlobally(request.getAvailableGlobally())
                 .build();
 
         ServiceOffering saved = serviceRepository.save(serviceOffering);

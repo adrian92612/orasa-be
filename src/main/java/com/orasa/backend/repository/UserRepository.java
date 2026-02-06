@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.orasa.backend.domain.User;
 
@@ -14,4 +16,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
   List<User> findByBusinessId(UUID businessId);
   boolean existsByUsername(String username);
   boolean existsByEmail(String email);
+
+  @Query("SELECT u FROM User u LEFT JOIN FETCH u.business LEFT JOIN FETCH u.branches WHERE u.id = :id")
+  Optional<User> findByIdWithRelations(@Param("id") UUID id);
 }

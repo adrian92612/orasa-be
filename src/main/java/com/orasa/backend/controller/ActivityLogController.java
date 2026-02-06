@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/activity-logs")
 @RequiredArgsConstructor
-public class ActivityLogController {
+public class ActivityLogController extends BaseController {
     
     private final ActivityLogService activityLogService;
     

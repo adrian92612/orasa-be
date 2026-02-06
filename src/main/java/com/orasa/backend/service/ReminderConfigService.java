@@ -37,7 +37,7 @@ public class ReminderConfigService {
                 .businessId(businessId)
                 .leadTimeHours(request.getLeadTimeHours())
                 .messageTemplate(request.getMessageTemplate())
-                .isEnabled(request.isEnabled())
+                .isEnabled(request.getEnabled())
                 .build();
 
         BusinessReminderConfig saved = reminderConfigRepository.save(config);

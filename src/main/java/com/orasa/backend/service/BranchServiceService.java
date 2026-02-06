@@ -54,7 +54,7 @@ public class BranchServiceService {
                 .branchId(branchId)
                 .service(service)
                 .customPrice(request.getCustomPrice())
-                .isActive(request.isActive())
+                .isActive(request.getActive())
                 .build();
 
         BranchService saved = branchServiceRepository.save(branchService);
@@ -82,7 +82,7 @@ public class BranchServiceService {
         if (request.getCustomPrice() != null) {
             branchService.setCustomPrice(request.getCustomPrice());
         }
-        branchService.setActive(request.isActive());
+        branchService.setActive(request.getActive());
 
         BranchService saved = branchServiceRepository.save(branchService);
         return mapToResponse(saved);

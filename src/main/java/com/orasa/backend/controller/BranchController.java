@@ -45,9 +45,7 @@ public class BranchController extends BaseController {
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid @RequestBody CreateBranchRequest request
     ) {
-        if (authenticatedUser.businessId() == null) {
-            throw new BusinessException("Business must be created first");
-        }
+        validateBusinessExists(authenticatedUser);
 
         BranchResponse branch = branchService.createBranch(
                 authenticatedUser.userId(),
@@ -64,9 +62,7 @@ public class BranchController extends BaseController {
     public ResponseEntity<ApiResponse<List<BranchResponse>>> getMyBranches(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
-        if (authenticatedUser.businessId() == null) {
-            throw new BusinessException("No business found");
-        }
+        validateBusinessExists(authenticatedUser);
 
         List<BranchResponse> branches = branchService.getBranchesByBusiness(authenticatedUser.businessId());
         return ResponseEntity.ok(ApiResponse.success(branches));

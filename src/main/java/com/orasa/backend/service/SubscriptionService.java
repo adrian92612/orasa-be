@@ -56,6 +56,9 @@ public class SubscriptionService {
     }
 
     public void validateActiveSubscription(Business business) {
+
+        if (!business.isOnboardingCompleted()) return;
+
         if (!isSubscriptionActive(business)) {
             String status = business.getSubscriptionStatus().name();
             String message = switch (business.getSubscriptionStatus()) {

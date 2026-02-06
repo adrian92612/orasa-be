@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/analytics")
 @RequiredArgsConstructor
-public class AnalyticsController {
+public class AnalyticsController extends BaseController {
 
     private final AnalyticsService analyticsService;
     private final BusinessService businessService;

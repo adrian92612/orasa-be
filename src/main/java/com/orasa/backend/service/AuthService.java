@@ -60,6 +60,7 @@ public class AuthService {
 
     AuthResponse response = AuthResponse.builder()
       .userId(user.getId())
+      .username(user.getUsername())
       .role(user.getRole())
       .businessId(user.getBusiness().getId())
       .branchIds(branchIds)
@@ -94,6 +95,7 @@ public class AuthService {
 
     return new LoginResult(token, AuthResponse.builder()
         .userId(user.getId())
+        .username(user.getUsername())
         .role(user.getRole())
         .businessId(businessId)
         .branchIds(branchIds)
