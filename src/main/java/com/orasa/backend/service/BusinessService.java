@@ -10,6 +10,7 @@ import com.orasa.backend.domain.Business;
 import com.orasa.backend.domain.User;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
+import com.orasa.backend.dto.business.UpdateBusinessRequest;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BranchRepository;
@@ -20,7 +21,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.orasa.backend.dto.activity.FieldChange;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,7 @@ public class BusinessService {
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
     private final SubscriptionService subscriptionService;
+    private final ActivityLogService activityLogService;
 
     /**
      * Creates a new business with its first branch atomically.
@@ -87,6 +91,28 @@ public class BusinessService {
         subscriptionService.checkAndRefreshCredits(business);
 
         return mapToResponse(business, null);
+    }
+
+    @Transactional
+    public BusinessResponse updateBusiness(UUID businessId, UpdateBusinessRequest request) {
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+        
+        String beforeName = business.getName();
+        
+        business.setName(request.name());
+        business.setSlug(generateSlug(request.name()));
+        
+        Business savedBusiness = businessRepository.save(business);
+        
+        User actor = getCurrentUser();
+        
+        if (!beforeName.equals(savedBusiness.getName())) {
+            List<FieldChange> changes = List.of(new FieldChange("Business Name", beforeName, savedBusiness.getName()));
+            activityLogService.logBusinessUpdated(actor, savedBusiness, FieldChange.toJson(changes));
+        }
+        
+        return mapToResponse(savedBusiness, null);
     }
 
     @Transactional
@@ -148,5 +174,14 @@ public class BusinessService {
                 .createdAt(business.getCreatedAt())
                 .firstBranchId(firstBranchId)
                 .build();
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+             throw new BusinessException("User not authenticated");
+        }
+        return userRepository.findByUsername(authentication.getName())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

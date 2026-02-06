@@ -16,7 +16,11 @@ import com.orasa.backend.domain.User;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.repository.UserRepository;
+import com.orasa.backend.exception.BusinessException;
+import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.security.JwtService;
+import com.orasa.backend.dto.profile.ChangePasswordRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,6 +32,8 @@ public class AuthService {
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
   private final GoogleOAuthService googleOAuthService;
+  private final PasswordEncoder passwordEncoder;
+  private final ActivityLogService activityLogService;
 
   public record LoginResult(String token, AuthResponse response) {}
   
@@ -67,11 +73,9 @@ public class AuthService {
     
     String email = payload.getEmail();
 
-    // Find existing user OR create new Owner
     User user = userRepository.findByEmail(email)
         .orElseGet(() -> createNewOwner(email));
 
-    // Verify role is Owner (in case Staff tries to use Google login)
     if (user.getRole() != UserRole.OWNER) {
         throw new BadCredentialsException("Google login is only for business owners");
     }
@@ -94,6 +98,21 @@ public class AuthService {
         .businessId(businessId)
         .branchIds(branchIds)
         .build());
+  }
+
+  public void changePassword(UUID userId, ChangePasswordRequest request) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+    if (user.getPasswordHash() != null && !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+        throw new BusinessException("Current password is incorrect");
+    }
+
+    user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+    user.setMustChangePassword(false); 
+    userRepository.save(user);
+    
+    activityLogService.logPasswordChanged(user, user.getBusiness());
   }
 
   private User createNewOwner(String email) {

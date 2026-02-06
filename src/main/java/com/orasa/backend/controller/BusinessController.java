@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.orasa.backend.domain.User;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
+import com.orasa.backend.dto.business.UpdateBusinessRequest;
 import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.UserRepository;
@@ -29,6 +30,7 @@ import com.orasa.backend.service.BusinessService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequestMapping("/businesses")
@@ -79,6 +81,20 @@ public class BusinessController {
         }
 
         BusinessResponse business = businessService.getBusinessById(authenticatedUser.businessId());
+        return ResponseEntity.ok(ApiResponse.success(business));
+    }
+
+    @PutMapping("/me")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<BusinessResponse>> updateMyBusiness(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @Valid @RequestBody UpdateBusinessRequest request
+    ) {
+        if (authenticatedUser.businessId() == null) {
+            throw new ResourceNotFoundException("No business found for user");
+        }
+
+        BusinessResponse business = businessService.updateBusiness(authenticatedUser.businessId(), request);
         return ResponseEntity.ok(ApiResponse.success(business));
     }
 

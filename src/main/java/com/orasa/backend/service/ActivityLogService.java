@@ -162,6 +162,16 @@ public class ActivityLogService {
         String description = String.format("Deactivated staff account: %s", staffName);
         logAction(actor, business, null, ActivityAction.STAFF_DEACTIVATED, description);
     }
+
+    public void logProfileUpdated(User actor, Business business, String details) {
+        String description = "Updated profile details";
+        logAction(actor, business, null, ActivityAction.PROFILE_UPDATED, description, details);
+    }
+
+    public void logPasswordChanged(User actor, Business business) {
+        String description = "Changed password";
+        logAction(actor, business, null, ActivityAction.PASSWORD_CHANGED, description);
+    }
     
     // ==================== BRANCH LOGGING ====================
     
@@ -197,6 +207,11 @@ public class ActivityLogService {
     public void logReminderConfigUpdated(User actor, Business business, String changes) {
         String description = String.format("Updated reminder configuration. Changes: %s", changes);
         logAction(actor, business, null, ActivityAction.REMINDER_CONFIG_UPDATED, description);
+    }
+
+    public void logBusinessUpdated(User actor, Business business, String details) {
+        String description = "Updated business settings";
+        logAction(actor, business, null, ActivityAction.BUSINESS_UPDATED, description, details);
     }
     
     // ==================== AUTH LOGGING ====================
