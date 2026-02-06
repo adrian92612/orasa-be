@@ -45,7 +45,7 @@ public class AuthService {
             )
         );
 
-    User user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    User user = userRepository.findByUsernameWithRelations(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
     List<UUID> branchIds = user.getBranches() != null 
     ? user.getBranches().stream().map(Branch::getId).toList()
@@ -74,7 +74,7 @@ public class AuthService {
     
     String email = payload.getEmail();
 
-    User user = userRepository.findByEmail(email)
+    User user = userRepository.findByEmailWithRelations(email)
         .orElseGet(() -> createNewOwner(email));
 
     if (user.getRole() != UserRole.OWNER) {
