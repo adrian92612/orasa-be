@@ -115,13 +115,11 @@ public class BusinessController extends BaseController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
 
         String newToken = jwtService.generateToken(
                 user.getId(),
                 user.getUsername(),
-                user.getRole().name(),
-                businessId
+                user.getRole().name()
         );
 
         ResponseCookie cookie = ResponseCookie.from("token", newToken)
