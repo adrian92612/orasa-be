@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.orasa.backend.common.UserRole;
-import com.orasa.backend.domain.Branch;
 import com.orasa.backend.domain.User;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
@@ -47,15 +46,10 @@ public class AuthService {
 
     User user = userRepository.findByUsernameWithRelations(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-    List<UUID> branchIds = user.getBranches() != null 
-    ? user.getBranches().stream().map(Branch::getId).toList()
-    : List.of();
-
     String token = jwtService.generateToken(
       user.getId(),
       user.getUsername(),
-      user.getRole().name(),
-      user.getBusiness().getId()
+      user.getRole().name()
     );
 
     List<AuthResponse.BranchInfo> branchInfos = user.getBranches() != null
@@ -73,7 +67,6 @@ public class AuthService {
       .role(user.getRole())
       .businessId(user.getBusiness().getId())
       .businessName(user.getBusiness().getName())
-      .branchIds(branchIds)
       .branches(branchInfos)
       .build();
 
@@ -93,15 +86,11 @@ public class AuthService {
     }
 
     UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
-    List<UUID> branchIds = user.getBusiness() != null && user.getBranches() != null
-        ? user.getBranches().stream().map(Branch::getId).toList()
-        : List.of();
 
     String token = jwtService.generateToken(
         user.getId(),
         user.getUsername(),
-        user.getRole().name(),
-        businessId
+        user.getRole().name()
     );
 
     List<AuthResponse.BranchInfo> branchInfos = user.getBusiness() != null && user.getBranches() != null
@@ -119,7 +108,6 @@ public class AuthService {
         .role(user.getRole())
         .businessId(businessId)
         .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
-        .branchIds(branchIds)
         .branches(branchInfos)
         .build());
   }

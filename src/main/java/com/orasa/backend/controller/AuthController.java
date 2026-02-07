@@ -14,10 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
-
-import com.orasa.backend.domain.Branch;
 import com.orasa.backend.domain.User;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
@@ -78,10 +75,6 @@ public class AuthController extends BaseController {
     User currentUser = userRepository.findByIdWithRelations(user.userId())
         .orElseThrow(() -> new com.orasa.backend.exception.ResourceNotFoundException("User not found"));
 
-    List<UUID> branchIds = currentUser.getBranches().stream()
-        .map(Branch::getId)
-        .toList();
-
     List<AuthResponse.BranchInfo> branchInfos = currentUser.getBranches().stream()
         .map(b -> AuthResponse.BranchInfo.builder()
             .id(b.getId())
@@ -95,7 +88,6 @@ public class AuthController extends BaseController {
       .businessId(currentUser.getBusiness() != null ? currentUser.getBusiness().getId() : null)
       .businessName(currentUser.getBusiness() != null ? currentUser.getBusiness().getName() : null)
       .role(currentUser.getRole())
-      .branchIds(branchIds)
       .branches(branchInfos)
       .build();
     return ResponseEntity.ok(ApiResponse.success(userData));

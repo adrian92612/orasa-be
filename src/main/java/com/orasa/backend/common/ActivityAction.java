@@ -29,6 +29,7 @@ public enum ActivityAction {
     // Business settings
     REMINDER_CONFIG_UPDATED,
     BUSINESS_UPDATED,
+    BUSINESS_CREATED,
     
     // Authentication
     USER_LOGIN,

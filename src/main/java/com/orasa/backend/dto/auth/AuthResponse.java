@@ -17,7 +17,6 @@ public class AuthResponse {
   private UserRole role;
   private UUID businessId;
   private String businessName;
-  private List<UUID> branchIds;
   private List<BranchInfo> branches;
 
   @Data

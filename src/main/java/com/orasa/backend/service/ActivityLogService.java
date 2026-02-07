@@ -213,6 +213,11 @@ public class ActivityLogService {
         String description = "Updated business settings";
         logAction(actor, business, null, ActivityAction.BUSINESS_UPDATED, description, details);
     }
+
+    public void logBusinessCreated(User actor, Business business) {
+        String description = String.format("Created business: %s", business.getName());
+        logAction(actor, business, null, ActivityAction.BUSINESS_CREATED, description);
+    }
     
     // ==================== AUTH LOGGING ====================
     

@@ -18,12 +18,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import com.orasa.backend.repository.UserRepository;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @SuppressWarnings("deprecation")
     @Override
@@ -38,21 +40,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (jwt != null && jwtService.isTokenValid(jwt)) {
             String userId = jwtService.extractUserId(jwt);
             String role = jwtService.extractRole(jwt);
-            String businessId = jwtService.extractBusinessId(jwt);
+            
+            // Fetch fresh user data from DB to ensure businessId is accurate
+            // This also handles cases where user might have been deleted/disabled
+            userRepository.findById(UUID.fromString(userId)).ifPresent(user -> {
+                AuthenticatedUser principal = new AuthenticatedUser(
+                    user.getId(),
+                    user.getBusiness() != null ? user.getBusiness().getId() : null,
+                    role
+                );
 
-            AuthenticatedUser principal = new AuthenticatedUser(
-                UUID.fromString(userId),
-                businessId != null ? UUID.fromString(businessId) : null,
-                role
-            );
-
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                principal,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
-            );
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    principal,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            });
         }
 
         filterChain.doFilter(request, response);

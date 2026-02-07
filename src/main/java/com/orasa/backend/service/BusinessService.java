@@ -75,10 +75,15 @@ public class BusinessService {
 
         Branch savedBranch = branchRepository.save(branch);
 
+
+
         // Link business to owner
         owner.setBusiness(savedBusiness);
         owner.getBranches().add(savedBranch);
         userRepository.save(owner);
+
+        activityLogService.logBusinessCreated(owner, savedBusiness);
+        activityLogService.logBranchCreated(owner,savedBusiness, savedBranch);
 
         return mapToResponse(savedBusiness, savedBranch.getId());
     }

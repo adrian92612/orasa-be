@@ -54,7 +54,6 @@ public class UserService {
                 .userId(savedUser.getId())
                 .role(savedUser.getRole())
                 .businessId(savedUser.getBusiness() != null ? savedUser.getBusiness().getId() : null)
-                .branchIds(savedUser.getBranches().stream().map(b -> b.getId()).toList())
                 .build();
     }
 
