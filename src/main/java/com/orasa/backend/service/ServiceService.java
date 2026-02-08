@@ -8,9 +8,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.orasa.backend.domain.Business;
-import com.orasa.backend.domain.ServiceOffering;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.BusinessEntity;
+import com.orasa.backend.domain.ServiceEntity;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.service.CreateServiceRequest;
 import com.orasa.backend.dto.service.ServiceResponse;
@@ -35,13 +35,13 @@ public class ServiceService {
 
     @Transactional
     public ServiceResponse createService(UUID actorUserId, UUID businessId, CreateServiceRequest request) {
-        User actor = userRepository.findById(actorUserId)
+        UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-        ServiceOffering serviceOffering = ServiceOffering.builder()
+        ServiceEntity serviceOffering = ServiceEntity.builder()
                 .businessId(businessId)
                 .name(request.getName())
                 .description(request.getDescription())
@@ -50,7 +50,7 @@ public class ServiceService {
                 .isAvailableGlobally(request.getAvailableGlobally())
                 .build();
 
-        ServiceOffering saved = serviceRepository.save(serviceOffering);
+        ServiceEntity saved = serviceRepository.save(serviceOffering);
         
         // Log service creation
         activityLogService.logServiceCreated(actor, business, saved.getName());
@@ -60,13 +60,13 @@ public class ServiceService {
 
     @Transactional
     public ServiceResponse updateService(UUID actorUserId, UUID serviceId, UUID businessId, UpdateServiceRequest request) {
-        User actor = userRepository.findById(actorUserId)
+        UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-        ServiceOffering serviceOffering = serviceRepository.findById(serviceId)
+        ServiceEntity serviceOffering = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         if (!serviceOffering.getBusinessId().equals(businessId)) {
@@ -144,7 +144,7 @@ public class ServiceService {
     }
 
     public ServiceResponse getServiceById(UUID serviceId) {
-        ServiceOffering serviceOffering = serviceRepository.findById(serviceId)
+        ServiceEntity serviceOffering = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         return mapToResponse(serviceOffering);
@@ -152,13 +152,13 @@ public class ServiceService {
 
     @Transactional
     public void deleteService(UUID actorUserId, UUID serviceId, UUID businessId) {
-        User actor = userRepository.findById(actorUserId)
+        UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-        ServiceOffering serviceOffering = serviceRepository.findById(serviceId)
+        ServiceEntity serviceOffering = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         if (!serviceOffering.getBusinessId().equals(businessId)) {
@@ -171,7 +171,7 @@ public class ServiceService {
         serviceRepository.delete(serviceOffering);
     }
 
-    private ServiceResponse mapToResponse(ServiceOffering serviceOffering) {
+    private ServiceResponse mapToResponse(ServiceEntity serviceOffering) {
         return ServiceResponse.builder()
                 .id(serviceOffering.getId())
                 .businessId(serviceOffering.getBusinessId())

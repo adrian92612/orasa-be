@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.orasa.backend.domain.BranchService;
+import com.orasa.backend.domain.BranchServiceEntity;
 import com.orasa.backend.dto.service.AssignServiceToBranchRequest;
 import com.orasa.backend.dto.service.BranchServiceResponse;
 import com.orasa.backend.exception.BusinessException;
@@ -50,14 +50,14 @@ public class BranchServiceService {
             throw new BusinessException("Service is already assigned to this branch");
         }
 
-        BranchService branchService = BranchService.builder()
+        BranchServiceEntity branchService = BranchServiceEntity.builder()
                 .branchId(branchId)
                 .service(service)
                 .customPrice(request.getCustomPrice())
                 .isActive(request.getActive())
                 .build();
 
-        BranchService saved = branchServiceRepository.save(branchService);
+        BranchServiceEntity saved = branchServiceRepository.save(branchService);
         return mapToResponse(saved);
     }
 
@@ -69,7 +69,7 @@ public class BranchServiceService {
 
     @Transactional
     public BranchServiceResponse updateBranchService(UUID branchServiceId, UUID businessId, AssignServiceToBranchRequest request) {
-        BranchService branchService = branchServiceRepository.findById(branchServiceId)
+        BranchServiceEntity branchService = branchServiceRepository.findById(branchServiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch service assignment not found"));
 
         var branch = branchRepository.findById(branchService.getBranchId())
@@ -84,13 +84,13 @@ public class BranchServiceService {
         }
         branchService.setActive(request.getActive());
 
-        BranchService saved = branchServiceRepository.save(branchService);
+        BranchServiceEntity saved = branchServiceRepository.save(branchService);
         return mapToResponse(saved);
     }
 
     @Transactional
     public void removeServiceFromBranch(UUID branchServiceId, UUID businessId) {
-        BranchService branchService = branchServiceRepository.findById(branchServiceId)
+        BranchServiceEntity branchService = branchServiceRepository.findById(branchServiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch service assignment not found"));
 
         var branch = branchRepository.findById(branchService.getBranchId())
@@ -103,7 +103,7 @@ public class BranchServiceService {
         branchServiceRepository.delete(branchService);
     }
 
-    private BranchServiceResponse mapToResponse(BranchService branchService) {
+    private BranchServiceResponse mapToResponse(BranchServiceEntity branchService) {
         var service = branchService.getService();
         return BranchServiceResponse.builder()
                 .id(branchService.getId())

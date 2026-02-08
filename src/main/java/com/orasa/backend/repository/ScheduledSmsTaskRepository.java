@@ -7,12 +7,12 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.orasa.backend.common.SmsTaskStatus;
-import com.orasa.backend.domain.ScheduledSmsTask;
+import com.orasa.backend.domain.ScheduledSmsTaskEntity;
 
-public interface ScheduledSmsTaskRepository extends JpaRepository<ScheduledSmsTask, UUID> {
-  List<ScheduledSmsTask> findByStatusAndScheduledAtBefore(SmsTaskStatus status, OffsetDateTime time);
+public interface ScheduledSmsTaskRepository extends JpaRepository<ScheduledSmsTaskEntity, UUID> {
+  List<ScheduledSmsTaskEntity> findByStatusAndScheduledAtBefore(SmsTaskStatus status, OffsetDateTime time);
 
-  List<ScheduledSmsTask> findByAppointmentId(UUID appointmentId);
+  List<ScheduledSmsTaskEntity> findByAppointmentId(UUID appointmentId);
 
   void deleteByAppointmentId(UUID appointmentId);
 }

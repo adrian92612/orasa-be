@@ -20,6 +20,7 @@ public enum ActivityAction {
     // Branch actions
     BRANCH_CREATED,
     BRANCH_UPDATED,
+    BRANCH_DELETED,
     
     // Service actions
     SERVICE_CREATED,

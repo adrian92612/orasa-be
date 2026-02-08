@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.orasa.backend.domain.BusinessReminderConfig;
+import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.dto.sms.CreateReminderConfigRequest;
 import com.orasa.backend.dto.sms.ReminderConfigResponse;
 import com.orasa.backend.dto.sms.UpdateReminderConfigRequest;
@@ -25,7 +25,7 @@ public class ReminderConfigService {
 
     @Transactional
     public ReminderConfigResponse createConfig(UUID businessId, CreateReminderConfigRequest request) {
-        List<BusinessReminderConfig> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
+        List<BusinessReminderConfigEntity> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
         boolean duplicateLeadTime = existingConfigs.stream()
                 .anyMatch(c -> c.getLeadTimeHours().equals(request.getLeadTimeHours()));
 
@@ -33,23 +33,23 @@ public class ReminderConfigService {
             throw new BusinessException("Reminder with " + request.getLeadTimeHours() + " hours lead time already exists");
         }
 
-        BusinessReminderConfig config = BusinessReminderConfig.builder()
+        BusinessReminderConfigEntity config = BusinessReminderConfigEntity.builder()
                 .businessId(businessId)
                 .leadTimeHours(request.getLeadTimeHours())
                 .messageTemplate(request.getMessageTemplate())
                 .isEnabled(request.getEnabled())
                 .build();
 
-        BusinessReminderConfig saved = reminderConfigRepository.save(config);
+        BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
         return mapToResponse(saved);
     }
 
     @Transactional
     public ReminderConfigResponse updateConfig(UUID configId, UUID businessId, UpdateReminderConfigRequest request) {
-        BusinessReminderConfig config = getConfigById(configId, businessId);
+        BusinessReminderConfigEntity config = getConfigById(configId, businessId);
 
         if (request.getLeadTimeHours() != null) {
-            List<BusinessReminderConfig> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
+            List<BusinessReminderConfigEntity> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
             boolean duplicateLeadTime = existingConfigs.stream()
                     .filter(c -> !c.getId().equals(configId))
                     .anyMatch(c -> c.getLeadTimeHours().equals(request.getLeadTimeHours()));
@@ -68,7 +68,7 @@ public class ReminderConfigService {
             config.setEnabled(request.getEnabled());
         }
 
-        BusinessReminderConfig saved = reminderConfigRepository.save(config);
+        BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
         return mapToResponse(saved);
     }
 
@@ -78,20 +78,20 @@ public class ReminderConfigService {
                 .toList();
     }
 
-    public List<BusinessReminderConfig> getEnabledConfigs(UUID businessId) {
+    public List<BusinessReminderConfigEntity> getEnabledConfigs(UUID businessId) {
         return reminderConfigRepository.findByBusinessId(businessId).stream()
-                .filter(BusinessReminderConfig::isEnabled)
+                .filter(BusinessReminderConfigEntity::isEnabled)
                 .toList();
     }
 
     @Transactional
     public void deleteConfig(UUID configId, UUID businessId) {
-        BusinessReminderConfig config = getConfigById(configId, businessId);
+        BusinessReminderConfigEntity config = getConfigById(configId, businessId);
         reminderConfigRepository.delete(config);
     }
 
-    private BusinessReminderConfig getConfigById(UUID configId, UUID businessId) {
-        BusinessReminderConfig config = reminderConfigRepository.findById(configId)
+    private BusinessReminderConfigEntity getConfigById(UUID configId, UUID businessId) {
+        BusinessReminderConfigEntity config = reminderConfigRepository.findById(configId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reminder config not found"));
 
         if (!config.getBusinessId().equals(businessId)) {
@@ -101,7 +101,7 @@ public class ReminderConfigService {
         return config;
     }
 
-    private ReminderConfigResponse mapToResponse(BusinessReminderConfig config) {
+    private ReminderConfigResponse mapToResponse(BusinessReminderConfigEntity config) {
         return ReminderConfigResponse.builder()
                 .id(config.getId())
                 .businessId(config.getBusinessId())

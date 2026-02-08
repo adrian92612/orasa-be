@@ -17,7 +17,7 @@ import java.time.OffsetDateTime;
 @Builder
 @SQLDelete(sql = "UPDATE businesses SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class Business extends BaseEntity {
+public class BusinessEntity extends BaseEntity {
 
     @Column(nullable = false)
     private String name;

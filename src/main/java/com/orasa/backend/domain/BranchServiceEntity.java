@@ -18,14 +18,14 @@ import java.util.UUID;
 @Builder
 @SQLDelete(sql = "UPDATE branch_services SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class BranchService extends BaseEntity{
+public class BranchServiceEntity extends BaseEntity{
 
     @Column(name = "branch_id", nullable = false)
     private UUID branchId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", nullable = false)
-    private ServiceOffering service;
+    private ServiceEntity service;
 
     @Column(name = "custom_price")
     private BigDecimal customPrice;

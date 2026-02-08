@@ -3,6 +3,9 @@ package com.orasa.backend.domain;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -15,12 +18,12 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @SQLDelete(sql = "UPDATE branches SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class Branch extends BaseEntity {
+public class BranchEntity extends BaseEntity {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
-    private Business business;
+    private BusinessEntity business;
 
     @NotBlank
     @Column(nullable = false)
@@ -30,4 +33,8 @@ public class Branch extends BaseEntity {
 
     @Column(name = "phone_number")
     private String phoneNumber;
+
+    @ManyToMany(mappedBy = "branches")
+    @Builder.Default
+    private Set<UserEntity> staff = new HashSet<>();
 }

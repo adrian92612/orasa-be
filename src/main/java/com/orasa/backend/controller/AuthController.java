@@ -13,9 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.dto.common.ApiResponse;
@@ -72,15 +70,8 @@ public class AuthController extends BaseController {
   public ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser(
     @AuthenticationPrincipal AuthenticatedUser user
   ) {
-    User currentUser = userRepository.findByIdWithRelations(user.userId())
+    UserEntity currentUser = userRepository.findByIdWithRelations(user.userId())
         .orElseThrow(() -> new com.orasa.backend.exception.ResourceNotFoundException("User not found"));
-
-    List<AuthResponse.BranchInfo> branchInfos = currentUser.getBranches().stream()
-        .map(b -> AuthResponse.BranchInfo.builder()
-            .id(b.getId())
-            .name(b.getName())
-            .build())
-        .toList();
 
     AuthResponse userData = AuthResponse.builder()
       .userId(currentUser.getId())
@@ -88,7 +79,6 @@ public class AuthController extends BaseController {
       .businessId(currentUser.getBusiness() != null ? currentUser.getBusiness().getId() : null)
       .businessName(currentUser.getBusiness() != null ? currentUser.getBusiness().getName() : null)
       .role(currentUser.getRole())
-      .branches(branchInfos)
       .build();
     return ResponseEntity.ok(ApiResponse.success(userData));
   }

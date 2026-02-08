@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
 import com.orasa.backend.dto.business.UpdateBusinessRequest;
@@ -112,7 +112,7 @@ public class BusinessController extends BaseController {
      * Called after business creation to include the new businessId.
      */
     private void refreshJwtCookie(UUID userId, HttpServletResponse response) {
-        User user = userRepository.findById(userId)
+        UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
 

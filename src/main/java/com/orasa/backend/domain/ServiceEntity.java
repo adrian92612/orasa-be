@@ -19,7 +19,7 @@ import java.util.UUID;
 @Builder
 @SQLDelete(sql = "UPDATE services SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class ServiceOffering extends BaseEntity {
+public class ServiceEntity extends BaseEntity {
 
     @Column(name = "business_id", nullable = false)
     private UUID businessId;
@@ -35,7 +35,7 @@ public class ServiceOffering extends BaseEntity {
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 
-    @Column(name = "is_available_globally")
+    @Column(name = "is_available_globally", nullable = false)
     @Builder.Default
     private boolean isAvailableGlobally = true;
 }

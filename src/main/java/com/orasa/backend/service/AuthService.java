@@ -1,6 +1,5 @@
 package com.orasa.backend.service;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.orasa.backend.common.UserRole;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.repository.UserRepository;
@@ -44,7 +43,7 @@ public class AuthService {
             )
         );
 
-    User user = userRepository.findByUsernameWithRelations(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    UserEntity user = userRepository.findByUsernameWithRelations(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
     String token = jwtService.generateToken(
       user.getId(),
@@ -52,22 +51,12 @@ public class AuthService {
       user.getRole().name()
     );
 
-    List<AuthResponse.BranchInfo> branchInfos = user.getBranches() != null
-      ? user.getBranches().stream()
-          .map(b -> AuthResponse.BranchInfo.builder()
-              .id(b.getId())
-              .name(b.getName())
-              .build())
-          .toList()
-      : List.of();
-
     AuthResponse response = AuthResponse.builder()
       .userId(user.getId())
       .username(user.getUsername())
       .role(user.getRole())
       .businessId(user.getBusiness().getId())
       .businessName(user.getBusiness().getName())
-      .branches(branchInfos)
       .build();
 
     return new LoginResult(token, response);
@@ -78,7 +67,7 @@ public class AuthService {
     
     String email = payload.getEmail();
 
-    User user = userRepository.findByEmailWithRelations(email)
+    UserEntity user = userRepository.findByEmailWithRelations(email)
         .orElseGet(() -> createNewOwner(email));
 
     if (user.getRole() != UserRole.OWNER) {
@@ -93,27 +82,17 @@ public class AuthService {
         user.getRole().name()
     );
 
-    List<AuthResponse.BranchInfo> branchInfos = user.getBusiness() != null && user.getBranches() != null
-        ? user.getBranches().stream()
-            .map(b -> AuthResponse.BranchInfo.builder()
-                .id(b.getId())
-                .name(b.getName())
-                .build())
-            .toList()
-        : List.of();
-
     return new LoginResult(token, AuthResponse.builder()
         .userId(user.getId())
         .username(user.getUsername())
         .role(user.getRole())
         .businessId(businessId)
         .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
-        .branches(branchInfos)
         .build());
   }
 
   public void changePassword(UUID userId, ChangePasswordRequest request) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
     if (user.getPasswordHash() != null && !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
@@ -127,8 +106,8 @@ public class AuthService {
     activityLogService.logPasswordChanged(user, user.getBusiness());
   }
 
-  private User createNewOwner(String email) {
-    User owner = User.builder()
+  private UserEntity createNewOwner(String email) {
+    UserEntity owner = UserEntity.builder()
         .email(email)
         .username(email)
         .role(UserRole.OWNER)

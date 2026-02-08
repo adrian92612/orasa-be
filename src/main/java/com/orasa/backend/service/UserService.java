@@ -1,7 +1,7 @@
 package com.orasa.backend.service;
 
 import com.orasa.backend.common.UserRole;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.profile.UpdateProfileRequest;
 import com.orasa.backend.exception.BusinessException;
@@ -26,7 +26,7 @@ public class UserService {
 
     @Transactional
     public AuthResponse updateProfile(UUID userId, UpdateProfileRequest request) {
-        User user = userRepository.findById(userId)
+        UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String beforeUsername = user.getUsername();
@@ -35,7 +35,7 @@ public class UserService {
         updateUsername(user, request.username());
         updateEmail(user, request.email());
 
-        User savedUser = userRepository.save(user);
+        UserEntity savedUser = userRepository.save(user);
 
         // Build details
         List<FieldChange> changes = new ArrayList<>();
@@ -57,7 +57,7 @@ public class UserService {
                 .build();
     }
 
-    private void updateUsername(User user, String username) {
+    private void updateUsername(UserEntity user, String username) {
         if (username == null || username.isBlank()) return;
         if (username.equals(user.getUsername())) return;
 
@@ -68,7 +68,7 @@ public class UserService {
         user.setUsername(username);
     }
 
-    private void updateEmail(User user, String email) {
+    private void updateEmail(UserEntity user, String email) {
         if (email == null || email.isBlank()) return;
         if (user.getRole() != UserRole.OWNER) return;
         if (email.equals(user.getEmail())) return;

@@ -37,7 +37,6 @@ public class SubscriptionEnforcementAspect {
                 log.debug("Checking subscription for business {}", businessId);
                 subscriptionService.validateActiveSubscription(businessId);
             }
-            // If businessId is null (new owner), let them proceed (they're in onboarding)
         }
         
         return joinPoint.proceed();

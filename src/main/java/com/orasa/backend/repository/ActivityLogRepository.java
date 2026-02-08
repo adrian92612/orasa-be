@@ -9,18 +9,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.orasa.backend.domain.ActivityLog;
+import com.orasa.backend.domain.ActivityLogEntity;
 
-public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> {
+public interface ActivityLogRepository extends JpaRepository<ActivityLogEntity, UUID> {
     
-    Page<ActivityLog> findByBusinessIdOrderByCreatedAtDesc(UUID businessId, Pageable pageable);
+    Page<ActivityLogEntity> findByBusinessIdOrderByCreatedAtDesc(UUID businessId, Pageable pageable);
     
-    Page<ActivityLog> findByBranchIdOrderByCreatedAtDesc(UUID branchId, Pageable pageable);
+    Page<ActivityLogEntity> findByBranchIdOrderByCreatedAtDesc(UUID branchId, Pageable pageable);
     
-    Page<ActivityLog> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+    Page<ActivityLogEntity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
     
     @Query("""
-        SELECT a FROM ActivityLog a
+        SELECT a FROM ActivityLogEntity a
         WHERE a.business.id = :businessId
         AND (:branchId IS NULL OR a.branch.id = :branchId)
         AND (:action IS NULL OR a.action = :action)
@@ -28,7 +28,7 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> 
         AND (:endDate IS NULL OR a.createdAt <= :endDate)
         ORDER BY a.createdAt DESC
         """)
-    Page<ActivityLog> searchActivityLogs(
+    Page<ActivityLogEntity> searchActivityLogs(
         @Param("businessId") UUID businessId,
         @Param("branchId") UUID branchId,
         @Param("action") String action,

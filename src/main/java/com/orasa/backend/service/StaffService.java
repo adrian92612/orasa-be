@@ -12,9 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.common.UserRole;
-import com.orasa.backend.domain.Branch;
-import com.orasa.backend.domain.Business;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.BranchEntity;
+import com.orasa.backend.domain.BusinessEntity;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.staff.ChangePasswordRequest;
 import com.orasa.backend.dto.staff.CreateStaffRequest;
@@ -41,10 +41,10 @@ public class StaffService {
 
     @Transactional
     public StaffResponse createStaff(UUID actorUserId, UUID businessId, CreateStaffRequest request) {
-        User actor = userRepository.findById(actorUserId)
+        UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -55,9 +55,9 @@ public class StaffService {
             throw new BusinessException("Email already exists");
         }
 
-        Set<Branch> branches = new HashSet<>();
+        Set<BranchEntity> branches = new HashSet<>();
         for (UUID branchId : request.getBranchIds()) {
-            Branch branch = branchRepository.findById(branchId)
+            BranchEntity branch = branchRepository.findById(branchId)
                     .orElseThrow(() -> new ResourceNotFoundException("Branch not found: " + branchId));
 
             if (!branch.getBusiness().getId().equals(businessId)) {
@@ -66,7 +66,7 @@ public class StaffService {
             branches.add(branch);
         }
 
-        User staff = User.builder()
+        UserEntity staff = UserEntity.builder()
                 .business(business)
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -76,7 +76,7 @@ public class StaffService {
                 .branches(branches)
                 .build();
 
-        User saved = userRepository.save(staff);
+        UserEntity saved = userRepository.save(staff);
         
         // Log staff creation
         activityLogService.logStaffCreated(actor, business, saved.getUsername());
@@ -86,16 +86,16 @@ public class StaffService {
 
     @Transactional
     public StaffResponse updateStaff(UUID actorUserId, UUID staffId, UUID businessId, UpdateStaffRequest request) {
-        User actor = userRepository.findById(actorUserId)
+        UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        User staff = getStaffById(staffId, businessId);
+        UserEntity staff = getStaffById(staffId, businessId);
         
         // Track changes
         List<FieldChange> changes = new ArrayList<>();
         String beforeEmail = staff.getEmail();
         Set<String> beforeBranches = staff.getBranches().stream()
-                .map(Branch::getName)
+                .map(BranchEntity::getName)
                 .collect(Collectors.toSet());
 
         if (request.getEmail() != null) {
@@ -123,9 +123,9 @@ public class StaffService {
         }
 
         if (request.getBranchIds() != null) {
-            Set<Branch> branches = new HashSet<>();
+            Set<BranchEntity> branches = new HashSet<>();
             for (UUID branchId : request.getBranchIds()) {
-                Branch branch = branchRepository.findById(branchId)
+                BranchEntity branch = branchRepository.findById(branchId)
                         .orElseThrow(() -> new ResourceNotFoundException("Branch not found: " + branchId));
 
                 if (!branch.getBusiness().getId().equals(businessId)) {
@@ -135,7 +135,7 @@ public class StaffService {
             }
             
             Set<String> afterBranches = branches.stream()
-                    .map(Branch::getName)
+                    .map(BranchEntity::getName)
                     .collect(Collectors.toSet());
             
             if (!beforeBranches.equals(afterBranches)) {
@@ -148,7 +148,7 @@ public class StaffService {
             staff.setBranches(branches);
         }
 
-        User saved = userRepository.save(staff);
+        UserEntity saved = userRepository.save(staff);
         
         // Log staff update if there were changes
         if (!changes.isEmpty()) {
@@ -167,16 +167,16 @@ public class StaffService {
     }
 
     public StaffResponse getStaffMember(UUID staffId, UUID businessId) {
-        User staff = getStaffById(staffId, businessId);
+        UserEntity staff = getStaffById(staffId, businessId);
         return mapToResponse(staff);
     }
 
     @Transactional
     public void deleteStaff(UUID actorUserId, UUID staffId, UUID businessId) {
-        User actor = userRepository.findById(actorUserId)
+        UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        User staff = getStaffById(staffId, businessId);
+        UserEntity staff = getStaffById(staffId, businessId);
         
         // Log before deletion
         activityLogService.logStaffDeactivated(actor, staff.getBusiness(), staff.getUsername());
@@ -186,7 +186,7 @@ public class StaffService {
 
     @Transactional
     public void changePassword(UUID userId, ChangePasswordRequest request) {
-        User user = userRepository.findById(userId)
+        UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
@@ -203,8 +203,8 @@ public class StaffService {
         }
     }
 
-    private User getStaffById(UUID staffId, UUID businessId) {
-        User staff = userRepository.findById(staffId)
+    private UserEntity getStaffById(UUID staffId, UUID businessId) {
+        UserEntity staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff member not found"));
 
         if (staff.getRole() != UserRole.STAFF) {
@@ -218,7 +218,7 @@ public class StaffService {
         return staff;
     }
 
-    private StaffResponse mapToResponse(User staff) {
+    private StaffResponse mapToResponse(UserEntity staff) {
         List<StaffResponse.BranchInfo> branchInfos = staff.getBranches().stream()
                 .map(branch -> StaffResponse.BranchInfo.builder()
                         .id(branch.getId())

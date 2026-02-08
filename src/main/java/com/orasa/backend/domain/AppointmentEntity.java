@@ -18,11 +18,11 @@ import java.time.OffsetDateTime;
 @Builder
 @SQLDelete(sql = "UPDATE appointments SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class Appointment extends BaseEntity {
+public class AppointmentEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
-    private Business business;
+    private BusinessEntity business;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -31,7 +31,7 @@ public class Appointment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
+    private BranchEntity branch;
 
     @Column(name = "customer_name", nullable = false)
     private String customerName;

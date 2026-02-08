@@ -8,17 +8,15 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.common.ActivityAction;
-import com.orasa.backend.domain.ActivityLog;
-import com.orasa.backend.domain.Appointment;
-import com.orasa.backend.domain.Branch;
-import com.orasa.backend.domain.Business;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.ActivityLogEntity;
+import com.orasa.backend.domain.AppointmentEntity;
+import com.orasa.backend.domain.BranchEntity;
+import com.orasa.backend.domain.BusinessEntity;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.ActivityLogResponse;
 import com.orasa.backend.repository.ActivityLogRepository;
 
@@ -40,11 +38,10 @@ public class ActivityLogService {
     
     /**
      * General-purpose logging method for any action.
-     * Runs asynchronously in a separate transaction to avoid blocking the main flow.
+     * Runs synchronously in the same transaction to ensure consistency.
      */
-    @Async
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logAction(User user, Business business, Branch branch, 
+    @Transactional
+    public void logAction(UserEntity user, BusinessEntity business, BranchEntity branch, 
                           ActivityAction action, String description) {
         logAction(user, business, branch, action, description, null);
     }
@@ -52,12 +49,11 @@ public class ActivityLogService {
     /**
      * General-purpose logging method with details for expandable view.
      */
-    @Async
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logAction(User user, Business business, Branch branch, 
+    @Transactional
+    public void logAction(UserEntity user, BusinessEntity business, BranchEntity branch, 
                           ActivityAction action, String description, String details) {
         try {
-            ActivityLog activityLog = ActivityLog.builder()
+            ActivityLogEntity activityLog = ActivityLogEntity.builder()
                     .user(user)
                     .business(business)
                     .branch(branch)
@@ -75,14 +71,13 @@ public class ActivityLogService {
     }
     
     /**
-     * Synchronous version for when you need to ensure logging completes
-     * before returning (e.g., for critical audit trails)
+     * Synchronous version (now same as standard logAction)
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logActionSync(User user, Business business, Branch branch, 
+    @Transactional
+    public void logActionSync(UserEntity user, BusinessEntity business, BranchEntity branch, 
                               ActivityAction action, String description) {
         try {
-            ActivityLog activityLog = ActivityLog.builder()
+            ActivityLogEntity activityLog = ActivityLogEntity.builder()
                     .user(user)
                     .business(business)
                     .branch(branch)
@@ -99,7 +94,7 @@ public class ActivityLogService {
     
     // ==================== APPOINTMENT LOGGING ====================
     
-    public void logAppointmentCreated(User user, Appointment appointment) {
+    public void logAppointmentCreated(UserEntity user, AppointmentEntity appointment) {
         String description = String.format(
             "Created appointment for %s on %s",
             appointment.getCustomerName(),
@@ -109,7 +104,7 @@ public class ActivityLogService {
                   ActivityAction.APPOINTMENT_CREATED, description);
     }
     
-    public void logAppointmentUpdated(User user, Appointment appointment, String details) {
+    public void logAppointmentUpdated(UserEntity user, AppointmentEntity appointment, String details) {
         String description = String.format(
             "Updated appointment for %s",
             appointment.getCustomerName()
@@ -118,7 +113,7 @@ public class ActivityLogService {
                   ActivityAction.APPOINTMENT_UPDATED, description, details);
     }
     
-    public void logAppointmentDeleted(User user, Appointment appointment) {
+    public void logAppointmentDeleted(UserEntity user, AppointmentEntity appointment) {
         String description = String.format(
             "Deleted appointment for %s scheduled on %s",
             appointment.getCustomerName(),
@@ -128,7 +123,7 @@ public class ActivityLogService {
                   ActivityAction.APPOINTMENT_DELETED, description);
     }
     
-    public void logAppointmentStatusChanged(User user, Appointment appointment, 
+    public void logAppointmentStatusChanged(UserEntity user, AppointmentEntity appointment, 
                                             String oldStatus, String newStatus) {
         String description = String.format(
             "Changed status for %s: %s → %s",
@@ -143,90 +138,95 @@ public class ActivityLogService {
     
     // ==================== STAFF LOGGING ====================
     
-    public void logStaffCreated(User actor, Business business, String staffName) {
+    public void logStaffCreated(UserEntity actor, BusinessEntity business, String staffName) {
         String description = String.format("Created staff account: %s", staffName);
         logAction(actor, business, null, ActivityAction.STAFF_CREATED, description);
     }
     
-    public void logStaffUpdated(User actor, Business business, String staffName, String details) {
+    public void logStaffUpdated(UserEntity actor, BusinessEntity business, String staffName, String details) {
         String description = String.format("Updated staff: %s", staffName);
         logAction(actor, business, null, ActivityAction.STAFF_UPDATED, description, details);
     }
     
-    public void logStaffPasswordReset(User actor, Business business, String staffName) {
+    public void logStaffPasswordReset(UserEntity actor, BusinessEntity business, String staffName) {
         String description = String.format("Reset password for staff: %s", staffName);
         logAction(actor, business, null, ActivityAction.STAFF_PASSWORD_RESET, description);
     }
     
-    public void logStaffDeactivated(User actor, Business business, String staffName) {
+    public void logStaffDeactivated(UserEntity actor, BusinessEntity business, String staffName) {
         String description = String.format("Deactivated staff account: %s", staffName);
         logAction(actor, business, null, ActivityAction.STAFF_DEACTIVATED, description);
     }
 
-    public void logProfileUpdated(User actor, Business business, String details) {
+    public void logProfileUpdated(UserEntity actor, BusinessEntity business, String details) {
         String description = "Updated profile details";
         logAction(actor, business, null, ActivityAction.PROFILE_UPDATED, description, details);
     }
 
-    public void logPasswordChanged(User actor, Business business) {
+    public void logPasswordChanged(UserEntity actor, BusinessEntity business) {
         String description = "Changed password";
         logAction(actor, business, null, ActivityAction.PASSWORD_CHANGED, description);
     }
     
     // ==================== BRANCH LOGGING ====================
     
-    public void logBranchCreated(User actor, Business business, Branch branch) {
+    public void logBranchCreated(UserEntity actor, BusinessEntity business, BranchEntity branch) {
         String description = String.format("Created branch: %s", branch.getName());
         logAction(actor, business, branch, ActivityAction.BRANCH_CREATED, description);
     }
     
-    public void logBranchUpdated(User actor, Business business, Branch branch, String changes) {
-        String description = String.format("Updated branch %s. Changes: %s", branch.getName(), changes);
-        logAction(actor, business, branch, ActivityAction.BRANCH_UPDATED, description);
+    public void logBranchUpdated(UserEntity actor, BusinessEntity business, BranchEntity branch, String changes) {
+        String description = String.format("Updated branch %s", branch.getName());
+        logAction(actor, business, branch, ActivityAction.BRANCH_UPDATED, description, changes);
+    }
+    
+    public void logBranchDeleted(UserEntity actor, BusinessEntity business, String branchName) {
+        String description = String.format("Deleted branch: %s", branchName);
+        logAction(actor, business, null, ActivityAction.BRANCH_DELETED, description);
     }
     
     // ==================== SERVICE LOGGING ====================
     
-    public void logServiceCreated(User actor, Business business, String serviceName) {
+    public void logServiceCreated(UserEntity actor, BusinessEntity business, String serviceName) {
         String description = String.format("Created service: %s", serviceName);
         logAction(actor, business, null, ActivityAction.SERVICE_CREATED, description);
     }
     
-    public void logServiceUpdated(User actor, Business business, String serviceName, String details) {
+    public void logServiceUpdated(UserEntity actor, BusinessEntity business, String serviceName, String details) {
         String description = String.format("Updated service: %s", serviceName);
         logAction(actor, business, null, ActivityAction.SERVICE_UPDATED, description, details);
     }
     
-    public void logServiceDeleted(User actor, Business business, String serviceName) {
+    public void logServiceDeleted(UserEntity actor, BusinessEntity business, String serviceName) {
         String description = String.format("Deleted service: %s", serviceName);
         logAction(actor, business, null, ActivityAction.SERVICE_DELETED, description);
     }
     
     // ==================== SETTINGS LOGGING ====================
     
-    public void logReminderConfigUpdated(User actor, Business business, String changes) {
+    public void logReminderConfigUpdated(UserEntity actor, BusinessEntity business, String changes) {
         String description = String.format("Updated reminder configuration. Changes: %s", changes);
         logAction(actor, business, null, ActivityAction.REMINDER_CONFIG_UPDATED, description);
     }
 
-    public void logBusinessUpdated(User actor, Business business, String details) {
+    public void logBusinessUpdated(UserEntity actor, BusinessEntity business, String details) {
         String description = "Updated business settings";
         logAction(actor, business, null, ActivityAction.BUSINESS_UPDATED, description, details);
     }
 
-    public void logBusinessCreated(User actor, Business business) {
+    public void logBusinessCreated(UserEntity actor, BusinessEntity business) {
         String description = String.format("Created business: %s", business.getName());
         logAction(actor, business, null, ActivityAction.BUSINESS_CREATED, description);
     }
     
     // ==================== AUTH LOGGING ====================
     
-    public void logUserLogin(User user, Business business) {
+    public void logUserLogin(UserEntity user, BusinessEntity business) {
         String description = String.format("User logged in: %s", user.getDisplayName());
         logAction(user, business, null, ActivityAction.USER_LOGIN, description);
     }
     
-    public void logUserLogout(User user, Business business) {
+    public void logUserLogout(UserEntity user, BusinessEntity business) {
         String description = String.format("User logged out: %s", user.getDisplayName());
         logAction(user, business, null, ActivityAction.USER_LOGOUT, description);
     }
@@ -274,7 +274,7 @@ public class ActivityLogService {
     
     // ==================== HELPER METHODS ====================
     
-    private ActivityLogResponse mapToResponse(ActivityLog log) {
+    private ActivityLogResponse mapToResponse(ActivityLogEntity log) {
         return ActivityLogResponse.builder()
                 .id(log.getId())
                 .userId(log.getUser().getId())

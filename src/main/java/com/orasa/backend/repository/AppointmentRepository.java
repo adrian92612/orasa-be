@@ -11,16 +11,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.orasa.backend.domain.Appointment;
+import com.orasa.backend.domain.AppointmentEntity;
 
-public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
-  Page<Appointment> findByBranchId(UUID branchId, Pageable pageable);
-  Page<Appointment> findByBusinessId(UUID businessId, Pageable pageable);
-  Page<Appointment> findByBranchIdAndStartDateTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
+public interface AppointmentRepository extends JpaRepository<AppointmentEntity, UUID> {
+  Page<AppointmentEntity> findByBranchId(UUID branchId, Pageable pageable);
+  Page<AppointmentEntity> findByBusinessId(UUID businessId, Pageable pageable);
+  Page<AppointmentEntity> findByBranchIdAndStartDateTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
 
     @Query("""
       SELECT a
-      FROM Appointment a
+      FROM AppointmentEntity a
       WHERE a.branch.id = :branchId
       AND (COALESCE(:search, '') = '' OR
         LOWER(a.customerName) ILIKE LOWER(CONCAT('%', :search, '%')) OR
@@ -29,7 +29,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
       AND (:startOfDay IS NULL OR a.startDateTime >= :startOfDay)
       AND (:endOfDay IS NULL OR a.endDateTime <= :endOfDay)
       """)
-  Page<Appointment> searchAppointments(
+  Page<AppointmentEntity> searchAppointments(
     @Param("branchId") UUID branchId,
     @Param("search") String search,
     @Param("startOfDay") OffsetDateTime startOfDay,

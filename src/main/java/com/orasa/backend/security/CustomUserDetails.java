@@ -8,7 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.UserEntity;
 
 import lombok.Getter;
 
@@ -21,7 +21,7 @@ public class CustomUserDetails implements UserDetails{
   private final String password;
   private final Collection<? extends GrantedAuthority> authorities;
 
-  public CustomUserDetails(User user) {
+  public CustomUserDetails(UserEntity user) {
     this.id = user.getId();
     this.businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
     this.username = user.getUsername();

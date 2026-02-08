@@ -14,19 +14,19 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @SQLDelete(sql = "UPDATE activity_logs SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class ActivityLog extends BaseEntity {
+public class ActivityLogEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private UserEntity user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
-    private Business business;
+    private BusinessEntity business;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id")
-    private Branch branch;
+    private BranchEntity branch;
 
     @Column(nullable = false)
     private String action;

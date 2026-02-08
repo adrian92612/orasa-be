@@ -5,10 +5,10 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.orasa.backend.domain.BranchService;
+import com.orasa.backend.domain.BranchServiceEntity;
 
-public interface BranchServiceRepository extends JpaRepository<BranchService, UUID> {
-  List<BranchService> findByBranchId(UUID branchId);
+public interface BranchServiceRepository extends JpaRepository<BranchServiceEntity, UUID> {
+  List<BranchServiceEntity> findByBranchId(UUID branchId);
 
-  List<BranchService> findByServiceId(UUID serviceId);
+  List<BranchServiceEntity> findByServiceId(UUID serviceId);
 }

@@ -1,6 +1,5 @@
 package com.orasa.backend.dto.auth;
 
-import java.util.List;
 import java.util.UUID;
 
 import com.orasa.backend.common.UserRole;
@@ -17,12 +16,4 @@ public class AuthResponse {
   private UserRole role;
   private UUID businessId;
   private String businessName;
-  private List<BranchInfo> branches;
-
-  @Data
-  @Builder
-  public static class BranchInfo {
-    private UUID id;
-    private String name;
-  }
 }

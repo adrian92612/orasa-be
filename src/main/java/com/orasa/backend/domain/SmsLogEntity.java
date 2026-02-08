@@ -15,15 +15,15 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @SQLDelete(sql = "UPDATE sms_logs SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class SmsLog extends BaseEntity {
+public class SmsLogEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
-    private Business business;
+    private BusinessEntity business;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")
-    private Appointment appointment;
+    private AppointmentEntity appointment;
 
     @Column(name = "recipient_phone", nullable = false)
     private String recipientPhone;

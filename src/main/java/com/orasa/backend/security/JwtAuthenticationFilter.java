@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import com.orasa.backend.repository.UserRepository;
+import com.orasa.backend.common.UserRole;
 
 @Component
 @RequiredArgsConstructor
@@ -47,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 AuthenticatedUser principal = new AuthenticatedUser(
                     user.getId(),
                     user.getBusiness() != null ? user.getBusiness().getId() : null,
-                    role
+                    UserRole.valueOf(role)
                 );
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

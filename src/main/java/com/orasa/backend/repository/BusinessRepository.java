@@ -7,9 +7,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.orasa.backend.domain.Business;
+import com.orasa.backend.domain.BusinessEntity;
 
-public interface BusinessRepository extends JpaRepository<Business, UUID> {
-  Optional<Business> findBySlug(String slug);
-  Page<Business> findByNameContainingIgnoreCase(String name, Pageable pageable);
+public interface BusinessRepository extends JpaRepository<BusinessEntity, UUID> {
+  Optional<BusinessEntity> findBySlug(String slug);
+  Page<BusinessEntity> findByNameContainingIgnoreCase(String name, Pageable pageable);
 }

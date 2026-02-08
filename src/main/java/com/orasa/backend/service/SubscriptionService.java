@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.common.SubscriptionStatus;
-import com.orasa.backend.domain.Business;
+import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.exception.SubscriptionExpiredException;
 import com.orasa.backend.repository.BusinessRepository;
@@ -26,14 +26,14 @@ public class SubscriptionService {
 
     @Transactional
     public boolean isSubscriptionActive(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         return isSubscriptionActive(business);
     }
 
     @Transactional
-    public boolean isSubscriptionActive(Business business) {
+    public boolean isSubscriptionActive(BusinessEntity business) {
         if (business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE 
                 && business.getSubscriptionEndDate() != null
                 && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now())) {
@@ -49,13 +49,13 @@ public class SubscriptionService {
     }
 
     public void validateActiveSubscription(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         validateActiveSubscription(business);
     }
 
-    public void validateActiveSubscription(Business business) {
+    public void validateActiveSubscription(BusinessEntity business) {
 
         if (!business.isOnboardingCompleted()) return;
 
@@ -73,7 +73,7 @@ public class SubscriptionService {
     }
 
     public SubscriptionInfo getSubscriptionInfo(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         return new SubscriptionInfo(
@@ -93,7 +93,7 @@ public class SubscriptionService {
 
     @Transactional
     public void activateSubscription(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         business.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
@@ -117,7 +117,7 @@ public class SubscriptionService {
 
     @Transactional
     public void extendSubscription(UUID businessId, int months) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         if (business.getSubscriptionStatus() != SubscriptionStatus.ACTIVE) {
@@ -147,14 +147,14 @@ public class SubscriptionService {
 
     @Transactional
     public void consumeSmsCredit(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
         consumeSmsCredit(business);
     }
 
     @Transactional
-    public void consumeSmsCredit(Business business) {
+    public void consumeSmsCredit(BusinessEntity business) {
         // 1. Lazy Reset: Check if we moved into a new cycle since last check
         checkAndRefreshCredits(business);
 
@@ -171,7 +171,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public void checkAndRefreshCredits(Business business) {
+    public void checkAndRefreshCredits(BusinessEntity business) {
         // 1. Check for Expiry First
         if (handleExpiryCheck(business)) {
             return; // If expired, stop processing
@@ -198,7 +198,7 @@ public class SubscriptionService {
         }
     }
 
-    private boolean handleExpiryCheck(Business business) {
+    private boolean handleExpiryCheck(BusinessEntity business) {
         if (business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE 
             && business.getSubscriptionEndDate() != null 
             && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now())) {

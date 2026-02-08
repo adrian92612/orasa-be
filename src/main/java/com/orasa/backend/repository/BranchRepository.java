@@ -5,8 +5,8 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.orasa.backend.domain.Branch;
+import com.orasa.backend.domain.BranchEntity;
 
-public interface BranchRepository extends JpaRepository<Branch, UUID> {
-  List<Branch> findByBusinessId(UUID businessId);
+public interface BranchRepository extends JpaRepository<BranchEntity, UUID> {
+  List<BranchEntity> findByBusinessId(UUID businessId);
 }

@@ -20,11 +20,11 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @SQLDelete(sql = "UPDATE users SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class User extends BaseEntity {
+public class UserEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = true)
-    private Business business;
+    private BusinessEntity business;
 
     @ManyToMany
     @JoinTable(
@@ -33,7 +33,7 @@ public class User extends BaseEntity {
         inverseJoinColumns= @JoinColumn(name = "branch_id")
     )
     @Builder.Default
-    private Set<Branch> branches = new HashSet<>();
+    private Set<BranchEntity> branches = new HashSet<>();
 
     @NotBlank
     @Column(unique = true, nullable = false)
@@ -49,7 +49,7 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private UserRole role;
 
-    @Column(name = "must_change_password")
+    @Column(name = "must_change_password", nullable = false)
     @Builder.Default
     private boolean mustChangePassword = false;
 

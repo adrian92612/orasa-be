@@ -5,9 +5,9 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.orasa.backend.domain.ServiceOffering;
+import com.orasa.backend.domain.ServiceEntity;
 
-public interface ServiceRepository extends JpaRepository<ServiceOffering, UUID> {
-  List<ServiceOffering> findByBusinessId(UUID businessId);
+public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
+  List<ServiceEntity> findByBusinessId(UUID businessId);
 }
 

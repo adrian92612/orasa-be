@@ -13,12 +13,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.UserRole;
-import com.orasa.backend.domain.Appointment;
-import com.orasa.backend.domain.Branch;
-import com.orasa.backend.domain.Business;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.AppointmentEntity;
+import com.orasa.backend.domain.BranchEntity;
+import com.orasa.backend.domain.BusinessEntity;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
 import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
@@ -48,13 +49,13 @@ public class AppointmentService {
 
   @Transactional
   public AppointmentResponse createAppointment(UUID userId, CreateAppointmentRequest request) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    Business business = businessRepository.findById(request.getBusinessId())
+    BusinessEntity business = businessRepository.findById(request.getBusinessId())
         .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-    Branch branch = branchRepository.findById(request.getBranchId())
+    BranchEntity branch = branchRepository.findById(request.getBranchId())
         .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
     if (!branch.getBusiness().getId().equals(request.getBusinessId())) {
@@ -68,7 +69,7 @@ public class AppointmentService {
       throw new InvalidAppointmentException("Appointment time must be in the future");
     }
 
-    Appointment appointment = Appointment.builder()
+    AppointmentEntity appointment = AppointmentEntity.builder()
         .business(business)
         .branch(branch)
         .customerName(request.getCustomerName())
@@ -80,7 +81,7 @@ public class AppointmentService {
         .reminderLeadTimeOverride(request.getReminderLeadTimeOverride())
         .build();
 
-    Appointment saved = appointmentRepository.save(appointment);
+    AppointmentEntity saved = appointmentRepository.save(appointment);
     
     // Log the activity asynchronously
     activityLogService.logAppointmentCreated(user, saved);
@@ -101,10 +102,10 @@ public class AppointmentService {
 
   @Transactional
   public UpdateResult updateAppointment(UUID userId, UUID id, UpdateAppointmentRequest request) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    Appointment appointment = appointmentRepository.findById(id)
+    AppointmentEntity appointment = appointmentRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
     // Capture the before state for logging
@@ -190,7 +191,7 @@ public class AppointmentService {
       return new UpdateResult(mapToResponse(appointment), false);
     }
 
-    Appointment saved = appointmentRepository.save(appointment);
+    AppointmentEntity saved = appointmentRepository.save(appointment);
     
     // Build structured JSON details
     String details = FieldChange.toJson(changes);
@@ -220,9 +221,9 @@ public class AppointmentService {
   }
 
   public AppointmentResponse getAppointmentById(UUID userId, UUID id) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-    Appointment appointment = appointmentRepository.findById(id)
+    AppointmentEntity appointment = appointmentRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
     
     validateBranchAccess(user, appointment.getBranch());
@@ -231,10 +232,10 @@ public class AppointmentService {
   }
 
   public Page<AppointmentResponse> getAppointmentsByBranch(UUID userId, UUID branchId, Pageable pageable) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     
-    Branch branch = branchRepository.findById(branchId)
+    BranchEntity branch = branchRepository.findById(branchId)
         .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
     validateBranchAccess(user, branch);
@@ -243,7 +244,7 @@ public class AppointmentService {
   }
 
   public Page<AppointmentResponse> getAppointmentsByBusiness(UUID userId, UUID businessId, Pageable pageable) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     
     // Check if user is OWNER and owns this business
@@ -262,10 +263,10 @@ public class AppointmentService {
       LocalDate endDate,
       Pageable pageable) {
     
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     
-    Branch branch = branchRepository.findById(branchId)
+    BranchEntity branch = branchRepository.findById(branchId)
         .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
     validateBranchAccess(user, branch);
@@ -278,7 +279,7 @@ public class AppointmentService {
         .map(this::mapToResponse);
   }
 
-  private void validateBranchAccess(User user, Branch branch) {
+  private void validateBranchAccess(UserEntity user, BranchEntity branch) {
     if (user.getRole() == UserRole.OWNER) {
       if (!branch.getBusiness().getId().equals(user.getBusiness().getId())) {
         throw new ForbiddenException("You do not have permission to access this branch");
@@ -296,10 +297,10 @@ public class AppointmentService {
 
   @Transactional
   public void deleteAppointment(UUID userId, UUID id) {
-    User user = userRepository.findById(userId)
+    UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    Appointment appointment = appointmentRepository.findById(id)
+    AppointmentEntity appointment = appointmentRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
     // Log before deletion (so we have access to appointment data)
@@ -312,7 +313,7 @@ public class AppointmentService {
   }
 
   // Helper methods
-  private AppointmentResponse mapToResponse(Appointment appointment) {
+  private AppointmentResponse mapToResponse(AppointmentEntity appointment) {
     return AppointmentResponse.builder()
         .id(appointment.getId())
         .businessId(appointment.getBusiness().getId())

@@ -5,9 +5,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.orasa.backend.domain.Branch;
-import com.orasa.backend.domain.Business;
-import com.orasa.backend.domain.User;
+import com.orasa.backend.domain.BranchEntity;
+import com.orasa.backend.domain.BusinessEntity;
+import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
 import com.orasa.backend.dto.business.UpdateBusinessRequest;
@@ -50,7 +50,7 @@ public class BusinessService {
     @Transactional
     public BusinessResponse createBusinessWithBranch(UUID ownerId, CreateBusinessRequest request) {
         // Verify owner exists and doesn't already have a business
-        User owner = userRepository.findById(ownerId)
+        UserEntity owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (owner.getBusiness() != null) {
@@ -58,22 +58,22 @@ public class BusinessService {
         }
 
         // Create the business
-        Business business = Business.builder()
+        BusinessEntity business = BusinessEntity.builder()
                 .name(request.getName())
                 .slug(generateSlug(request.getName()))
                 .build();
 
-        Business savedBusiness = businessRepository.save(business);
+        BusinessEntity savedBusiness = businessRepository.save(business);
 
         // Create the first branch
-        Branch branch = Branch.builder()
+        BranchEntity branch = BranchEntity.builder()
                 .business(savedBusiness)
                 .name(request.getBranch().getName())
                 .address(request.getBranch().getAddress())
                 .phoneNumber(request.getBranch().getPhoneNumber())
                 .build();
 
-        Branch savedBranch = branchRepository.save(branch);
+        BranchEntity savedBranch = branchRepository.save(branch);
 
 
 
@@ -93,7 +93,7 @@ public class BusinessService {
      */
     @Transactional
     public BusinessResponse getBusinessById(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
         subscriptionService.checkAndRefreshCredits(business);
@@ -103,7 +103,7 @@ public class BusinessService {
 
     @Transactional
     public BusinessResponse updateBusiness(UUID businessId, UpdateBusinessRequest request) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
         String beforeName = business.getName();
@@ -111,9 +111,9 @@ public class BusinessService {
         business.setName(request.name());
         business.setSlug(generateSlug(request.name()));
         
-        Business savedBusiness = businessRepository.save(business);
+        BusinessEntity savedBusiness = businessRepository.save(business);
         
-        User actor = getCurrentUser();
+        UserEntity actor = getCurrentUser();
         
         if (!beforeName.equals(savedBusiness.getName())) {
             List<FieldChange> changes = List.of(new FieldChange("Business Name", beforeName, savedBusiness.getName()));
@@ -125,7 +125,7 @@ public class BusinessService {
 
     @Transactional
     public Page<BusinessResponse> getAllBusinesses(String search, Pageable pageable) {
-        Page<Business> page;
+        Page<BusinessEntity> page;
         if (search != null && !search.isBlank()) {
             page = businessRepository.findByNameContainingIgnoreCase(search, pageable);
         } else {
@@ -140,7 +140,7 @@ public class BusinessService {
 
     @Transactional
     public void completeOnboarding(UUID businessId) {
-        Business business = businessRepository.findById(businessId)
+        BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
         business.setOnboardingCompleted(true);
@@ -155,7 +155,7 @@ public class BusinessService {
         }
         
         String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
+        UserEntity user = userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
             
         if (user.getBusiness() == null) {
@@ -179,7 +179,7 @@ public class BusinessService {
         return baseSlug + "-" + uniqueSuffix;
     }
 
-    private BusinessResponse mapToResponse(Business business, UUID firstBranchId) {
+    private BusinessResponse mapToResponse(BusinessEntity business, UUID firstBranchId) {
         return BusinessResponse.builder()
                 .id(business.getId())
                 .name(business.getName())
@@ -194,7 +194,7 @@ public class BusinessService {
                 .build();
     }
 
-    private User getCurrentUser() {
+    private UserEntity getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
              throw new BusinessException("User not authenticated");

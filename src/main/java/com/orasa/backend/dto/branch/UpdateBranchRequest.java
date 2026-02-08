@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateBranchRequest {
+public class UpdateBranchRequest {
 
-    @NotBlank(message = "Branch name is required")
+    @NotBlank(message = "Name is required")
     private String name;
 
     private String address;

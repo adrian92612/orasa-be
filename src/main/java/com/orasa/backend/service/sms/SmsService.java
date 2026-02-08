@@ -13,11 +13,11 @@ import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.common.SmsStatus;
 import com.orasa.backend.common.SmsTaskStatus;
-import com.orasa.backend.domain.Appointment;
-import com.orasa.backend.domain.Business;
-import com.orasa.backend.domain.BusinessReminderConfig;
-import com.orasa.backend.domain.ScheduledSmsTask;
-import com.orasa.backend.domain.SmsLog;
+import com.orasa.backend.domain.AppointmentEntity;
+import com.orasa.backend.domain.BusinessEntity;
+import com.orasa.backend.domain.BusinessReminderConfigEntity;
+import com.orasa.backend.domain.ScheduledSmsTaskEntity;
+import com.orasa.backend.domain.SmsLogEntity;
 import com.orasa.backend.dto.sms.SmsLogResponse;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BusinessRepository;
@@ -44,7 +44,7 @@ public class SmsService {
 
 
     @Transactional
-    public void scheduleRemindersForAppointment(Appointment appointment) {
+    public void scheduleRemindersForAppointment(AppointmentEntity appointment) {
         if (!appointment.isRemindersEnabled()) {
             log.info("Reminders disabled for appointment {}", appointment.getId());
             return;
@@ -66,7 +66,7 @@ public class SmsService {
                 return;
             }
 
-            ScheduledSmsTask task = ScheduledSmsTask.builder()
+            ScheduledSmsTaskEntity task = ScheduledSmsTaskEntity.builder()
                     .businessId(appointment.getBusiness().getId())
                     .appointment(appointment)
                     .scheduledAt(scheduledAt)
@@ -78,7 +78,7 @@ public class SmsService {
             return; // Exit after scheduling override
         }
 
-        List<BusinessReminderConfig> configs = reminderConfigService.getEnabledConfigs(
+        List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
                 appointment.getBusiness().getId()
         );
 
@@ -87,7 +87,7 @@ public class SmsService {
             return;
         }
 
-        for (BusinessReminderConfig config : configs) {
+        for (BusinessReminderConfigEntity config : configs) {
             OffsetDateTime scheduledAt = appointment.getStartDateTime()
                     .minusHours(config.getLeadTimeHours());
 
@@ -97,7 +97,7 @@ public class SmsService {
                 continue;
             }
 
-            ScheduledSmsTask task = ScheduledSmsTask.builder()
+            ScheduledSmsTaskEntity task = ScheduledSmsTaskEntity.builder()
                     .businessId(appointment.getBusiness().getId())
                     .appointment(appointment)
                     .scheduledAt(scheduledAt)
@@ -111,8 +111,8 @@ public class SmsService {
 
     @Transactional
     public void cancelRemindersForAppointment(UUID appointmentId) {
-        List<ScheduledSmsTask> tasks = scheduledSmsTaskRepository.findByAppointmentId(appointmentId);
-        for (ScheduledSmsTask task : tasks) {
+        List<ScheduledSmsTaskEntity> tasks = scheduledSmsTaskRepository.findByAppointmentId(appointmentId);
+        for (ScheduledSmsTaskEntity task : tasks) {
             task.setStatus(SmsTaskStatus.CANCELLED);
         }
         scheduledSmsTaskRepository.saveAll(tasks);
@@ -121,12 +121,12 @@ public class SmsService {
 
     @Transactional
     public void processPendingReminders() {
-        List<ScheduledSmsTask> dueTasks = scheduledSmsTaskRepository
+        List<ScheduledSmsTaskEntity> dueTasks = scheduledSmsTaskRepository
                 .findByStatusAndScheduledAtBefore(SmsTaskStatus.PENDING, OffsetDateTime.now());
 
         log.info("Processing {} pending SMS reminders", dueTasks.size());
 
-        for (ScheduledSmsTask task : dueTasks) {
+        for (ScheduledSmsTaskEntity task : dueTasks) {
             try {
                 processReminder(task);
             } catch (Exception e) {
@@ -139,13 +139,13 @@ public class SmsService {
 
     @Transactional
     @RequiresActiveSubscription
-    public SmsLog sendSms(Business business, Appointment appointment, String recipientPhone, String message) {
+    public SmsLogEntity sendSms(BusinessEntity business, AppointmentEntity appointment, String recipientPhone, String message) {
         // Enforce credit consumption logic
         subscriptionService.consumeSmsCredit(business);
 
         PhilSmsProvider.SendSmsResult result = philSmsProvider.sendSms(recipientPhone, message);
 
-        SmsLog smsLog = SmsLog.builder()
+        SmsLogEntity smsLog = SmsLogEntity.builder()
                 .business(business)
                 .appointment(appointment)
                 .recipientPhone(recipientPhone)
@@ -167,8 +167,8 @@ public class SmsService {
         return philSmsProvider.getBalance();
     }
 
-    private void processReminder(ScheduledSmsTask task) {
-        Appointment appointment = task.getAppointment();
+    private void processReminder(ScheduledSmsTaskEntity task) {
+        AppointmentEntity appointment = task.getAppointment();
 
         if (appointment.getStartDateTime().isBefore(OffsetDateTime.now())) {
             log.info("Skipping reminder for appointment {} - already passed", appointment.getId());
@@ -179,7 +179,7 @@ public class SmsService {
 
         String message = buildReminderMessage(appointment);
 
-        Business business = businessRepository.findById(task.getBusinessId())
+        BusinessEntity business = businessRepository.findById(task.getBusinessId())
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         if (!business.hasActiveSubscription()) {
@@ -189,14 +189,14 @@ public class SmsService {
             return;
         }
 
-        SmsLog smsLog = sendSms(business, appointment, appointment.getCustomerPhone(), message);
+        SmsLogEntity smsLog = sendSms(business, appointment, appointment.getCustomerPhone(), message);
 
         task.setStatus(smsLog.getStatus() == SmsStatus.SENT ? SmsTaskStatus.COMPLETED : SmsTaskStatus.FAILED);
         scheduledSmsTaskRepository.save(task);
     }
 
-    private String buildReminderMessage(Appointment appointment) {
-        List<BusinessReminderConfig> configs = reminderConfigService.getEnabledConfigs(
+    private String buildReminderMessage(AppointmentEntity appointment) {
+        List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
                 appointment.getBusiness().getId()
         );
 
@@ -211,7 +211,7 @@ public class SmsService {
                 .replace("{branch_name}", appointment.getBranch().getName());
     }
 
-    private SmsLogResponse mapToResponse(SmsLog smsLog) {
+    private SmsLogResponse mapToResponse(SmsLogEntity smsLog) {
         return SmsLogResponse.builder()
                 .id(smsLog.getId())
                 .businessId(smsLog.getBusiness().getId())

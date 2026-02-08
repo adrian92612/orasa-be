@@ -13,14 +13,14 @@ import java.util.UUID;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @SQLDelete(sql = "UPDATE scheduled_sms_tasks SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
-public class ScheduledSmsTask extends BaseEntity {
+public class ScheduledSmsTaskEntity extends BaseEntity {
 
     @Column(name = "business_id", nullable = false)
     private UUID businessId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id", nullable = false)
-    private Appointment appointment;
+    private AppointmentEntity appointment;
 
     @Column(name = "scheduled_at", nullable = false)
     private OffsetDateTime scheduledAt;
