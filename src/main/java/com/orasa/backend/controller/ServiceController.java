@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.common.ApiResponse;
@@ -77,11 +78,12 @@ public class ServiceController extends BaseController {
     @GetMapping
     @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
     public ResponseEntity<ApiResponse<List<ServiceResponse>>> getMyServices(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @RequestParam(required = false) UUID branchId
     ) {
         validateBusinessExists(authenticatedUser);
 
-        List<ServiceResponse> services = serviceService.getServicesByBusiness(authenticatedUser.businessId());
+        List<ServiceResponse> services = serviceService.getServicesByBusiness(authenticatedUser.businessId(), branchId);
         return ResponseEntity.ok(ApiResponse.success(services));
     }
 

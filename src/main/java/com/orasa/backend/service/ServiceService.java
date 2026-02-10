@@ -17,9 +17,13 @@ import com.orasa.backend.dto.service.ServiceResponse;
 import com.orasa.backend.dto.service.UpdateServiceRequest;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
+import com.orasa.backend.repository.BranchRepository;
+import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.UserRepository;
+import com.orasa.backend.domain.BranchEntity;
+import com.orasa.backend.domain.BranchServiceEntity;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +35,8 @@ public class ServiceService {
     private final ServiceRepository serviceRepository;
     private final UserRepository userRepository;
     private final BusinessRepository businessRepository;
+    private final BranchRepository branchRepository;
+    private final BranchServiceRepository branchServiceRepository;
     private final ActivityLogService activityLogService;
 
     @Transactional
@@ -52,7 +58,9 @@ public class ServiceService {
 
         ServiceEntity saved = serviceRepository.save(serviceOffering);
         
-        // Log service creation
+        if (saved.isAvailableGlobally()) {
+            associateServiceWithAllBranches(businessId, saved);
+        }
         activityLogService.logServiceCreated(actor, business, saved.getName());
         
         return mapToResponse(saved);
@@ -124,6 +132,10 @@ public class ServiceService {
                     .after(request.getAvailableGlobally() ? "Yes" : "No")
                     .build());
             serviceOffering.setAvailableGlobally(request.getAvailableGlobally());
+            
+            if (request.getAvailableGlobally()) {
+                associateServiceWithAllBranches(businessId, serviceOffering);
+            }
         }
 
         if (!changes.isEmpty()) {
@@ -137,8 +149,14 @@ public class ServiceService {
         return mapToResponse(serviceOffering);
     }
 
-    public List<ServiceResponse> getServicesByBusiness(UUID businessId) {
-        return serviceRepository.findByBusinessId(businessId).stream()
+    public List<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
+        List<ServiceEntity> services;
+        if (branchId != null) {
+            services = serviceRepository.findServicesForBranch(businessId, branchId);
+        } else {
+            services = serviceRepository.findByBusinessId(businessId);
+        }
+        return services.stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -169,6 +187,28 @@ public class ServiceService {
         activityLogService.logServiceDeleted(actor, business, serviceOffering.getName());
 
         serviceRepository.delete(serviceOffering);
+    }
+
+    private void associateServiceWithAllBranches(UUID businessId, ServiceEntity service) {
+        List<BranchEntity> branches = branchRepository.findByBusinessId(businessId);
+        List<BranchServiceEntity> existingAssignments = branchServiceRepository.findByServiceId(service.getId());
+        
+        List<UUID> assignedBranchIds = existingAssignments.stream()
+                .map(BranchServiceEntity::getBranchId)
+                .toList();
+
+        List<BranchServiceEntity> newAssignments = branches.stream()
+                .filter(branch -> !assignedBranchIds.contains(branch.getId()))
+                .map(branch -> BranchServiceEntity.builder()
+                        .branchId(branch.getId())
+                        .service(service)
+                        .isActive(true)
+                        .build())
+                .toList();
+        
+        if (!newAssignments.isEmpty()) {
+            branchServiceRepository.saveAll(newAssignments);
+        }
     }
 
     private ServiceResponse mapToResponse(ServiceEntity serviceOffering) {

@@ -75,9 +75,14 @@ public class BranchService {
         }
 
         // Handle Services
-        if (request.getServiceIds() != null) {
-            updateBranchServices(saved, request.getServiceIds(), new ArrayList<>());
+        java.util.Set<UUID> serviceIds = request.getServiceIds();
+        if (serviceIds == null) {
+            serviceIds = serviceRepository.findByBusinessId(businessId).stream()
+                    .filter(ServiceEntity::isAvailableGlobally)
+                    .map(ServiceEntity::getId)
+                    .collect(Collectors.toSet());
         }
+        updateBranchServices(saved, serviceIds, new ArrayList<>());
 
         owner.getBranches().add(saved);
         userRepository.save(owner);
@@ -224,43 +229,62 @@ public class BranchService {
                 .collect(Collectors.toMap(bs -> bs.getService().getId(), bs -> bs));
 
         List<BranchServiceEntity> toSave = new ArrayList<>();
-        int oldActiveCount = 0;
-        int newActiveCount = 0;
-        boolean changed = false;
+        int oldActiveCount = 0; // Count previously active services
+        int newActiveCount = 0; // Count effectively active services
+        boolean needsSave = false;
 
         for (ServiceEntity service : allServices) {
-            boolean isGloballyAvailable = service.isAvailableGlobally();
+            // Determine current state (before this update)
             BranchServiceEntity override = overrideMap.get(service.getId());
-            
-            boolean currentlyActive = (override != null) ? override.isActive() : isGloballyAvailable;
-            if (currentlyActive) oldActiveCount++;
+            boolean isGloballyAvailable = service.isAvailableGlobally();
+            boolean wasActive = (override != null) ? override.isActive() : isGloballyAvailable;
 
+            if (wasActive) {
+                oldActiveCount++;
+            }
+
+            // Determine target state (after this update)
             boolean shouldBeActive = requestedActiveServiceIds.contains(service.getId());
-            if (shouldBeActive) newActiveCount++;
+            if (shouldBeActive) {
+                newActiveCount++;
+            }
 
-            if (currentlyActive != shouldBeActive) {
-                changed = true;
+            // Logic:
+            // 1. If status changed (Active -> Inactive OR Inactive -> Active)
+            // 2. OR if status is same but we want to enforce an explicit record (e.g. Global service, override is null, but we want to confirm it's active for this branch)
+            //    This effectively "locks in" the state for the branch so even if global changes, this branch stays as is.
+            
+            // For now, let's implement the specific request: deactivating a service.
+            // If a service IS global, but NOT in requestedActiveServiceIds -> it means we want to DEACTIVATE it for this branch.
+            // We must create/update the BranchServiceEntity with isActive = false.
+
+            boolean statusChanged = wasActive != shouldBeActive;
+            boolean missingRecord = override == null;
+
+            if (statusChanged || (shouldBeActive && missingRecord)) {
+                needsSave = true;
                 if (override == null) {
                     override = BranchServiceEntity.builder()
                             .branchId(branch.getId())
                             .service(service)
                             .isActive(shouldBeActive)
                             .build();
-                    toSave.add(override);
                 } else {
                     override.setActive(shouldBeActive);
-                    toSave.add(override);
                 }
+                toSave.add(override);
             }
         }
 
-        if (changed) {
+        if (needsSave) {
             branchServiceRepository.saveAll(toSave);
-            changes.add(FieldChange.builder()
-                    .field("Services")
-                    .before(oldActiveCount + " Active")
-                    .after(newActiveCount + " Active")
-                    .build());
+            if (oldActiveCount != newActiveCount) {
+                changes.add(FieldChange.builder()
+                        .field("Services")
+                        .before(oldActiveCount + " Active")
+                        .after(newActiveCount + " Active")
+                        .build());
+            }
         }
     }
 
