@@ -4,7 +4,6 @@ import java.util.stream.Collectors;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -77,10 +76,7 @@ public class BranchService {
         // Handle Services
         java.util.Set<UUID> serviceIds = request.getServiceIds();
         if (serviceIds == null) {
-            serviceIds = serviceRepository.findByBusinessId(businessId).stream()
-                    .filter(ServiceEntity::isAvailableGlobally)
-                    .map(ServiceEntity::getId)
-                    .collect(Collectors.toSet());
+            serviceIds = java.util.Collections.emptySet();
         }
         updateBranchServices(saved, serviceIds, new ArrayList<>());
 
@@ -236,8 +232,7 @@ public class BranchService {
         for (ServiceEntity service : allServices) {
             // Determine current state (before this update)
             BranchServiceEntity override = overrideMap.get(service.getId());
-            boolean isGloballyAvailable = service.isAvailableGlobally();
-            boolean wasActive = (override != null) ? override.isActive() : isGloballyAvailable;
+            boolean wasActive = (override != null) && override.isActive();
 
             if (wasActive) {
                 oldActiveCount++;
@@ -248,15 +243,6 @@ public class BranchService {
             if (shouldBeActive) {
                 newActiveCount++;
             }
-
-            // Logic:
-            // 1. If status changed (Active -> Inactive OR Inactive -> Active)
-            // 2. OR if status is same but we want to enforce an explicit record (e.g. Global service, override is null, but we want to confirm it's active for this branch)
-            //    This effectively "locks in" the state for the branch so even if global changes, this branch stays as is.
-            
-            // For now, let's implement the specific request: deactivating a service.
-            // If a service IS global, but NOT in requestedActiveServiceIds -> it means we want to DEACTIVATE it for this branch.
-            // We must create/update the BranchServiceEntity with isActive = false.
 
             boolean statusChanged = wasActive != shouldBeActive;
             boolean missingRecord = override == null;
@@ -315,21 +301,12 @@ public class BranchService {
     }
 
     private BranchResponse mapToResponse(BranchEntity branch) {
-        List<ServiceEntity> allServices = serviceRepository.findByBusinessId(branch.getBusiness().getId());
         List<BranchServiceEntity> overrides = branchServiceRepository.findByBranchId(branch.getId());
 
-        java.util.Set<UUID> activeServiceIds = allServices.stream().filter(service -> {
-            Optional<BranchServiceEntity> override = overrides.stream()
-                .filter(o -> o.getService().getId().equals(service.getId()))
-                .findFirst();
-            
-            if (override.isPresent()) {
-                return override.get().isActive();
-            }
-            return service.isAvailableGlobally();
-        })
-        .map(ServiceEntity::getId)
-        .collect(Collectors.toSet());
+        java.util.Set<UUID> activeServiceIds = overrides.stream()
+                .filter(BranchServiceEntity::isActive)
+                .map(bs -> bs.getService().getId())
+                .collect(Collectors.toSet());
 
         java.util.Set<UserEntity> staffUsers = branch.getStaff() != null 
                 ? branch.getStaff().stream()

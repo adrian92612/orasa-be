@@ -20,7 +20,6 @@ public class ServiceResponse {
     private String description;
     private BigDecimal basePrice;
     private Integer durationMinutes;
-    private boolean availableGlobally;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

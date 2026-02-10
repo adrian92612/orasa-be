@@ -24,5 +24,4 @@ public class UpdateServiceRequest {
     @Positive(message = "Duration must be positive")
     private Integer durationMinutes;
 
-    private Boolean availableGlobally;
 }

@@ -29,6 +29,4 @@ public class CreateServiceRequest {
     @Positive(message = "Duration must be positive")
     private Integer durationMinutes;
 
-    @Builder.Default
-    private Boolean availableGlobally = true;
 }
