@@ -4,7 +4,6 @@ import java.util.stream.Collectors;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -75,9 +74,11 @@ public class BranchService {
         }
 
         // Handle Services
-        if (request.getServiceIds() != null) {
-            updateBranchServices(saved, request.getServiceIds(), new ArrayList<>());
+        java.util.Set<UUID> serviceIds = request.getServiceIds();
+        if (serviceIds == null) {
+            serviceIds = java.util.Collections.emptySet();
         }
+        updateBranchServices(saved, serviceIds, new ArrayList<>());
 
         owner.getBranches().add(saved);
         userRepository.save(owner);
@@ -224,43 +225,52 @@ public class BranchService {
                 .collect(Collectors.toMap(bs -> bs.getService().getId(), bs -> bs));
 
         List<BranchServiceEntity> toSave = new ArrayList<>();
-        int oldActiveCount = 0;
-        int newActiveCount = 0;
-        boolean changed = false;
+        int oldActiveCount = 0; // Count previously active services
+        int newActiveCount = 0; // Count effectively active services
+        boolean needsSave = false;
 
         for (ServiceEntity service : allServices) {
-            boolean isGloballyAvailable = service.isAvailableGlobally();
+            // Determine current state (before this update)
             BranchServiceEntity override = overrideMap.get(service.getId());
-            
-            boolean currentlyActive = (override != null) ? override.isActive() : isGloballyAvailable;
-            if (currentlyActive) oldActiveCount++;
+            boolean wasActive = (override != null) && override.isActive();
 
+            if (wasActive) {
+                oldActiveCount++;
+            }
+
+            // Determine target state (after this update)
             boolean shouldBeActive = requestedActiveServiceIds.contains(service.getId());
-            if (shouldBeActive) newActiveCount++;
+            if (shouldBeActive) {
+                newActiveCount++;
+            }
 
-            if (currentlyActive != shouldBeActive) {
-                changed = true;
+            boolean statusChanged = wasActive != shouldBeActive;
+            boolean missingRecord = override == null;
+
+            if (statusChanged || (shouldBeActive && missingRecord)) {
+                needsSave = true;
                 if (override == null) {
                     override = BranchServiceEntity.builder()
                             .branchId(branch.getId())
                             .service(service)
                             .isActive(shouldBeActive)
                             .build();
-                    toSave.add(override);
                 } else {
                     override.setActive(shouldBeActive);
-                    toSave.add(override);
                 }
+                toSave.add(override);
             }
         }
 
-        if (changed) {
+        if (needsSave) {
             branchServiceRepository.saveAll(toSave);
-            changes.add(FieldChange.builder()
-                    .field("Services")
-                    .before(oldActiveCount + " Active")
-                    .after(newActiveCount + " Active")
-                    .build());
+            if (oldActiveCount != newActiveCount) {
+                changes.add(FieldChange.builder()
+                        .field("Services")
+                        .before(oldActiveCount + " Active")
+                        .after(newActiveCount + " Active")
+                        .build());
+            }
         }
     }
 
@@ -291,21 +301,12 @@ public class BranchService {
     }
 
     private BranchResponse mapToResponse(BranchEntity branch) {
-        List<ServiceEntity> allServices = serviceRepository.findByBusinessId(branch.getBusiness().getId());
         List<BranchServiceEntity> overrides = branchServiceRepository.findByBranchId(branch.getId());
 
-        java.util.Set<UUID> activeServiceIds = allServices.stream().filter(service -> {
-            Optional<BranchServiceEntity> override = overrides.stream()
-                .filter(o -> o.getService().getId().equals(service.getId()))
-                .findFirst();
-            
-            if (override.isPresent()) {
-                return override.get().isActive();
-            }
-            return service.isAvailableGlobally();
-        })
-        .map(ServiceEntity::getId)
-        .collect(Collectors.toSet());
+        java.util.Set<UUID> activeServiceIds = overrides.stream()
+                .filter(BranchServiceEntity::isActive)
+                .map(bs -> bs.getService().getId())
+                .collect(Collectors.toSet());
 
         java.util.Set<UserEntity> staffUsers = branch.getStaff() != null 
                 ? branch.getStaff().stream()

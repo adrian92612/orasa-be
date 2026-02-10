@@ -11,12 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.domain.UserEntity;
+import com.orasa.backend.domain.BranchServiceEntity;
+import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.service.CreateServiceRequest;
 import com.orasa.backend.dto.service.ServiceResponse;
 import com.orasa.backend.dto.service.UpdateServiceRequest;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
+import com.orasa.backend.repository.BranchRepository;
+import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.UserRepository;
@@ -31,6 +35,8 @@ public class ServiceService {
     private final ServiceRepository serviceRepository;
     private final UserRepository userRepository;
     private final BusinessRepository businessRepository;
+    private final BranchRepository branchRepository;
+    private final BranchServiceRepository branchServiceRepository;
     private final ActivityLogService activityLogService;
 
     @Transactional
@@ -47,12 +53,21 @@ public class ServiceService {
                 .description(request.getDescription())
                 .basePrice(request.getBasePrice())
                 .durationMinutes(request.getDurationMinutes())
-                .isAvailableGlobally(request.getAvailableGlobally())
                 .build();
 
         ServiceEntity saved = serviceRepository.save(serviceOffering);
-        
-        // Log service creation
+
+        // Automatically assign to all branches
+        List<BranchEntity> branches = branchRepository.findByBusinessId(businessId);
+        List<BranchServiceEntity> branchServices = branches.stream()
+                .map(branch -> BranchServiceEntity.builder()
+                        .branchId(branch.getId())
+                        .service(saved)
+                        .isActive(true)
+                        .build())
+                .toList();
+        branchServiceRepository.saveAll(branchServices);
+
         activityLogService.logServiceCreated(actor, business, saved.getName());
         
         return mapToResponse(saved);
@@ -79,7 +94,6 @@ public class ServiceService {
         String beforeDescription = serviceOffering.getDescription();
         BigDecimal beforePrice = serviceOffering.getBasePrice();
         Integer beforeDuration = serviceOffering.getDurationMinutes();
-        boolean beforeGlobal = serviceOffering.isAvailableGlobally();
 
         if (request.getName() != null && !request.getName().equals(serviceOffering.getName())) {
             changes.add(FieldChange.builder()
@@ -117,15 +131,6 @@ public class ServiceService {
             serviceOffering.setDurationMinutes(request.getDurationMinutes());
         }
 
-        if (request.getAvailableGlobally() != null && request.getAvailableGlobally() != serviceOffering.isAvailableGlobally()) {
-            changes.add(FieldChange.builder()
-                    .field("Available Globally")
-                    .before(beforeGlobal ? "Yes" : "No")
-                    .after(request.getAvailableGlobally() ? "Yes" : "No")
-                    .build());
-            serviceOffering.setAvailableGlobally(request.getAvailableGlobally());
-        }
-
         if (!changes.isEmpty()) {
             serviceOffering = serviceRepository.save(serviceOffering);
             
@@ -137,8 +142,14 @@ public class ServiceService {
         return mapToResponse(serviceOffering);
     }
 
-    public List<ServiceResponse> getServicesByBusiness(UUID businessId) {
-        return serviceRepository.findByBusinessId(businessId).stream()
+    public List<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
+        List<ServiceEntity> services;
+        if (branchId != null) {
+            services = serviceRepository.findServicesForBranch(businessId, branchId);
+        } else {
+            services = serviceRepository.findByBusinessId(businessId);
+        }
+        return services.stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -165,8 +176,10 @@ public class ServiceService {
             throw new BusinessException("Service does not belong to your business");
         }
         
-        // Log before deletion
         activityLogService.logServiceDeleted(actor, business, serviceOffering.getName());
+
+        List<BranchServiceEntity> branchLinks = branchServiceRepository.findByServiceId(serviceId);
+        branchServiceRepository.deleteAll(branchLinks);
 
         serviceRepository.delete(serviceOffering);
     }
@@ -179,7 +192,6 @@ public class ServiceService {
                 .description(serviceOffering.getDescription())
                 .basePrice(serviceOffering.getBasePrice())
                 .durationMinutes(serviceOffering.getDurationMinutes())
-                .availableGlobally(serviceOffering.isAvailableGlobally())
                 .createdAt(serviceOffering.getCreatedAt())
                 .updatedAt(serviceOffering.getUpdatedAt())
                 .build();

@@ -30,14 +30,14 @@ public class SubscriptionEnforcementAspect {
     public Object enforceSubscription(ProceedingJoinPoint joinPoint) throws Throwable {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
-        if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user) {
-            UUID businessId = user.businessId();
+        // if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user) {
+        //     UUID businessId = user.businessId();
             
-            if (businessId != null) {
-                log.debug("Checking subscription for business {}", businessId);
-                subscriptionService.validateActiveSubscription(businessId);
-            }
-        }
+        //     if (businessId != null) {
+        //         log.debug("Checking subscription for business {}", businessId);
+        //         subscriptionService.validateActiveSubscription(businessId);
+        //     }
+        // }
         
         return joinPoint.proceed();
     }

@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS sms_logs CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS business_reminder_configs CASCADE;
 DROP TABLE IF EXISTS appointments CASCADE;
+DROP TABLE IF EXISTS branch_services CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS user_branches CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -99,7 +100,6 @@ CREATE TABLE services (
     description TEXT,
     base_price DECIMAL(10, 2) NOT NULL,
     duration_minutes INTEGER NOT NULL,
-    is_available_globally BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
