@@ -21,7 +21,7 @@ public class StaffResponse {
     private String username;
     private String email;
     private UserRole role;
-    private boolean mustChangePassword;
+
     private List<BranchInfo> branches;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

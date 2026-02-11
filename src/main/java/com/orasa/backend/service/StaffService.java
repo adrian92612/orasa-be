@@ -16,7 +16,6 @@ import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.FieldChange;
-import com.orasa.backend.dto.staff.ChangePasswordRequest;
 import com.orasa.backend.dto.staff.CreateStaffRequest;
 import com.orasa.backend.dto.staff.StaffResponse;
 import com.orasa.backend.dto.staff.UpdateStaffRequest;
@@ -72,7 +71,7 @@ public class StaffService {
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getTemporaryPassword()))
                 .role(UserRole.STAFF)
-                .mustChangePassword(true)
+
                 .branches(branches)
                 .build();
 
@@ -114,11 +113,11 @@ public class StaffService {
 
         if (request.getNewPassword() != null) {
             staff.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-            staff.setMustChangePassword(true);
+
             changes.add(FieldChange.builder()
                     .field("Password")
                     .before("(hidden)")
-                    .after("Reset (must change on login)")
+                    .after("Reset")
                     .build());
         }
 
@@ -184,24 +183,6 @@ public class StaffService {
         userRepository.delete(staff);
     }
 
-    @Transactional
-    public void changePassword(UUID userId, ChangePasswordRequest request) {
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BusinessException("Current password is incorrect");
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        user.setMustChangePassword(false);
-        userRepository.save(user);
-        
-        // Log password change (self-service, so user is the actor)
-        if (user.getBusiness() != null) {
-            activityLogService.logStaffPasswordReset(user, user.getBusiness(), user.getUsername());
-        }
-    }
 
     private UserEntity getStaffById(UUID staffId, UUID businessId) {
         UserEntity staff = userRepository.findById(staffId)
@@ -232,7 +213,7 @@ public class StaffService {
                 .username(staff.getUsername())
                 .email(staff.getEmail())
                 .role(staff.getRole())
-                .mustChangePassword(staff.isMustChangePassword())
+
                 .branches(branchInfos)
                 .createdAt(staff.getCreatedAt())
                 .updatedAt(staff.getUpdatedAt())
