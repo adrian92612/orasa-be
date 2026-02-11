@@ -66,7 +66,6 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE,
     password_hash VARCHAR(255),
     role VARCHAR(50) NOT NULL,
-    must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),

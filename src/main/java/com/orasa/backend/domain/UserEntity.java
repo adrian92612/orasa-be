@@ -49,9 +49,7 @@ public class UserEntity extends BaseEntity {
     @Column(nullable = false)
     private UserRole role;
 
-    @Column(name = "must_change_password", nullable = false)
-    @Builder.Default
-    private boolean mustChangePassword = false;
+
 
     /**
      * Returns a user-friendly display name for activity logs

@@ -100,7 +100,6 @@ public class AuthService {
     }
 
     user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-    user.setMustChangePassword(false); 
     userRepository.save(user);
     
     activityLogService.logPasswordChanged(user, user.getBusiness());

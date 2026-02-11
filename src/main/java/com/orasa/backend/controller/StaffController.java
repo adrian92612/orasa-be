@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.common.ApiResponse;
-import com.orasa.backend.dto.staff.ChangePasswordRequest;
 import com.orasa.backend.dto.staff.CreateStaffRequest;
 import com.orasa.backend.dto.staff.StaffResponse;
 import com.orasa.backend.dto.staff.UpdateStaffRequest;
@@ -111,13 +110,4 @@ public class StaffController extends BaseController {
         return ResponseEntity.ok(ApiResponse.success("Staff member deleted successfully"));
     }
 
-    @PostMapping("/change-password")
-    @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
-    public ResponseEntity<ApiResponse<Void>> changePassword(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @Valid @RequestBody ChangePasswordRequest request
-    ) {
-        staffService.changePassword(authenticatedUser.userId(), request);
-        return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
-    }
 }
