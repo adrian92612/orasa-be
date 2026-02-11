@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class ReminderConfigResponse {
     private UUID id;
     private UUID businessId;
-    private Integer leadTimeHours;
+    private Integer leadTimeMinutes;
     private String messageTemplate;
     private boolean enabled;
     private OffsetDateTime createdAt;

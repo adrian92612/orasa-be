@@ -1,6 +1,7 @@
 package com.orasa.backend.service.sms;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -57,9 +58,9 @@ public class SmsService {
         }
 
         // Check for override
-        if (appointment.getReminderLeadTimeOverride() != null) {
-            int leadTime = appointment.getReminderLeadTimeOverride();
-            OffsetDateTime scheduledAt = appointment.getStartDateTime().minusHours(leadTime);
+        if (appointment.getReminderLeadTimeMinutesOverride() != null) {
+            int leadTime = appointment.getReminderLeadTimeMinutesOverride();
+            OffsetDateTime scheduledAt = appointment.getStartDateTime().minusMinutes(leadTime);
             
             if (scheduledAt.isBefore(OffsetDateTime.now())) {
                 log.info("Skipping override reminder for appointment {} - scheduled time {} has passed", appointment.getId(), scheduledAt);
@@ -88,8 +89,14 @@ public class SmsService {
         }
 
         for (BusinessReminderConfigEntity config : configs) {
+            if (config.getLeadTimeMinutes() == null) {
+                log.warn("Skipping reminder config {} for business {} - leadTimeMinutes is null. Manual migration required.",
+                        config.getId(), appointment.getBusiness().getId());
+                continue;
+            }
+
             OffsetDateTime scheduledAt = appointment.getStartDateTime()
-                    .minusHours(config.getLeadTimeHours());
+                    .minusMinutes(config.getLeadTimeMinutes());
 
             if (scheduledAt.isBefore(OffsetDateTime.now())) {
                 log.info("Skipping reminder for appointment {} - scheduled time {} has passed",
@@ -195,21 +202,29 @@ public class SmsService {
         scheduledSmsTaskRepository.save(task);
     }
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
+
     private String buildReminderMessage(AppointmentEntity appointment) {
-        List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
-                appointment.getBusiness().getId()
-        );
+    List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
+            appointment.getBusiness().getId()
+    );
 
-        String template = configs.isEmpty() 
-                ? "Reminder: You have an appointment on {date} at {time}. See you soon!"
-                : configs.get(0).getMessageTemplate();
+    // Update the default fallback to match the new placeholder keys
+    String template = (configs == null || configs.isEmpty())
+            ? "Reminder: {name}, your {service} is on {date} @ {time} at {businessName}. See you!"
+            : configs.get(0).getMessageTemplate();
 
-        return template
-                .replace("{customer_name}", appointment.getCustomerName())
-                .replace("{date}", appointment.getStartDateTime().toLocalDate().toString())
-                .replace("{time}", appointment.getStartDateTime().toLocalTime().toString())
-                .replace("{branch_name}", appointment.getBranch().getName());
-    }
+    return template
+            .replace("{name}", appointment.getCustomerName())
+            /* Note: Once you link the Service entity to the Appointment, 
+               replace "appointment" with appointment.getService().getName() 
+            */
+            .replace("{service}", "appointment") 
+            .replace("{date}", appointment.getStartDateTime().format(DATE_FORMATTER))
+            .replace("{time}", appointment.getStartDateTime().format(TIME_FORMATTER))
+            .replace("{businessName}", appointment.getBranch().getName());
+}
 
     private SmsLogResponse mapToResponse(SmsLogEntity smsLog) {
         return SmsLogResponse.builder()

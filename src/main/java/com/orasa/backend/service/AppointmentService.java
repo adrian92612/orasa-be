@@ -78,7 +78,7 @@ public class AppointmentService {
         .endDateTime(request.getEndDateTime())
         .status(request.getIsWalkin() ? AppointmentStatus.WALK_IN : AppointmentStatus.SCHEDULED)
         .notes(request.getNotes())
-        .reminderLeadTimeOverride(request.getReminderLeadTimeOverride())
+        .reminderLeadTimeMinutesOverride(request.getReminderLeadTimeMinutes())
         .build();
 
     AppointmentEntity saved = appointmentRepository.save(appointment);
@@ -178,13 +178,13 @@ public class AppointmentService {
       appointment.setStatus(request.getStatus());
     }
 
-    if (request.getReminderLeadTimeOverride() != null && !request.getReminderLeadTimeOverride().equals(appointment.getReminderLeadTimeOverride())) {
+    if (request.getReminderLeadTimeMinutes() != null && !request.getReminderLeadTimeMinutes().equals(appointment.getReminderLeadTimeMinutesOverride())) {
         changes.add(FieldChange.builder()
             .field("Reminder Lead Time")
-            .before(appointment.getReminderLeadTimeOverride() != null ? appointment.getReminderLeadTimeOverride().toString() : "(default)")
-            .after(request.getReminderLeadTimeOverride().toString())
+            .before(appointment.getReminderLeadTimeMinutesOverride() != null ? appointment.getReminderLeadTimeMinutesOverride().toString() : "(default)")
+            .after(request.getReminderLeadTimeMinutes().toString())
             .build());
-        appointment.setReminderLeadTimeOverride(request.getReminderLeadTimeOverride());
+        appointment.setReminderLeadTimeMinutesOverride(request.getReminderLeadTimeMinutes());
     }
 
     if (changes.isEmpty()) {
@@ -325,6 +325,7 @@ public class AppointmentService {
         .endDateTime(appointment.getEndDateTime())
         .status(appointment.getStatus())
         .notes(appointment.getNotes())
+        .reminderLeadTimeMinutes(appointment.getReminderLeadTimeMinutesOverride())
         .createdAt(appointment.getCreatedAt())
         .updatedAt(appointment.getUpdatedAt())
         .build();

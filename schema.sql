@@ -144,7 +144,7 @@ CREATE TABLE appointments (
     reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     status VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
     notes TEXT,
-    reminder_lead_time_override INTEGER,
+    reminder_lead_time_minutes_override INTEGER,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
@@ -164,7 +164,7 @@ CREATE INDEX idx_appointments_customer_phone ON appointments(customer_phone);
 CREATE TABLE business_reminder_configs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id UUID NOT NULL,
-    lead_time_hours INTEGER NOT NULL,
+    lead_time_minutes INTEGER NOT NULL,
     message_template TEXT,
     is_enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

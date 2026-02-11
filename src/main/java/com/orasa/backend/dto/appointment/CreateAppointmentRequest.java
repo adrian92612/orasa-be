@@ -38,5 +38,5 @@ public class CreateAppointmentRequest {
   @Builder.Default
   private Boolean isWalkin = false;
 
-  private Integer reminderLeadTimeOverride;
+  private Integer reminderLeadTimeMinutes;
 }

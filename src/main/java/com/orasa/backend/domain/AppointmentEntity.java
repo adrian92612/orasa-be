@@ -57,6 +57,6 @@ public class AppointmentEntity extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "reminder_lead_time_override")
-    private Integer reminderLeadTimeOverride;
+    @Column(name = "reminder_lead_time_minutes_override")
+    private Integer reminderLeadTimeMinutesOverride;
 }

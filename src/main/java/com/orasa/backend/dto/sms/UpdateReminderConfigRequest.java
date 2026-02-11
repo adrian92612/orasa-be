@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class UpdateReminderConfigRequest {
 
     @Positive(message = "Lead time must be positive")
-    private Integer leadTimeHours;
+    private Integer leadTimeMinutes;
 
     private String messageTemplate;
 

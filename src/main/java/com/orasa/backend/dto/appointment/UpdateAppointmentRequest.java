@@ -33,5 +33,5 @@ public class UpdateAppointmentRequest {
   @NotNull(message = "Appointment status is required")
   private AppointmentStatus status;
 
-  private Integer reminderLeadTimeOverride;
+  private Integer reminderLeadTimeMinutes;
 }

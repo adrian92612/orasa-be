@@ -26,6 +26,7 @@ public class AppointmentResponse {
   private OffsetDateTime endDateTime;
   private String notes;
   private AppointmentStatus status;
+  private Integer reminderLeadTimeMinutes;
   private OffsetDateTime createdAt;
   private OffsetDateTime updatedAt;
 }
