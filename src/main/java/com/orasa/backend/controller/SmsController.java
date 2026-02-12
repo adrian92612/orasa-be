@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.dto.sms.SmsLogResponse;
 
 import com.orasa.backend.security.AuthenticatedUser;
@@ -28,14 +29,14 @@ public class SmsController extends BaseController {
 
     @GetMapping("/logs")
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<Page<SmsLogResponse>>> getSmsLogs(
+    public ResponseEntity<ApiResponse<PageResponse<SmsLogResponse>>> getSmsLogs(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         validateBusinessExists(authenticatedUser);
 
         Page<SmsLogResponse> logs = smsService.getSmsLogs(authenticatedUser.businessId(), pageable);
-        return ResponseEntity.ok(ApiResponse.success(logs));
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
     }
 
     @GetMapping("/balance")

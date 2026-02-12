@@ -15,29 +15,32 @@ import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BusinessReminderConfigRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ReminderConfigService {
 
     private final BusinessReminderConfigRepository reminderConfigRepository;
 
     @Transactional
     public ReminderConfigResponse createConfig(UUID businessId, CreateReminderConfigRequest request) {
+        log.info("SMS request: {}", request);
         List<BusinessReminderConfigEntity> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
         boolean duplicateLeadTime = existingConfigs.stream()
-                .anyMatch(c -> c.getLeadTimeHours().equals(request.getLeadTimeHours()));
+                .anyMatch(c -> c.getLeadTimeMinutes() != null && c.getLeadTimeMinutes().equals(request.getLeadTimeMinutes()));
 
         if (duplicateLeadTime) {
-            throw new BusinessException("Reminder with " + request.getLeadTimeHours() + " hours lead time already exists");
+            throw new BusinessException("Reminder with " + request.getLeadTimeMinutes() + " minutes lead time already exists");
         }
 
         BusinessReminderConfigEntity config = BusinessReminderConfigEntity.builder()
                 .businessId(businessId)
-                .leadTimeHours(request.getLeadTimeHours())
+                .leadTimeMinutes(request.getLeadTimeMinutes())
                 .messageTemplate(request.getMessageTemplate())
-                .isEnabled(request.getEnabled())
+                .isEnabled(request.getEnabled() == null ? false : request.getEnabled())
                 .build();
 
         BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
@@ -48,16 +51,16 @@ public class ReminderConfigService {
     public ReminderConfigResponse updateConfig(UUID configId, UUID businessId, UpdateReminderConfigRequest request) {
         BusinessReminderConfigEntity config = getConfigById(configId, businessId);
 
-        if (request.getLeadTimeHours() != null) {
+        if (request.getLeadTimeMinutes() != null) {
             List<BusinessReminderConfigEntity> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
             boolean duplicateLeadTime = existingConfigs.stream()
                     .filter(c -> !c.getId().equals(configId))
-                    .anyMatch(c -> c.getLeadTimeHours().equals(request.getLeadTimeHours()));
+                    .anyMatch(c -> c.getLeadTimeMinutes() != null && c.getLeadTimeMinutes().equals(request.getLeadTimeMinutes()));
 
             if (duplicateLeadTime) {
-                throw new BusinessException("Reminder with " + request.getLeadTimeHours() + " hours lead time already exists");
+                throw new BusinessException("Reminder with " + request.getLeadTimeMinutes() + " minutes lead time already exists");
             }
-            config.setLeadTimeHours(request.getLeadTimeHours());
+            config.setLeadTimeMinutes(request.getLeadTimeMinutes());
         }
 
         if (request.getMessageTemplate() != null) {
@@ -105,7 +108,7 @@ public class ReminderConfigService {
         return ReminderConfigResponse.builder()
                 .id(config.getId())
                 .businessId(config.getBusinessId())
-                .leadTimeHours(config.getLeadTimeHours())
+                .leadTimeMinutes(config.getLeadTimeMinutes())
                 .messageTemplate(config.getMessageTemplate())
                 .enabled(config.isEnabled())
                 .createdAt(config.getCreatedAt())

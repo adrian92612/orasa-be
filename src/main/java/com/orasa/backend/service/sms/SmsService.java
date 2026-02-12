@@ -1,7 +1,11 @@
 package com.orasa.backend.service.sms;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -9,7 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.orasa.backend.common.AppointmentStatus;
+import com.orasa.backend.common.AppointmentType;
 import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.common.SmsStatus;
 import com.orasa.backend.common.SmsTaskStatus;
@@ -50,73 +54,78 @@ public class SmsService {
             return;
         }
 
-        // Explicitly skip walk-ins (though isRemindersEnabled checks this, adding explicit check for clarity/safety)
-        if (appointment.getStatus() == AppointmentStatus.WALK_IN) {
+        // Explicitly skip walk-ins
+        if (appointment.getType() == AppointmentType.WALK_IN) {
             log.info("Skipping reminders for walk-in appointment {}", appointment.getId());
             return;
         }
 
-        // Check for override
-        if (appointment.getReminderLeadTimeOverride() != null) {
-            int leadTime = appointment.getReminderLeadTimeOverride();
-            OffsetDateTime scheduledAt = appointment.getStartDateTime().minusHours(leadTime);
-            
-            if (scheduledAt.isBefore(OffsetDateTime.now())) {
-                log.info("Skipping override reminder for appointment {} - scheduled time {} has passed", appointment.getId(), scheduledAt);
-                return;
-            }
+        Set<Integer> uniqueLeadTimes = new HashSet<>();
 
-            ScheduledSmsTaskEntity task = ScheduledSmsTaskEntity.builder()
-                    .businessId(appointment.getBusiness().getId())
-                    .appointment(appointment)
-                    .scheduledAt(scheduledAt)
-                    .status(SmsTaskStatus.PENDING)
-                    .build();
-            
-            scheduledSmsTaskRepository.save(task);
-            log.info("Scheduled SMS reminder (override) for appointment {} at {}", appointment.getId(), scheduledAt);
-            return; // Exit after scheduling override
+        // 1. Add additive reminder lead time
+        if (appointment.getAdditionalReminderMinutes() != null) {
+            uniqueLeadTimes.add(appointment.getAdditionalReminderMinutes());
         }
 
-        List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
-                appointment.getBusiness().getId()
-        );
+        // 2. Add selected or default reminder lead times
+        List<BusinessReminderConfigEntity> configsToSchedule;
+        if (appointment.getSelectedReminders() != null && !appointment.getSelectedReminders().isEmpty()) {
+            configsToSchedule = new ArrayList<>(appointment.getSelectedReminders());
+        } else {
+            configsToSchedule = reminderConfigService.getEnabledConfigs(appointment.getBusiness().getId());
+        }
 
-        if (configs.isEmpty()) {
-            log.info("No reminder configs found for business {}", appointment.getBusiness().getId());
+        for (BusinessReminderConfigEntity config : configsToSchedule) {
+            if (config.getLeadTimeMinutes() != null) {
+                uniqueLeadTimes.add(config.getLeadTimeMinutes());
+            }
+        }
+
+        if (uniqueLeadTimes.isEmpty()) {
+            log.info("No reminder lead times to schedule for appointment {}", appointment.getId());
             return;
         }
 
-        for (BusinessReminderConfigEntity config : configs) {
-            OffsetDateTime scheduledAt = appointment.getStartDateTime()
-                    .minusHours(config.getLeadTimeHours());
+        List<ScheduledSmsTaskEntity> tasksToSave = new ArrayList<>();
+        OffsetDateTime now = OffsetDateTime.now();
 
-            if (scheduledAt.isBefore(OffsetDateTime.now())) {
-                log.info("Skipping reminder for appointment {} - scheduled time {} has passed",
-                        appointment.getId(), scheduledAt);
+        for (Integer leadTime : uniqueLeadTimes) {
+            OffsetDateTime scheduledAt = appointment.getStartDateTime().minusMinutes(leadTime);
+
+            if (scheduledAt.isBefore(now)) {
+                log.info("Skipping reminder ({} mins) for appointment {} - scheduled time {} has passed",
+                        leadTime, appointment.getId(), scheduledAt);
                 continue;
             }
 
-            ScheduledSmsTaskEntity task = ScheduledSmsTaskEntity.builder()
+            tasksToSave.add(ScheduledSmsTaskEntity.builder()
                     .businessId(appointment.getBusiness().getId())
                     .appointment(appointment)
                     .scheduledAt(scheduledAt)
                     .status(SmsTaskStatus.PENDING)
-                    .build();
+                    .build());
+            
+            log.info("Prepared SMS reminder ({} mins) for appointment {} at {}", 
+                leadTime, appointment.getId(), scheduledAt);
+        }
 
-            scheduledSmsTaskRepository.save(task);
-            log.info("Scheduled SMS reminder for appointment {} at {}", appointment.getId(), scheduledAt);
+        if (!tasksToSave.isEmpty()) {
+            scheduledSmsTaskRepository.saveAll(tasksToSave);
+            log.info("Scheduled {} unique reminders for appointment {}", tasksToSave.size(), appointment.getId());
         }
     }
 
     @Transactional
     public void cancelRemindersForAppointment(UUID appointmentId) {
-        List<ScheduledSmsTaskEntity> tasks = scheduledSmsTaskRepository.findByAppointmentId(appointmentId);
-        for (ScheduledSmsTaskEntity task : tasks) {
+        List<ScheduledSmsTaskEntity> pendingTasks = scheduledSmsTaskRepository
+            .findByAppointmentIdAndStatus(appointmentId, SmsTaskStatus.PENDING);
+        
+        for (ScheduledSmsTaskEntity task : pendingTasks) {
             task.setStatus(SmsTaskStatus.CANCELLED);
         }
-        scheduledSmsTaskRepository.saveAll(tasks);
-        log.info("Cancelled {} reminders for appointment {}", tasks.size(), appointmentId);
+        
+        scheduledSmsTaskRepository.saveAll(pendingTasks);
+        log.info("Cancelled {} pending reminders for appointment {}", pendingTasks.size(), appointmentId);
     }
 
     @Transactional
@@ -140,7 +149,6 @@ public class SmsService {
     @Transactional
     @RequiresActiveSubscription
     public SmsLogEntity sendSms(BusinessEntity business, AppointmentEntity appointment, String recipientPhone, String message) {
-        // Enforce credit consumption logic
         subscriptionService.consumeSmsCredit(business);
 
         PhilSmsProvider.SendSmsResult result = philSmsProvider.sendSms(recipientPhone, message);
@@ -195,21 +203,26 @@ public class SmsService {
         scheduledSmsTaskRepository.save(task);
     }
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
+
     private String buildReminderMessage(AppointmentEntity appointment) {
-        List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
-                appointment.getBusiness().getId()
-        );
+    List<BusinessReminderConfigEntity> configs = reminderConfigService.getEnabledConfigs(
+            appointment.getBusiness().getId()
+    );
 
-        String template = configs.isEmpty() 
-                ? "Reminder: You have an appointment on {date} at {time}. See you soon!"
-                : configs.get(0).getMessageTemplate();
+    // Update the default fallback to match the new placeholder keys
+    String template = (configs == null || configs.isEmpty())
+            ? "Reminder: {name}, your {service} is on {date} @ {time} at {businessName}. See you!"
+            : configs.get(0).getMessageTemplate();
 
-        return template
-                .replace("{customer_name}", appointment.getCustomerName())
-                .replace("{date}", appointment.getStartDateTime().toLocalDate().toString())
-                .replace("{time}", appointment.getStartDateTime().toLocalTime().toString())
-                .replace("{branch_name}", appointment.getBranch().getName());
-    }
+    return template
+            .replace("{name}", appointment.getCustomerName())
+            .replace("{service}", appointment.getService() != null ? appointment.getService().getName() : "appointment") 
+            .replace("{date}", appointment.getStartDateTime().format(DATE_FORMATTER))
+            .replace("{time}", appointment.getStartDateTime().format(TIME_FORMATTER))
+            .replace("{businessName}", appointment.getBranch().getName());
+}
 
     private SmsLogResponse mapToResponse(SmsLogEntity smsLog) {
         return SmsLogResponse.builder()

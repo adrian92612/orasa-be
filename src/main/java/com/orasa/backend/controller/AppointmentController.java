@@ -5,12 +5,15 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+
+import com.orasa.backend.dto.common.PageResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,9 +24,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.common.RequiresActiveSubscription;
+import com.orasa.backend.common.AppointmentStatus;
+import com.orasa.backend.common.AppointmentType;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
 import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
 import com.orasa.backend.dto.appointment.UpdateAppointmentRequest;
+import com.orasa.backend.dto.appointment.UpdateAppointmentStatusRequest;
 import com.orasa.backend.dto.appointment.UpdateResult;
 import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.security.AuthenticatedUser;
@@ -61,36 +67,64 @@ public class AppointmentController extends BaseController {
   }
 
   @GetMapping("/branch/{branchId}")
-  public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getAppointmentsByBranch(
+  public ResponseEntity<ApiResponse<PageResponse<AppointmentResponse>>> getAppointmentsByBranch(
     @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID branchId,
-    @PageableDefault(size = 20) Pageable pageable
+    @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
   ) {
     Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByBranch(authenticatedUser.userId(), branchId, pageable);
-    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments));
+    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", PageResponse.from(appointments)));
   }
 
   @GetMapping("/business/{businessId}")
-  public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> getAppointmentsByBusiness(
+  public ResponseEntity<ApiResponse<PageResponse<AppointmentResponse>>> getAppointmentsByBusiness(
     @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID businessId,
-    @PageableDefault(size = 20) Pageable pageable
+    @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
   ) {
     Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByBusiness(authenticatedUser.userId(), businessId, pageable);
-    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments)); 
+    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", PageResponse.from(appointments))); 
   }
 
   @GetMapping("/branch/{branchId}/search")
-  public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> searchAppointmentsByBranch(
+  public ResponseEntity<ApiResponse<PageResponse<AppointmentResponse>>> searchAppointmentsByBranch(
     @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
     @PathVariable UUID branchId,
     @RequestParam(required = false, defaultValue = "") String search,
-    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-    @PageableDefault(size = 20) Pageable pageable
+    @RequestParam(required = false) AppointmentStatus status,
+    @RequestParam(required = false) AppointmentType type,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+    @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
   ) {
-    Page<AppointmentResponse> appointments = appointmentService.searchAppointments(authenticatedUser.userId(), branchId, search, startDate, endDate, pageable);
-    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments));
+    Page<AppointmentResponse> appointments = appointmentService.searchAppointments(authenticatedUser.userId(), branchId, search, status, type, startDate, endDate, pageable);
+    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", PageResponse.from(appointments)));
+  }
+
+  @GetMapping("/business/{businessId}/search")
+  public ResponseEntity<ApiResponse<PageResponse<AppointmentResponse>>> searchAppointmentsByBusiness(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+    @PathVariable UUID businessId,
+    @RequestParam(required = false, defaultValue = "") String search,
+    @RequestParam(required = false) AppointmentStatus status,
+    @RequestParam(required = false) AppointmentType type,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+    @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+  ) {
+    Page<AppointmentResponse> appointments = appointmentService.searchAppointmentsByBusiness(authenticatedUser.userId(), businessId, search, status, type, startDate, endDate, pageable);
+    return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", PageResponse.from(appointments)));
+  }
+
+  @PostMapping("/{id}/status")
+  @RequiresActiveSubscription
+  public ResponseEntity<ApiResponse<AppointmentResponse>> updateAppointmentStatus(
+    @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+    @PathVariable UUID id,
+    @Valid @RequestBody UpdateAppointmentStatusRequest request
+  ) {
+    AppointmentResponse response = appointmentService.updateAppointmentStatus(authenticatedUser.userId(), id, request.getStatus());
+    return ResponseEntity.ok(ApiResponse.success("Appointment status updated successfully", response));
   }
 
   @GetMapping("/{id}")

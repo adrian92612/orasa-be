@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateReminderConfigRequest {
 
-    @NotNull(message = "Lead time hours is required")
+    @NotNull(message = "Lead time minutes is required")
     @Positive(message = "Lead time must be positive")
-    private Integer leadTimeHours;
+    private Integer leadTimeMinutes;
 
     @NotBlank(message = "Message template is required")
     private String messageTemplate;

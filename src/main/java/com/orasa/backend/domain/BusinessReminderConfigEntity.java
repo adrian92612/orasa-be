@@ -16,13 +16,13 @@ public class BusinessReminderConfigEntity extends BaseEntity {
     @Column(name = "business_id", nullable = false)
     private UUID businessId;
 
-    @Column(name = "lead_time_hours", nullable = false)
-    private Integer leadTimeHours;
+    @Column(name = "lead_time_minutes", nullable = false)
+    private Integer leadTimeMinutes;
 
-    @Column(name = "message_template", columnDefinition = "TEXT")
+    @Column(name = "message_template", nullable = false, columnDefinition = "TEXT")
     private String messageTemplate;
 
-    @Column(name = "is_enabled")
+    @Column(name = "is_enabled", nullable = false)
     @Builder.Default
     private boolean isEnabled = true;
 }

@@ -72,7 +72,7 @@ public class ReminderConfigController extends BaseController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<List<ReminderConfigResponse>>> getMyConfigs(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
