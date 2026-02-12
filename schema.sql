@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS sms_logs CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS business_reminder_configs CASCADE;
 DROP TABLE IF EXISTS appointments CASCADE;
+DROP TABLE IF EXISTS appointment_reminders CASCADE;
 DROP TABLE IF EXISTS branch_services CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS user_branches CASCADE;
@@ -139,12 +140,13 @@ CREATE TABLE appointments (
     type VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
     customer_name VARCHAR(255) NOT NULL,
     customer_phone VARCHAR(50) NOT NULL,
+    service_id UUID,
     start_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     end_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    status VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     notes TEXT,
-    reminder_lead_time_minutes_override INTEGER,
+    additional_reminder_minutes INTEGER,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
@@ -152,7 +154,8 @@ CREATE TABLE appointments (
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE,
     CONSTRAINT fk_appointments_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
-    CONSTRAINT fk_appointments_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+    CONSTRAINT fk_appointments_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+    CONSTRAINT fk_appointments_service FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_appointments_business_id ON appointments(business_id);
@@ -164,19 +167,42 @@ CREATE INDEX idx_appointments_customer_phone ON appointments(customer_phone);
 CREATE TABLE business_reminder_configs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id UUID NOT NULL,
-    lead_time_minutes INTEGER NOT NULL,
-    message_template TEXT,
-    is_enabled BOOLEAN DEFAULT TRUE,
+    lead_time_minutes INTEGER NOT NULL CHECK (lead_time_minutes > 0),
+    message_template TEXT NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_reminder_configs_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+
+    CONSTRAINT fk_reminder_configs_business
+        FOREIGN KEY (business_id)
+        REFERENCES businesses(id)
+        ON DELETE CASCADE
 );
 
-CREATE INDEX idx_reminder_configs_business_id ON business_reminder_configs(business_id);
+CREATE UNIQUE INDEX uq_business_leadtime_active
+ON business_reminder_configs (business_id, lead_time_minutes)
+WHERE is_deleted = FALSE;
+
+CREATE INDEX idx_business_reminder_configs_business
+ON business_reminder_configs (business_id)
+WHERE is_deleted = FALSE;
+
+
+-- 7b. Appointment Reminders (Join Table)
+CREATE TABLE appointment_reminders (
+    appointment_id UUID NOT NULL,
+    reminder_config_id UUID NOT NULL,
+    PRIMARY KEY (appointment_id, reminder_config_id),
+    CONSTRAINT fk_appointment_reminders_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+    CONSTRAINT fk_appointment_reminders_config FOREIGN KEY (reminder_config_id) REFERENCES business_reminder_configs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_appointment_reminders_appt ON appointment_reminders(appointment_id);
+CREATE INDEX idx_appointment_reminders_config ON appointment_reminders(reminder_config_id);
 
 -- 8. Activity Logs
 CREATE TABLE activity_logs (

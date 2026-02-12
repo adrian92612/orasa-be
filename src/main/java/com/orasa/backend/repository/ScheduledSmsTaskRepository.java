@@ -12,6 +12,8 @@ import com.orasa.backend.domain.ScheduledSmsTaskEntity;
 public interface ScheduledSmsTaskRepository extends JpaRepository<ScheduledSmsTaskEntity, UUID> {
   List<ScheduledSmsTaskEntity> findByStatusAndScheduledAtBefore(SmsTaskStatus status, OffsetDateTime time);
 
+  List<ScheduledSmsTaskEntity> findByAppointmentIdAndStatus(UUID appointmentId, SmsTaskStatus status);
+
   List<ScheduledSmsTaskEntity> findByAppointmentId(UUID appointmentId);
 
   void deleteByAppointmentId(UUID appointmentId);

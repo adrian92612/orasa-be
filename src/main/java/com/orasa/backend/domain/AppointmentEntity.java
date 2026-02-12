@@ -8,6 +8,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "appointments")
@@ -52,11 +53,23 @@ public class AppointmentEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private AppointmentStatus status = AppointmentStatus.SCHEDULED;
+    private AppointmentStatus status = AppointmentStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "reminder_lead_time_minutes_override")
-    private Integer reminderLeadTimeMinutesOverride;
+    @Column(name = "additional_reminder_minutes")
+    private Integer additionalReminderMinutes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    private ServiceEntity service;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "appointment_reminders",
+        joinColumns = @JoinColumn(name = "appointment_id"),
+        inverseJoinColumns = @JoinColumn(name = "reminder_config_id")
+    )
+    private Set<BusinessReminderConfigEntity> selectedReminders;
 }

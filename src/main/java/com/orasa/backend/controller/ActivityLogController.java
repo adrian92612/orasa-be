@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.activity.ActivityLogResponse;
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.service.ActivityLogService;
 
 import lombok.RequiredArgsConstructor;
@@ -34,12 +35,12 @@ public class ActivityLogController extends BaseController {
      */
     @GetMapping("/business/{businessId}")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<ActivityLogResponse>>> getActivityLogsByBusiness(
+    public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> getActivityLogsByBusiness(
             @PathVariable UUID businessId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         Page<ActivityLogResponse> logs = activityLogService.getActivityLogsByBusiness(businessId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(logs));
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
     }
     
     /**
@@ -47,12 +48,12 @@ public class ActivityLogController extends BaseController {
      */
     @GetMapping("/branch/{branchId}")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<ActivityLogResponse>>> getActivityLogsByBranch(
+    public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> getActivityLogsByBranch(
             @PathVariable UUID branchId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         Page<ActivityLogResponse> logs = activityLogService.getActivityLogsByBranch(branchId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(logs));
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
     }
     
     /**
@@ -60,12 +61,12 @@ public class ActivityLogController extends BaseController {
      */
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<ActivityLogResponse>>> getActivityLogsByUser(
+    public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> getActivityLogsByUser(
             @PathVariable UUID userId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         Page<ActivityLogResponse> logs = activityLogService.getActivityLogsByUser(userId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(logs));
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
     }
     
     /**
@@ -79,7 +80,7 @@ public class ActivityLogController extends BaseController {
      */
     @GetMapping("/business/{businessId}/search")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<ActivityLogResponse>>> searchActivityLogs(
+    public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> searchActivityLogs(
             @PathVariable UUID businessId,
             @RequestParam(required = false) UUID branchId,
             @RequestParam(required = false) String action,
@@ -89,6 +90,6 @@ public class ActivityLogController extends BaseController {
     ) {
         Page<ActivityLogResponse> logs = activityLogService.searchActivityLogs(
                 businessId, branchId, action, startDate, endDate, pageable);
-        return ResponseEntity.ok(ApiResponse.success(logs));
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
     }
 }

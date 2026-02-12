@@ -19,10 +19,10 @@ public class BusinessReminderConfigEntity extends BaseEntity {
     @Column(name = "lead_time_minutes", nullable = false)
     private Integer leadTimeMinutes;
 
-    @Column(name = "message_template", columnDefinition = "TEXT")
+    @Column(name = "message_template", nullable = false, columnDefinition = "TEXT")
     private String messageTemplate;
 
-    @Column(name = "is_enabled")
+    @Column(name = "is_enabled", nullable = false)
     @Builder.Default
     private boolean isEnabled = true;
 }

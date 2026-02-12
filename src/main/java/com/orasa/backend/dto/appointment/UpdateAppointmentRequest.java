@@ -1,6 +1,8 @@
 package com.orasa.backend.dto.appointment;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
+import java.util.List;
 
 import com.orasa.backend.common.AppointmentStatus;
 
@@ -33,5 +35,11 @@ public class UpdateAppointmentRequest {
   @NotNull(message = "Appointment status is required")
   private AppointmentStatus status;
 
-  private Integer reminderLeadTimeMinutes;
+  private UUID serviceId;
+
+  private List<UUID> selectedReminderIds;
+
+  private Integer additionalReminderMinutes;
+  
+  private Boolean isWalkin;
 }

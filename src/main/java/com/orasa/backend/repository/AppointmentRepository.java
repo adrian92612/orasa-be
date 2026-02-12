@@ -26,12 +26,41 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
         LOWER(a.customerName) ILIKE LOWER(CONCAT('%', :search, '%')) OR
         LOWER(a.customerPhone) ILIKE LOWER(CONCAT('%', :search, '%')) OR
         LOWER(a.notes) ILIKE LOWER(CONCAT('%', :search, '%')))
-      AND (:startOfDay IS NULL OR a.startDateTime >= :startOfDay)
-      AND (:endOfDay IS NULL OR a.endDateTime <= :endOfDay)
+      AND (:status IS NULL OR a.status = :status)
+      AND (:type IS NULL OR a.type = :type)
+      AND a.startDateTime >= :startOfDay
+      AND a.endDateTime <= :endOfDay
+      ORDER BY a.startDateTime ASC
       """)
   Page<AppointmentEntity> searchAppointments(
     @Param("branchId") UUID branchId,
     @Param("search") String search,
+    @Param("status") AppointmentStatus status,
+    @Param("type") AppointmentType type,
+    @Param("startOfDay") OffsetDateTime startOfDay,
+    @Param("endOfDay") OffsetDateTime endOfDay,
+    Pageable pageable
+  );
+
+  @Query("""
+      SELECT a
+      FROM AppointmentEntity a
+      WHERE a.business.id = :businessId
+      AND (COALESCE(:search, '') = '' OR
+        LOWER(a.customerName) ILIKE LOWER(CONCAT('%', :search, '%')) OR
+        LOWER(a.customerPhone) ILIKE LOWER(CONCAT('%', :search, '%')) OR
+        LOWER(a.notes) ILIKE LOWER(CONCAT('%', :search, '%')))
+      AND (:status IS NULL OR a.status = :status)
+      AND (:type IS NULL OR a.type = :type)
+      AND a.startDateTime >= :startOfDay
+      AND a.endDateTime <= :endOfDay
+      ORDER BY a.startDateTime ASC
+      """)
+  Page<AppointmentEntity> searchAppointmentsByBusiness(
+    @Param("businessId") UUID businessId,
+    @Param("search") String search,
+    @Param("status") AppointmentStatus status,
+    @Param("type") AppointmentType type,
     @Param("startOfDay") OffsetDateTime startOfDay,
     @Param("endOfDay") OffsetDateTime endOfDay,
     Pageable pageable

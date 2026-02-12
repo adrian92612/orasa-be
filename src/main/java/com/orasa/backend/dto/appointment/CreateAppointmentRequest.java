@@ -2,8 +2,10 @@ package com.orasa.backend.dto.appointment;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,7 +31,6 @@ public class CreateAppointmentRequest {
   @NotNull(message = "Start time is required")
   private OffsetDateTime startDateTime;
 
-  @NotNull(message = "End time is required")
   private OffsetDateTime endDateTime;
 
   private String notes;
@@ -38,5 +39,10 @@ public class CreateAppointmentRequest {
   @Builder.Default
   private Boolean isWalkin = false;
 
-  private Integer reminderLeadTimeMinutes;
+  private UUID serviceId;
+
+  private List<UUID> selectedReminderIds;
+
+  @jakarta.validation.constraints.Min(value = 0, message = "Additional reminder cannot be negative")
+  private Integer additionalReminderMinutes;
 }

@@ -1,8 +1,7 @@
 package com.orasa.backend.common;
 
 public enum AppointmentStatus {
-    WALK_IN,
-    SCHEDULED,
+    PENDING,
     CONFIRMED,
     CANCELLED,
     NO_SHOW,

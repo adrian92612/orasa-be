@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.service.BusinessService;
 import com.orasa.backend.service.SubscriptionService;
 
@@ -34,12 +35,12 @@ public class PlatformAdminController extends BaseController {
 
     @GetMapping("/businesses")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<BusinessResponse>>> getAllBusinesses(
+    public ResponseEntity<ApiResponse<PageResponse<BusinessResponse>>> getAllBusinesses(
             @RequestParam(required = false) String query,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         Page<BusinessResponse> businesses = businessService.getAllBusinesses(query, pageable);
-        return ResponseEntity.ok(ApiResponse.success(businesses));
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(businesses)));
     }
 
     @PostMapping("/businesses/{businessId}/subscription/extend")
