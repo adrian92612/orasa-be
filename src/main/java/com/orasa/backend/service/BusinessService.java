@@ -189,6 +189,7 @@ public class BusinessService {
                 .subscriptionStatus(business.getSubscriptionStatus())
                 .subscriptionStartDate(business.getSubscriptionStartDate())
                 .subscriptionEndDate(business.getSubscriptionEndDate())
+                .nextCreditResetDate(business.getNextCreditResetDate())
                 .createdAt(business.getCreatedAt())
                 .firstBranchId(firstBranchId)
                 .build();

@@ -1,5 +1,6 @@
 package com.orasa.backend.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 
 import java.util.UUID;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SubscriptionService {
 
     private final BusinessRepository businessRepository;
+    private final Clock clock;
 
     @Transactional
     public boolean isSubscriptionActive(UUID businessId) {
@@ -36,12 +38,21 @@ public class SubscriptionService {
     public boolean isSubscriptionActive(BusinessEntity business) {
         if (business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE 
                 && business.getSubscriptionEndDate() != null
-                && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now())) {
+                && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now(clock))) {
             
             log.info("Business {} subscription expired on {}", 
                     business.getId(), business.getSubscriptionEndDate());
             
             business.setSubscriptionStatus(SubscriptionStatus.EXPIRED);
+            businessRepository.save(business);
+        } else if (business.getSubscriptionStatus() != SubscriptionStatus.ACTIVE 
+                && business.getSubscriptionEndDate() != null 
+                && business.getSubscriptionEndDate().isAfter(OffsetDateTime.now(clock))) {
+            
+            log.info("Business {} subscription auto-reactivated. End date: {}", 
+                    business.getId(), business.getSubscriptionEndDate());
+            
+            business.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
             businessRepository.save(business);
         }
 
@@ -97,11 +108,11 @@ public class SubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         business.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
-        business.setSubscriptionStartDate(OffsetDateTime.now());
+        business.setSubscriptionStartDate(OffsetDateTime.now(clock));
         
         // Default 1 month if not set
-        if (business.getSubscriptionEndDate() == null || business.getSubscriptionEndDate().isBefore(OffsetDateTime.now())) {
-            business.setSubscriptionEndDate(OffsetDateTime.now().plusMonths(1));
+        if (business.getSubscriptionEndDate() == null || business.getSubscriptionEndDate().isBefore(OffsetDateTime.now(clock))) {
+            business.setSubscriptionEndDate(OffsetDateTime.now(clock).plusMonths(1));
         }
 
         // Reset SMS credits from start
@@ -109,7 +120,7 @@ public class SubscriptionService {
         business.setPaidSmsCredits(0);
         
         // Set next credit reset date
-        business.setNextCreditResetDate(OffsetDateTime.now().plusMonths(1));
+        business.setNextCreditResetDate(OffsetDateTime.now(clock).plusMonths(1));
         
         businessRepository.save(business);
         log.info("Activated subscription for business {}", businessId);
@@ -135,9 +146,9 @@ public class SubscriptionService {
         
         // If already active, just extend the end date.
         // Credits will NOT reset now. They reset when nextCreditResetDate is reached.
-        OffsetDateTime baseDate = (business.getSubscriptionEndDate() != null && business.getSubscriptionEndDate().isAfter(OffsetDateTime.now()))
+        OffsetDateTime baseDate = (business.getSubscriptionEndDate() != null && business.getSubscriptionEndDate().isAfter(OffsetDateTime.now(clock)))
                 ? business.getSubscriptionEndDate()
-                : OffsetDateTime.now();
+                : OffsetDateTime.now(clock);
         
         business.setSubscriptionEndDate(baseDate.plusMonths(months));
         businessRepository.save(business);
@@ -182,7 +193,7 @@ public class SubscriptionService {
         }
 
         // If next resetting date has passed, trigger the reset
-        if (business.getNextCreditResetDate() != null && !business.getNextCreditResetDate().isAfter(OffsetDateTime.now())) {
+        if (business.getNextCreditResetDate() != null && !business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
             log.info("Lazy-refreshing credits for business {}", business.getId());
             
             business.setFreeSmsCredits(100);
@@ -190,7 +201,7 @@ public class SubscriptionService {
             
             // Advance reset date by 1 month
             // Ensure we don't fall behind if multiple months passed (though rare if system is active)
-            while (!business.getNextCreditResetDate().isAfter(OffsetDateTime.now())) {
+            while (!business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
                  business.setNextCreditResetDate(business.getNextCreditResetDate().plusMonths(1));
             }
             
@@ -201,7 +212,7 @@ public class SubscriptionService {
     private boolean handleExpiryCheck(BusinessEntity business) {
         if (business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE 
             && business.getSubscriptionEndDate() != null 
-            && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now())) {
+            && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now(clock))) {
             
             log.info("Lazy-expiring subscription for business {}", business.getId());
             business.setSubscriptionStatus(SubscriptionStatus.EXPIRED);

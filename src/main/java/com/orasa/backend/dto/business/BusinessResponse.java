@@ -23,6 +23,7 @@ public class BusinessResponse {
     private SubscriptionStatus subscriptionStatus;
     private OffsetDateTime subscriptionStartDate;
     private OffsetDateTime subscriptionEndDate;
+    private OffsetDateTime nextCreditResetDate;
     private OffsetDateTime createdAt;
 
     // Included when business is created with a branch (onboarding)

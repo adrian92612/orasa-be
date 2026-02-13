@@ -72,7 +72,7 @@ public class BusinessController extends BaseController {
      * Gets the current user's business.
      */
     @GetMapping("/me")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
     public ResponseEntity<ApiResponse<BusinessResponse>> getMyBusiness(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {

@@ -1,5 +1,6 @@
 package com.orasa.backend.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -48,6 +49,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AppointmentService {
+
   private final AppointmentRepository appointmentRepository;
   private final BranchRepository branchRepository;
   private final BusinessRepository businessRepository;
@@ -56,6 +58,7 @@ public class AppointmentService {
   private final SmsService smsService;
   private final ServiceRepository serviceRepository;
   private final BusinessReminderConfigRepository reminderConfigRepository;
+  private final Clock clock;
 
   @Transactional
   public AppointmentResponse createAppointment(UUID userId, CreateAppointmentRequest request) {
@@ -75,7 +78,7 @@ public class AppointmentService {
     // Validate user access to branch
     validateBranchAccess(user, branch);
 
-    if (!request.getIsWalkin() && request.getStartDateTime().isBefore(OffsetDateTime.now())) {
+    if (!request.getIsWalkin() && request.getStartDateTime().isBefore(OffsetDateTime.now(clock))) {
       throw new InvalidAppointmentException("Appointment time must be in the future");
     }
 
@@ -204,7 +207,7 @@ public class AppointmentService {
     // TRACK IF START TIME CHANGED
     boolean startTimeChanged = false;
     if (request.getStartDateTime() != null && !request.getStartDateTime().equals(appointment.getStartDateTime())) {
-      if (request.getStartDateTime().isBefore(OffsetDateTime.now())) {
+      if (request.getStartDateTime().isBefore(OffsetDateTime.now(clock))) {
         throw new InvalidAppointmentException("Start time must be in the future");
       }
       changes.add(FieldChange.builder()
@@ -217,7 +220,7 @@ public class AppointmentService {
     }
 
     if (request.getEndDateTime() != null && !request.getEndDateTime().equals(appointment.getEndDateTime())) {
-      if (request.getEndDateTime().isBefore(OffsetDateTime.now())) {
+      if (request.getEndDateTime().isBefore(OffsetDateTime.now(clock))) {
         throw new InvalidAppointmentException("End time must be in the future");
       }
       changes.add(FieldChange.builder()

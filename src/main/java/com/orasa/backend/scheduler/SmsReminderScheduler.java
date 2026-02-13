@@ -15,7 +15,7 @@ public class SmsReminderScheduler {
 
     private final SmsService smsService;
 
-    @Scheduled(fixedRate = 300000)
+    // @Scheduled(fixedRate = 300000)
     public void processPendingReminders() {
         log.debug("Running SMS reminder scheduler...");
         try {

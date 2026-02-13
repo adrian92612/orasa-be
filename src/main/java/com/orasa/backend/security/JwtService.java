@@ -1,5 +1,7 @@
 package com.orasa.backend.security;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,8 +24,11 @@ public class JwtService {
   @Value("${jwt.secret}")
   private String secretKey;
 
-    @Value("${jwt.expiration}")
+  @Value("${jwt.expiration}")
   private long jwtExpiration;
+  
+  @org.springframework.beans.factory.annotation.Autowired
+  private Clock clock;
 
   public String generateToken(UUID userId, String username, String role) {
     Map<String, Object> claims = new HashMap<>();
@@ -33,8 +38,8 @@ public class JwtService {
     return Jwts.builder()
         .subject(userId.toString())
         .claims(claims)
-        .issuedAt(new Date())
-        .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+        .issuedAt(Date.from(Instant.now(clock)))
+        .expiration(Date.from(Instant.now(clock).plusMillis(jwtExpiration)))
         .signWith(getSigningKey())
         .compact();
   }
@@ -74,7 +79,7 @@ public class JwtService {
   }
 
   private boolean isTokenExpired(String token) {
-    return extractExpiration(token).before(new Date());
+    return extractExpiration(token).before(Date.from(Instant.now(clock)));
   }
 
   private Date extractExpiration(String token) {

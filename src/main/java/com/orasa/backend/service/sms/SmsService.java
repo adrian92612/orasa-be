@@ -1,5 +1,6 @@
 package com.orasa.backend.service.sms;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class SmsService {
     private final BusinessRepository businessRepository;
     private final ReminderConfigService reminderConfigService;
     private final SubscriptionService subscriptionService;
+    private final Clock clock;
 
 
     @Transactional
@@ -87,7 +89,7 @@ public class SmsService {
         }
 
         List<ScheduledSmsTaskEntity> tasksToSave = new ArrayList<>();
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
 
         for (Integer leadTime : uniqueLeadTimes) {
             OffsetDateTime scheduledAt = appointment.getStartDateTime().minusMinutes(leadTime);
@@ -131,7 +133,7 @@ public class SmsService {
     @Transactional
     public void processPendingReminders() {
         List<ScheduledSmsTaskEntity> dueTasks = scheduledSmsTaskRepository
-                .findByStatusAndScheduledAtBefore(SmsTaskStatus.PENDING, OffsetDateTime.now());
+                .findByStatusAndScheduledAtBefore(SmsTaskStatus.PENDING, OffsetDateTime.now(clock));
 
         log.info("Processing {} pending SMS reminders", dueTasks.size());
 
@@ -178,7 +180,7 @@ public class SmsService {
     private void processReminder(ScheduledSmsTaskEntity task) {
         AppointmentEntity appointment = task.getAppointment();
 
-        if (appointment.getStartDateTime().isBefore(OffsetDateTime.now())) {
+        if (appointment.getStartDateTime().isBefore(OffsetDateTime.now(clock))) {
             log.info("Skipping reminder for appointment {} - already passed", appointment.getId());
             task.setStatus(SmsTaskStatus.SKIPPED);
             scheduledSmsTaskRepository.save(task);

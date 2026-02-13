@@ -10,10 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -23,13 +23,12 @@ public class AnalyticsService {
 
     private final AppointmentRepository appointmentRepository;
     private final SmsLogRepository smsLogRepository;
+    private final Clock clock;
 
     public DashboardStats getDashboardStats(UUID businessId, LocalDate startDate, LocalDate endDate) {
-        // Convert LocalDate to OffsetDateTime (start of day to end of day)
-        // Assuming UTC for now, or system default. Ideally should be based on business timezone but keeping it simple as per requirements.
-        // Orasa seems to use OffsetDateTime throughout.
-        OffsetDateTime start = startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime end = endDate.atTime(LocalTime.MAX).atOffset(ZoneOffset.UTC);
+        ZoneId zoneId = clock.getZone();
+        OffsetDateTime start = startDate.atStartOfDay(zoneId).toOffsetDateTime();
+        OffsetDateTime end = endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime().minusNanos(1);
 
         long totalAppointments = appointmentRepository.countByBusinessIdAndStartDateTimeBetween(businessId, start, end);
         

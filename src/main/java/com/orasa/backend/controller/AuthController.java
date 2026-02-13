@@ -17,6 +17,7 @@ import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.AuthService;
@@ -71,7 +72,7 @@ public class AuthController extends BaseController {
     @AuthenticationPrincipal AuthenticatedUser user
   ) {
     UserEntity currentUser = userRepository.findByIdWithRelations(user.userId())
-        .orElseThrow(() -> new com.orasa.backend.exception.ResourceNotFoundException("User not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
     AuthResponse userData = AuthResponse.builder()
       .userId(currentUser.getId())

@@ -14,10 +14,6 @@ import com.orasa.backend.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * AOP Aspect that intercepts methods annotated with @RequiresActiveSubscription
- * and validates that the user's business has an active subscription.
- */
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -30,14 +26,14 @@ public class SubscriptionEnforcementAspect {
     public Object enforceSubscription(ProceedingJoinPoint joinPoint) throws Throwable {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
-        // if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user) {
-        //     UUID businessId = user.businessId();
+        if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user) {
+            UUID businessId = user.businessId();
             
-        //     if (businessId != null) {
-        //         log.debug("Checking subscription for business {}", businessId);
-        //         subscriptionService.validateActiveSubscription(businessId);
-        //     }
-        // }
+            if (businessId != null) {
+                log.debug("Checking subscription for business {}", businessId);
+                subscriptionService.validateActiveSubscription(businessId);
+            }
+        }
         
         return joinPoint.proceed();
     }
