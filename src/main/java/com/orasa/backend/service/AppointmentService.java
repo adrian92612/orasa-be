@@ -551,7 +551,7 @@ public class AppointmentService {
         .serviceId(appointment.getService() != null ? appointment.getService().getId() : null)
         .serviceName(appointment.getService() != null ? appointment.getService().getName() : null)
         .selectedReminderIds(appointment.getSelectedReminders() != null 
-            ? appointment.getSelectedReminders().stream().map(com.orasa.backend.domain.BaseEntity::getId).toList()
+            ? appointment.getSelectedReminders().stream().map(BaseEntity::getId).toList()
             : java.util.Collections.emptyList())
         .additionalReminderMinutes(appointment.getAdditionalReminderMinutes())
         .createdAt(appointment.getCreatedAt())

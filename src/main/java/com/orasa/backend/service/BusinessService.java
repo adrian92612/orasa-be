@@ -12,6 +12,7 @@ import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
 import com.orasa.backend.dto.business.UpdateBusinessRequest;
 import com.orasa.backend.exception.BusinessException;
+import com.orasa.backend.common.SubscriptionStatus;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
@@ -124,12 +125,21 @@ public class BusinessService {
     }
 
     @Transactional
-    public Page<BusinessResponse> getAllBusinesses(String search, Pageable pageable) {
+    public Page<BusinessResponse> getAllBusinesses(String search, SubscriptionStatus status, Pageable pageable) {
         Page<BusinessEntity> page;
-        if (search != null && !search.isBlank()) {
-            page = businessRepository.findByNameContainingIgnoreCase(search, pageable);
+        
+        if (status != null) {
+            if (search != null && !search.isBlank()) {
+                page = businessRepository.findByNameContainingIgnoreCaseAndSubscriptionStatus(search, status, pageable);
+            } else {
+                page = businessRepository.findBySubscriptionStatus(status, pageable);
+            }
         } else {
-            page = businessRepository.findAll(pageable);
+            if (search != null && !search.isBlank()) {
+                page = businessRepository.findByNameContainingIgnoreCase(search, pageable);
+            } else {
+                page = businessRepository.findAll(pageable);
+            }
         }
         
         return page.map(business -> {
@@ -138,15 +148,7 @@ public class BusinessService {
                 });
     }
 
-    @Transactional
-    public void completeOnboarding(UUID businessId) {
-        BusinessEntity business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
-        
-        business.setOnboardingCompleted(true);
-        businessRepository.save(business);
-        log.info("Business {} completed onboarding", businessId);
-    }
+
 
     public UUID getCurrentUserBusinessId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

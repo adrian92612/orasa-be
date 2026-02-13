@@ -70,8 +70,8 @@ public class AuthService {
     UserEntity user = userRepository.findByEmailWithRelations(email)
         .orElseGet(() -> createNewOwner(email));
 
-    if (user.getRole() != UserRole.OWNER) {
-        throw new BadCredentialsException("Google login is only for business owners");
+    if (user.getRole() != UserRole.OWNER && user.getRole() != UserRole.ADMIN) {
+        throw new BadCredentialsException("Google login is only for business owners and admins");
     }
 
     UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;

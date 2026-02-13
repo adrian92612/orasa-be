@@ -21,6 +21,7 @@ import com.orasa.backend.dto.branch.BranchResponse;
 import com.orasa.backend.dto.branch.CreateBranchRequest;
 import com.orasa.backend.dto.branch.UpdateBranchRequest;
 import com.orasa.backend.exception.ResourceNotFoundException;
+import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessRepository;
@@ -284,7 +285,7 @@ public class BranchService {
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
         if (!branch.getBusiness().getId().equals(businessId)) {
-             throw new com.orasa.backend.exception.BusinessException("Branch does not belong to your business");
+             throw new BusinessException("Branch does not belong to your business");
         }
 
         // Log before deletion

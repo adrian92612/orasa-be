@@ -68,7 +68,7 @@ public class SubscriptionService {
 
     public void validateActiveSubscription(BusinessEntity business) {
 
-        if (!business.isOnboardingCompleted()) return;
+
 
         if (!isSubscriptionActive(business)) {
             String status = business.getSubscriptionStatus().name();
@@ -127,25 +127,32 @@ public class SubscriptionService {
     }
 
     @Transactional
+    public void cancelSubscription(UUID businessId) {
+        BusinessEntity business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+
+        business.setSubscriptionStatus(SubscriptionStatus.CANCELLED);
+        business.setSubscriptionEndDate(OffsetDateTime.now(clock));
+        business.setNextCreditResetDate(null);
+        
+        businessRepository.save(business);
+        log.info("Cancelled subscription for business {}", businessId);
+    }
+
+    @Transactional
     public void extendSubscription(UUID businessId, int months) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         if (business.getSubscriptionStatus() != SubscriptionStatus.ACTIVE) {
-            // If expired or pending, activate first (starts new cycle NOW)
-            if (business.getSubscriptionStatus() == SubscriptionStatus.EXPIRED || business.getSubscriptionStatus() == SubscriptionStatus.PENDING) {
-                activateSubscription(businessId);
-                // If months > 1, add the extra months to the new end date
-                if (months > 1) {
-                    business.setSubscriptionEndDate(business.getSubscriptionEndDate().plusMonths(months - 1));
-                    businessRepository.save(business);
-                }
-                return;
+            activateSubscription(businessId);
+            if (months > 1) {
+                business.setSubscriptionEndDate(business.getSubscriptionEndDate().plusMonths(months - 1));
+                businessRepository.save(business);
             }
+            return;
         }
         
-        // If already active, just extend the end date.
-        // Credits will NOT reset now. They reset when nextCreditResetDate is reached.
         OffsetDateTime baseDate = (business.getSubscriptionEndDate() != null && business.getSubscriptionEndDate().isAfter(OffsetDateTime.now(clock)))
                 ? business.getSubscriptionEndDate()
                 : OffsetDateTime.now(clock);
@@ -221,5 +228,14 @@ public class SubscriptionService {
             return true;
         }
         return false;
+        
+    }
+    @Transactional
+    public void addPaidCredits(UUID businessId, int credits) {
+        BusinessEntity business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+
+        business.setPaidSmsCredits(business.getPaidSmsCredits() + credits);
+        businessRepository.save(business);
     }
 }
