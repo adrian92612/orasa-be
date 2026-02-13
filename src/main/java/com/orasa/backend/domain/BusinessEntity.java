@@ -47,10 +47,6 @@ public class BusinessEntity extends BaseEntity {
     @Column(name = "next_credit_reset_date")
     private OffsetDateTime nextCreditResetDate;
 
-    @Column(name = "is_onboarding_completed", nullable = false)
-    @Builder.Default
-    private boolean isOnboardingCompleted = false;
-
     /**
      * Checks if subscription is currently active.
      * Note: This is a simple check. Use SubscriptionService for full validation with auto-expiry.

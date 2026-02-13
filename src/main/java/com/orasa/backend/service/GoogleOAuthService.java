@@ -3,7 +3,6 @@ package com.orasa.backend.service;
 import java.io.IOException;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
@@ -12,18 +11,15 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.orasa.backend.config.OrasaProperties;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class GoogleOAuthService {
 
-    @Value("${google.client-id}")
-    private String clientId;
-
-    @Value("${google.client-secret}")
-    private String clientSecret;
-
-    @Value("${google.redirect-uri}")
-    private String redirectUri;
+    private final OrasaProperties orasaProperties;
 
     private static final List<String> SCOPES = List.of(
         "openid",
@@ -35,13 +31,13 @@ public class GoogleOAuthService {
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
             new NetHttpTransport(),
             GsonFactory.getDefaultInstance(),
-            clientId,
-            clientSecret,
+            orasaProperties.getGoogle().getClientId(),
+            orasaProperties.getGoogle().getClientSecret(),
             SCOPES
         ).build();
 
         return flow.newAuthorizationUrl()
-            .setRedirectUri(redirectUri)
+            .setRedirectUri(orasaProperties.getGoogle().getRedirectUri())
             .build();
     }
 
@@ -50,10 +46,10 @@ public class GoogleOAuthService {
             GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
                 new NetHttpTransport(),
                 GsonFactory.getDefaultInstance(),
-                clientId,
-                clientSecret,
+                orasaProperties.getGoogle().getClientId(),
+                orasaProperties.getGoogle().getClientSecret(),
                 code,
-                redirectUri
+                orasaProperties.getGoogle().getRedirectUri()
             ).execute();
 
             GoogleIdToken idToken = tokenResponse.parseIdToken();

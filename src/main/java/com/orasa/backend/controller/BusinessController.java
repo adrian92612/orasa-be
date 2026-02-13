@@ -3,7 +3,6 @@ package com.orasa.backend.controller;
 
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +25,7 @@ import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.security.JwtService;
 import com.orasa.backend.service.BusinessService;
+import com.orasa.backend.config.OrasaProperties;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -40,9 +40,7 @@ public class BusinessController extends BaseController {
     private final BusinessService businessService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
-
-    @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    private final OrasaProperties orasaProperties;
 
     /**
      * Creates a new business with its first branch.
@@ -96,16 +94,7 @@ public class BusinessController extends BaseController {
         return ResponseEntity.ok(ApiResponse.success(business));
     }
 
-    @PostMapping("/onboarding/complete")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<Void>> completeOnboarding(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
-    ) {
-        validateBusinessExists(authenticatedUser);
 
-        businessService.completeOnboarding(authenticatedUser.businessId());
-        return ResponseEntity.ok(ApiResponse.success("Onboarding completed", null));
-    }
 
     /**
      * Refreshes the JWT cookie with updated user claims from the database.
@@ -126,7 +115,7 @@ public class BusinessController extends BaseController {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
-                .maxAge(jwtExpiration / 1000)
+                .maxAge(orasaProperties.getJwt().getExpiration() / 1000)
                 .sameSite("None")
                 .build();
 

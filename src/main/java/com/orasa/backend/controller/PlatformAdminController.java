@@ -20,6 +20,7 @@ import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.service.BusinessService;
 import com.orasa.backend.service.SubscriptionService;
+import com.orasa.backend.common.SubscriptionStatus;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -37,9 +38,10 @@ public class PlatformAdminController extends BaseController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<BusinessResponse>>> getAllBusinesses(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) SubscriptionStatus status,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<BusinessResponse> businesses = businessService.getAllBusinesses(query, pageable);
+        Page<BusinessResponse> businesses = businessService.getAllBusinesses(query, status, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(businesses)));
     }
 
@@ -62,7 +64,30 @@ public class PlatformAdminController extends BaseController {
         return ResponseEntity.ok(ApiResponse.success("Subscription activated successfully"));
     }
 
+    @PostMapping("/businesses/{businessId}/subscription/cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> cancelSubscription(
+            @PathVariable UUID businessId
+    ) {
+        subscriptionService.cancelSubscription(businessId);
+        return ResponseEntity.ok(ApiResponse.success("Subscription cancelled successfully"));
+    }
+
+    @PostMapping("/businesses/{businessId}/add-credits")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> addPaidCredits(
+            @PathVariable UUID businessId,
+            @Valid @RequestBody AddCreditsRequest request
+    ) {
+        subscriptionService.addPaidCredits(businessId, request.credits());
+        return ResponseEntity.ok(ApiResponse.success("Paid credits added successfully"));
+    }
+
     public record ExtendSubscriptionRequest(
             @Min(1) int months
+    ) {}
+
+    public record AddCreditsRequest(
+            @Min(1) int credits
     ) {}
 }

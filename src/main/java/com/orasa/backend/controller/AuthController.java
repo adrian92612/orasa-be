@@ -2,7 +2,6 @@ package com.orasa.backend.controller;
 
 import java.io.IOException;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +21,7 @@ import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.AuthService;
 import com.orasa.backend.service.GoogleOAuthService;
+import com.orasa.backend.config.OrasaProperties;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -35,12 +35,7 @@ public class AuthController extends BaseController {
   private final AuthService authService;
   private final GoogleOAuthService googleOAuthService;
   private final UserRepository userRepository;
-
-  @Value("${jwt.expiration}")
-  private long jwtExpiration;
-
-  @Value("${app.frontend-url}")
-  private String frontendUrl;
+  private final OrasaProperties orasaProperties;
 
   @PostMapping("/staff/login")
   public ResponseEntity<ApiResponse<AuthResponse>> loginStaff(
@@ -106,7 +101,7 @@ public class AuthController extends BaseController {
         ? "/dashboard" 
         : "/onboarding";
     
-    response.sendRedirect(frontendUrl + redirectPath);
+    response.sendRedirect(orasaProperties.getApp().getFrontendUrl() + redirectPath);
   }
 
   private void addTokenCookie(HttpServletResponse response, String token) {
@@ -114,7 +109,7 @@ public class AuthController extends BaseController {
         .httpOnly(true)
         .secure(true)
         .path("/")
-        .maxAge(jwtExpiration / 1000)
+        .maxAge(orasaProperties.getJwt().getExpiration() / 1000)
         .sameSite("None")
         .build();
     response.addHeader("Set-Cookie", cookie.toString());

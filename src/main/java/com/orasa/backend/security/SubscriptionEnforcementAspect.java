@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.service.SubscriptionService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,8 @@ public class SubscriptionEnforcementAspect {
 
     private final SubscriptionService subscriptionService;
 
-    @Around("@annotation(com.orasa.backend.common.RequiresActiveSubscription)")
-    public Object enforceSubscription(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Around("@annotation(requiresActiveSubscription)")
+    public Object enforceSubscription(ProceedingJoinPoint joinPoint, RequiresActiveSubscription requiresActiveSubscription) throws Throwable {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user) {

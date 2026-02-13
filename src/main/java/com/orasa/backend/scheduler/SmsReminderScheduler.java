@@ -1,6 +1,5 @@
 package com.orasa.backend.scheduler;
 
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.orasa.backend.service.sms.SmsService;

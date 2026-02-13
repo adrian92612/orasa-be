@@ -2,7 +2,6 @@ package com.orasa.backend.service.sms;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -13,6 +12,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.orasa.backend.config.OrasaProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -32,15 +32,7 @@ public class PhilSmsProvider {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${philsms.base-url}")
-    private String BASE_URL;
-
-    @Value("${philsms.api-token}")
-    private String apiToken;
-
-    @Value("${philsms.sender-id}")
-    private String senderId;
+    private final OrasaProperties orasaProperties;
 
     /**
      * Sends an SMS message to a single recipient.
@@ -55,7 +47,7 @@ public class PhilSmsProvider {
             
             Map<String, Object> body = Map.of(
                 "recipient", formatPhoneNumber(recipient),
-                "sender_id", senderId,
+                "sender_id", orasaProperties.getPhilsms().getSenderId(),
                 "type", "plain",
                 "message", message
             );
@@ -63,7 +55,7 @@ public class PhilSmsProvider {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             
             ResponseEntity<String> response = restTemplate.exchange(
-                BASE_URL + "/sms/send",
+                orasaProperties.getPhilsms().getBaseUrl() + "/sms/send",
                 HttpMethod.POST,
                 request,
                 String.class
@@ -102,7 +94,7 @@ public class PhilSmsProvider {
             HttpEntity<Void> request = new HttpEntity<>(headers);
             
             ResponseEntity<String> response = restTemplate.exchange(
-                BASE_URL + "/balance",
+                orasaProperties.getPhilsms().getBaseUrl() + "/balance",
                 HttpMethod.GET,
                 request,
                 String.class
@@ -133,7 +125,7 @@ public class PhilSmsProvider {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Accept", "application/json");
-        headers.setBearerAuth(apiToken);
+        headers.setBearerAuth(orasaProperties.getPhilsms().getApiToken());
         return headers;
     }
 

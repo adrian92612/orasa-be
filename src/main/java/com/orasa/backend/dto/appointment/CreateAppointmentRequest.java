@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,6 +44,6 @@ public class CreateAppointmentRequest {
 
   private List<UUID> selectedReminderIds;
 
-  @jakarta.validation.constraints.Min(value = 0, message = "Additional reminder cannot be negative")
+  @Min(value = 0, message = "Additional reminder cannot be negative")
   private Integer additionalReminderMinutes;
 }

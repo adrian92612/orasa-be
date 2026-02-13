@@ -10,25 +10,22 @@ import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.orasa.backend.config.OrasaProperties;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class JwtService {
   
-  @Value("${jwt.secret}")
-  private String secretKey;
-
-  @Value("${jwt.expiration}")
-  private long jwtExpiration;
-  
-  @org.springframework.beans.factory.annotation.Autowired
-  private Clock clock;
+  private final OrasaProperties orasaProperties;
+  private final Clock clock;
 
   public String generateToken(UUID userId, String username, String role) {
     Map<String, Object> claims = new HashMap<>();
@@ -39,7 +36,7 @@ public class JwtService {
         .subject(userId.toString())
         .claims(claims)
         .issuedAt(Date.from(Instant.now(clock)))
-        .expiration(Date.from(Instant.now(clock).plusMillis(jwtExpiration)))
+        .expiration(Date.from(Instant.now(clock).plusMillis(orasaProperties.getJwt().getExpiration())))
         .signWith(getSigningKey())
         .compact();
   }
@@ -61,7 +58,7 @@ public class JwtService {
   }
 
   private SecretKey getSigningKey() {
-    byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+    byte[] keyBytes = Decoders.BASE64.decode(orasaProperties.getJwt().getSecret());
     return Keys.hmacShaKeyFor(keyBytes);
   }
 
