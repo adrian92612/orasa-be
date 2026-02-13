@@ -488,8 +488,10 @@ public class AppointmentService {
     ZoneId zoneId = ZoneId.of("Asia/Manila");
     OffsetDateTime start = startDate != null ? startDate.atStartOfDay(zoneId).toOffsetDateTime() : MIN_DATE;
     OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime() : MAX_DATE;
-
-    return appointmentRepository.searchAppointmentsByBusiness(businessId, search, status, type, start, end, pageable)
+    String searchParam = (search == null || search.trim().isEmpty()) 
+      ? null 
+      : "%" + search.trim() + "%";
+    return appointmentRepository.searchAppointmentsByBusiness(businessId, searchParam, status, type, start, end, pageable)
         .map(this::mapToResponse);
   }
 

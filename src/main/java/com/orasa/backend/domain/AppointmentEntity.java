@@ -4,6 +4,8 @@ import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 import jakarta.persistence.*;
 import lombok.*;
+
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -71,5 +73,6 @@ public class AppointmentEntity extends BaseEntity {
         joinColumns = @JoinColumn(name = "appointment_id"),
         inverseJoinColumns = @JoinColumn(name = "reminder_config_id")
     )
+    @BatchSize(size = 50)
     private Set<BusinessReminderConfigEntity> selectedReminders;
 }

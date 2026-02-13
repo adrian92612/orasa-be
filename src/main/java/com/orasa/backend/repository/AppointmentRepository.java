@@ -23,9 +23,9 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
       FROM AppointmentEntity a
       WHERE a.branch.id = :branchId
       AND (COALESCE(:search, '') = '' OR
-        LOWER(a.customerName) ILIKE LOWER(CONCAT('%', :search, '%')) OR
-        LOWER(a.customerPhone) ILIKE LOWER(CONCAT('%', :search, '%')) OR
-        LOWER(a.notes) ILIKE LOWER(CONCAT('%', :search, '%')))
+        a.customerName ILIKE CONCAT('%', :search, '%') OR
+        a.customerPhone ILIKE CONCAT('%', :search, '%') OR
+        a.notes ILIKE CONCAT('%', :search, '%'))
       AND (:status IS NULL OR a.status = :status)
       AND (:type IS NULL OR a.type = :type)
       AND a.startDateTime >= :startOfDay
@@ -41,22 +41,34 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
     @Param("endOfDay") OffsetDateTime endOfDay,
     Pageable pageable
   );
-
-  @Query("""
-      SELECT a
-      FROM AppointmentEntity a
-      WHERE a.business.id = :businessId
-      AND (COALESCE(:search, '') = '' OR
-        LOWER(a.customerName) ILIKE LOWER(CONCAT('%', :search, '%')) OR
-        LOWER(a.customerPhone) ILIKE LOWER(CONCAT('%', :search, '%')) OR
-        LOWER(a.notes) ILIKE LOWER(CONCAT('%', :search, '%')))
-      AND (:status IS NULL OR a.status = :status)
-      AND (:type IS NULL OR a.type = :type)
-      AND a.startDateTime >= :startOfDay
-      AND a.endDateTime <= :endOfDay
-      ORDER BY a.startDateTime ASC
-      """)
-  Page<AppointmentEntity> searchAppointmentsByBusiness(
+  @Query(value = """
+    SELECT DISTINCT a
+    FROM AppointmentEntity a
+    LEFT JOIN FETCH a.service
+    LEFT JOIN FETCH a.branch
+    LEFT JOIN FETCH a.selectedReminders
+    WHERE a.business.id = :businessId
+    AND (CAST(:search AS string) IS NULL OR
+      a.customerName ILIKE CAST(:search AS string) OR
+      a.customerPhone ILIKE CAST(:search AS string))
+    AND (:status IS NULL OR a.status = :status)
+    AND (:type IS NULL OR a.type = :type)
+    AND a.startDateTime >= :startOfDay
+    AND a.startDateTime <= :endOfDay
+    """,
+    countQuery = """
+    SELECT COUNT(DISTINCT a)
+    FROM AppointmentEntity a
+    WHERE a.business.id = :businessId
+    AND (CAST(:search AS string) IS NULL OR
+      a.customerName ILIKE CAST(:search AS string) OR
+      a.customerPhone ILIKE CAST(:search AS string))
+    AND (:status IS NULL OR a.status = :status)
+    AND (:type IS NULL OR a.type = :type)
+    AND a.startDateTime >= :startOfDay
+    AND a.startDateTime <= :endOfDay
+    """)
+Page<AppointmentEntity> searchAppointmentsByBusiness(
     @Param("businessId") UUID businessId,
     @Param("search") String search,
     @Param("status") AppointmentStatus status,
@@ -64,8 +76,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
     @Param("startOfDay") OffsetDateTime startOfDay,
     @Param("endOfDay") OffsetDateTime endOfDay,
     Pageable pageable
-  );
-
+);
   long countByBusinessIdAndStartDateTimeBetween(UUID businessId, OffsetDateTime start, OffsetDateTime end);
   long countByBusinessIdAndStatusAndStartDateTimeBetween(UUID businessId, AppointmentStatus status, OffsetDateTime start, OffsetDateTime end);
   long countByBusinessIdAndTypeAndStartDateTimeBetween(UUID businessId, AppointmentType type, OffsetDateTime start, OffsetDateTime end);

@@ -36,10 +36,10 @@ public class UserEntity extends BaseEntity {
     private Set<BranchEntity> branches = new HashSet<>();
 
     @NotBlank
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, columnDefinition = "citext")
     private String username;
 
-    @Column(unique = true)
+    @Column(unique = true, columnDefinition = "citext")
     private String email;
 
     @Column(name = "password_hash")

@@ -1,17 +1,19 @@
--- Orasa Backend Schema
--- Generated based on JPA Entities
--- Includes ON DELETE CASCADE and Soft Delete columns
+-- Orasa Full High-Performance Schema
+-- Optimized for: PostgreSQL / Supabase
+-- Target: Sub-100ms Query Times
 
--- Enable UUID extension if not already enabled
+-- 0. Enable Performance Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "citext"; -- native case-insensitivity
 
--- Drop existing tables (Reverse dependency order to avoid FK errors)
+-- 0. Cleanup (Reverse Dependency Order)
 DROP TABLE IF EXISTS scheduled_sms_tasks CASCADE;
 DROP TABLE IF EXISTS sms_logs CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
-DROP TABLE IF EXISTS business_reminder_configs CASCADE;
-DROP TABLE IF EXISTS appointments CASCADE;
 DROP TABLE IF EXISTS appointment_reminders CASCADE;
+DROP TABLE IF EXISTS appointments CASCADE;
+DROP TABLE IF EXISTS business_reminder_configs CASCADE;
 DROP TABLE IF EXISTS branch_services CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS user_branches CASCADE;
@@ -23,14 +25,13 @@ DROP TABLE IF EXISTS businesses CASCADE;
 CREATE TABLE businesses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE,
+    slug CITEXT UNIQUE, -- Instant lookups regardless of casing
     free_sms_credits INTEGER NOT NULL DEFAULT 100,
     paid_sms_credits INTEGER NOT NULL DEFAULT 0,
     subscription_status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     subscription_start_date TIMESTAMP WITH TIME ZONE,
     subscription_end_date TIMESTAMP WITH TIME ZONE,
     next_credit_reset_date TIMESTAMP WITH TIME ZONE,
-    is_onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
@@ -39,12 +40,10 @@ CREATE TABLE businesses (
     deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_businesses_slug ON businesses(slug);
-
 -- 2. Branches
 CREATE TABLE branches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255),
     phone_number VARCHAR(50),
@@ -53,18 +52,15 @@ CREATE TABLE branches (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_branches_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
-
-CREATE INDEX idx_branches_business_id ON branches(business_id);
 
 -- 3. Users
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID, -- Nullable for system admins if needed, or if user belongs to multiple (design choice)
-    username VARCHAR(255) NOT NULL UNIQUE,
-    email VARCHAR(255) UNIQUE,
+    business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+    username CITEXT NOT NULL,
+    email CITEXT,
     password_hash VARCHAR(255),
     role VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -72,30 +68,24 @@ CREATE TABLE users (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_users_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_users_business_id ON users(business_id);
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
+-- Unique indexes that only care about active rows (Faster than global indexes)
+CREATE UNIQUE INDEX uq_users_username_active ON users(username) WHERE is_deleted = FALSE;
+CREATE UNIQUE INDEX uq_users_email_active ON users(email) WHERE is_deleted = FALSE;
 
--- 4. User Branches (Join Table for Many-to-Many)
+-- 4. User Branches (Many-to-Many)
 CREATE TABLE user_branches (
-    user_id UUID NOT NULL,
-    branch_id UUID NOT NULL,
-    PRIMARY KEY (user_id, branch_id),
-    CONSTRAINT fk_user_branches_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_user_branches_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, branch_id)
 );
-
-CREATE INDEX idx_user_branches_user_id ON user_branches(user_id);
-CREATE INDEX idx_user_branches_branch_id ON user_branches(branch_id);
 
 -- 5. Services
 CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     base_price DECIMAL(10, 2) NOT NULL,
@@ -105,17 +95,14 @@ CREATE TABLE services (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_services_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_services_business_id ON services(business_id);
-
--- 5b. Branch Services (Overrides)
+-- 6. Branch Services
 CREATE TABLE branch_services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    branch_id UUID NOT NULL,
-    service_id UUID NOT NULL,
+    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
     custom_price DECIMAL(10, 2),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -124,23 +111,18 @@ CREATE TABLE branch_services (
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_branch_services_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
-    CONSTRAINT fk_branch_services_service FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
     UNIQUE(branch_id, service_id)
 );
 
-CREATE INDEX idx_branch_services_branch_id ON branch_services(branch_id);
-CREATE INDEX idx_branch_services_service_id ON branch_services(service_id);
-
--- 6. Appointments
+-- 7. Appointments (Performance Core)
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL,
-    branch_id UUID NOT NULL,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
     customer_name VARCHAR(255) NOT NULL,
     customer_phone VARCHAR(50) NOT NULL,
-    service_id UUID,
+    service_id UUID REFERENCES services(id) ON DELETE SET NULL,
     start_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     end_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -152,21 +134,25 @@ CREATE TABLE appointments (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_appointments_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
-    CONSTRAINT fk_appointments_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
-    CONSTRAINT fk_appointments_service FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_appointments_business_id ON appointments(business_id);
-CREATE INDEX idx_appointments_branch_id ON appointments(branch_id);
-CREATE INDEX idx_appointments_start_date ON appointments(start_date_time);
-CREATE INDEX idx_appointments_customer_phone ON appointments(customer_phone);
+-- SPEED INDEX 1: The Dashboard Query
+-- Targets: business_id + status + start_date_time (Matches your Controller/Service logic)
+CREATE INDEX idx_appt_dashboard_perf 
+ON appointments (business_id, status, start_date_time DESC) 
+WHERE is_deleted = FALSE;
 
--- 7. Business Reminder Configs
+-- SPEED INDEX 2: The Trigram Search
+-- Targets: Fast fuzzy search across Name and Phone
+CREATE INDEX idx_appt_fuzzy_search 
+ON appointments USING gin ((customer_name || ' ' || customer_phone) gin_trgm_ops) 
+WHERE is_deleted = FALSE;
+
+-- 8. Business Reminder Configs
 CREATE TABLE business_reminder_configs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     lead_time_minutes INTEGER NOT NULL CHECK (lead_time_minutes > 0),
     message_template TEXT NOT NULL,
     is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -175,41 +161,17 @@ CREATE TABLE business_reminder_configs (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-
-    CONSTRAINT fk_reminder_configs_business
-        FOREIGN KEY (business_id)
-        REFERENCES businesses(id)
-        ON DELETE CASCADE
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE UNIQUE INDEX uq_business_leadtime_active
-ON business_reminder_configs (business_id, lead_time_minutes)
-WHERE is_deleted = FALSE;
+CREATE UNIQUE INDEX uq_biz_leadtime_active ON business_reminder_configs (business_id, lead_time_minutes) WHERE is_deleted = FALSE;
 
-CREATE INDEX idx_business_reminder_configs_business
-ON business_reminder_configs (business_id)
-WHERE is_deleted = FALSE;
-
-
--- 7b. Appointment Reminders (Join Table)
-CREATE TABLE appointment_reminders (
-    appointment_id UUID NOT NULL,
-    reminder_config_id UUID NOT NULL,
-    PRIMARY KEY (appointment_id, reminder_config_id),
-    CONSTRAINT fk_appointment_reminders_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
-    CONSTRAINT fk_appointment_reminders_config FOREIGN KEY (reminder_config_id) REFERENCES business_reminder_configs(id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_appointment_reminders_appt ON appointment_reminders(appointment_id);
-CREATE INDEX idx_appointment_reminders_config ON appointment_reminders(reminder_config_id);
-
--- 8. Activity Logs
+-- 9. Activity Logs
 CREATE TABLE activity_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL,
-    business_id UUID NOT NULL,
-    branch_id UUID,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
     action VARCHAR(255) NOT NULL,
     description TEXT,
     details TEXT,
@@ -218,45 +180,32 @@ CREATE TABLE activity_logs (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_activity_logs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_activity_logs_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
-    CONSTRAINT fk_activity_logs_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_activity_logs_business_id ON activity_logs(business_id);
-CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
-CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at);
-
--- 9. SMS Logs
+-- 10. SMS Logs
 CREATE TABLE sms_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL,
-    appointment_id UUID,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    appointment_id UUID REFERENCES appointments(id) ON DELETE SET NULL,
     recipient_phone VARCHAR(50) NOT NULL,
     message_body TEXT,
     status VARCHAR(50),
-    provider_id VARCHAR(255) NOT NULL,
+    provider_id VARCHAR(255),
     error_message TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_sms_logs_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
-    CONSTRAINT fk_sms_logs_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_sms_logs_business_id ON sms_logs(business_id);
-CREATE INDEX idx_sms_logs_appointment_id ON sms_logs(appointment_id);
-CREATE INDEX idx_sms_logs_created_at ON sms_logs(created_at);
-
--- 10. Scheduled SMS Tasks
+-- 11. Scheduled SMS Tasks
 CREATE TABLE scheduled_sms_tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL,
-    appointment_id UUID NOT NULL,
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
     scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -264,12 +213,20 @@ CREATE TABLE scheduled_sms_tasks (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_scheduled_sms_business FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
-    CONSTRAINT fk_scheduled_sms_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_scheduled_sms_business_id ON scheduled_sms_tasks(business_id);
-CREATE INDEX idx_scheduled_sms_appointment_id ON scheduled_sms_tasks(appointment_id);
-CREATE INDEX idx_scheduled_sms_scheduled_at ON scheduled_sms_tasks(scheduled_at);
-CREATE INDEX idx_scheduled_sms_status ON scheduled_sms_tasks(status);
+-- SPEED INDEX 3: Background Queue
+CREATE INDEX idx_sms_queue_active ON scheduled_sms_tasks (scheduled_at ASC) 
+WHERE status = 'PENDING' AND is_deleted = FALSE;
+
+-- 12. Appointment Reminders (Join Table)
+CREATE TABLE appointment_reminders (
+    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    reminder_config_id UUID NOT NULL REFERENCES business_reminder_configs(id) ON DELETE CASCADE,
+    PRIMARY KEY (appointment_id, reminder_config_id)
+);
+
+-- 13. System Admin Insert
+INSERT INTO users (business_id, username, email, role, created_by)
+VALUES (NULL, 'adrvil.code@gmail.com', 'adrvil.code@gmail.com', 'ADMIN', 'SYSTEM_INIT');
