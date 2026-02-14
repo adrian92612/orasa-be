@@ -149,6 +149,18 @@ CREATE INDEX idx_appt_fuzzy_search
 ON appointments USING gin ((customer_name || ' ' || customer_phone) gin_trgm_ops) 
 WHERE is_deleted = FALSE;
 
+-- SPEED INDEX 3: Business Date Range (New)
+-- Targets: Queries filtering by business and date (e.g. "All" tab)
+CREATE INDEX idx_appt_biz_date
+ON appointments (business_id, start_date_time)
+WHERE is_deleted = FALSE;
+
+-- Add to your schema
+CREATE INDEX idx_appt_biz_search 
+ON appointments (business_id, start_date_time) 
+INCLUDE (customer_name, customer_phone, status, type)
+WHERE is_deleted = FALSE;
+
 -- 8. Business Reminder Configs
 CREATE TABLE business_reminder_configs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

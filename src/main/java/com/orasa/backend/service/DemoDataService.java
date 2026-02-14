@@ -340,8 +340,11 @@ public class DemoDataService {
                     else if (roll < 9) status = AppointmentStatus.CANCELLED;
                     else status = AppointmentStatus.NO_SHOW;
                 } else {
-                    // Today/Future: Mostly pending
-                    status = AppointmentStatus.PENDING; 
+                    // Today/Future: Mix of statuses
+                    int roll = random.nextInt(10);
+                    if (roll < 6) status = AppointmentStatus.PENDING; // 60%
+                    else if (roll < 9) status = AppointmentStatus.CONFIRMED; // 30%
+                    else status = AppointmentStatus.CANCELLED; // 10%
                 }
 
                 String timeStr = String.format("%02d:00", currentHour);
@@ -352,14 +355,25 @@ public class DemoDataService {
             }
             
             // Add 1 random walk-in (No reminders for walk-ins)
-            if (random.nextBoolean()) {
-                 ServiceEntity service = services.get(random.nextInt(services.size()));
-                 String walkInCustomer = "Walk-in: " + names.get(nameIndex % names.size()); // Named walk-in
-                 nameIndex++;
-
-                 createAppointmentWithLogs(business, branch, creator, service, currentDate, "13:30", walkInCustomer, "0918" + (1000000 + random.nextInt(9000000)), 
-                    isPast ? AppointmentStatus.COMPLETED : AppointmentStatus.PENDING, 
-                    AppointmentType.WALK_IN, "Walked in", null, isPast);
+            // Walk-ins only for today, and MUST be in the past (before current time)
+            if (currentDate.equals(today) && random.nextBoolean()) {
+                 LocalTime now = LocalTime.now(clock);
+                 // Only add walk-in if current time is reasonably into the day (e.g. past 10am)
+                 if (now.getHour() > 10) {
+                     int maxHour = now.getHour() - 1;
+                     int minHour = 9;
+                     int hour = minHour + (maxHour > minHour ? random.nextInt(maxHour - minHour) : 0);
+                     
+                     ServiceEntity service = services.get(random.nextInt(services.size()));
+                     String walkInCustomer = "Walk-in: " + names.get(nameIndex % names.size()); // Named walk-in
+                     nameIndex++;
+    
+                     String timeStr = String.format("%02d:30", hour);
+                     
+                     createAppointmentWithLogs(business, branch, creator, service, currentDate, timeStr, walkInCustomer, "0918" + (1000000 + random.nextInt(9000000)), 
+                        AppointmentStatus.COMPLETED, // Walk-ins today are completed or pending? Usually completed if in past
+                        AppointmentType.WALK_IN, "Walked in", null, true); // Treat today's past walk-in as "isPast=true" for logs
+                 }
             }
         }
     }
@@ -413,11 +427,14 @@ public class DemoDataService {
 
             } else {
                 // Future -> Scheduled Tasks
-                for (BusinessReminderConfigEntity config : reminders) {
-                    // Calculate scheduled time
-                    OffsetDateTime scheduledTime = start.minusMinutes(config.getLeadTimeMinutes());
-                    if (scheduledTime.isAfter(OffsetDateTime.now(clock))) {
-                         createScheduledSmsTask(business, appointment, scheduledTime);
+                // Only schedule reminders if not cancelled/completed/no-show
+                if (status == AppointmentStatus.PENDING || status == AppointmentStatus.CONFIRMED) {
+                    for (BusinessReminderConfigEntity config : reminders) {
+                        // Calculate scheduled time
+                        OffsetDateTime scheduledTime = start.minusMinutes(config.getLeadTimeMinutes());
+                        if (scheduledTime.isAfter(OffsetDateTime.now(clock))) {
+                             createScheduledSmsTask(business, appointment, scheduledTime);
+                        }
                     }
                 }
             }

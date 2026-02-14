@@ -468,19 +468,18 @@ public class AppointmentService {
   }
 
   public Page<AppointmentResponse> searchAppointmentsByBusiness(
-      UUID userId,
-      UUID businessId,
-      String search,
-      AppointmentStatus status,
-      AppointmentType type,
-      LocalDate startDate,
-      LocalDate endDate,
-      Pageable pageable) {
+    UUID userId,
+    UUID businessId,
+    String search,
+    AppointmentStatus status,
+    AppointmentType type,
+    LocalDate startDate,
+    LocalDate endDate,
+    Pageable pageable) {
     
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     
-    // Check if user is OWNER and owns this business
     if (user.getRole() != UserRole.OWNER || !user.getBusiness().getId().equals(businessId)) {
         throw new ForbiddenException("You do not have permission to search appointments for this business");
     }
@@ -491,8 +490,18 @@ public class AppointmentService {
     String searchParam = (search == null || search.trim().isEmpty()) 
       ? null 
       : "%" + search.trim() + "%";
-    return appointmentRepository.searchAppointmentsByBusiness(businessId, searchParam, status, type, start, end, pageable)
-        .map(this::mapToResponse);
+    
+    Page<AppointmentEntity> page = appointmentRepository.searchAppointmentsByBusiness(
+        businessId, searchParam, status, type, start, end, pageable);
+    
+    if (!page.getContent().isEmpty()) {
+        List<UUID> ids = page.getContent().stream()
+            .map(AppointmentEntity::getId)
+            .toList();
+        appointmentRepository.findAllByIdWithAssociations(ids);
+    }
+    
+    return page.map(this::mapToResponse);
   }
 
   private void validateBranchAccess(UserEntity user, BranchEntity branch) {

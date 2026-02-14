@@ -1,12 +1,14 @@
 package com.orasa.backend.repository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -41,23 +43,10 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
     @Param("endOfDay") OffsetDateTime endOfDay,
     Pageable pageable
   );
-  @Query(value = """
-    SELECT DISTINCT a
-    FROM AppointmentEntity a
-    LEFT JOIN FETCH a.service
-    LEFT JOIN FETCH a.branch
-    LEFT JOIN FETCH a.selectedReminders
-    WHERE a.business.id = :businessId
-    AND (CAST(:search AS string) IS NULL OR
-      a.customerName ILIKE CAST(:search AS string) OR
-      a.customerPhone ILIKE CAST(:search AS string))
-    AND (:status IS NULL OR a.status = :status)
-    AND (:type IS NULL OR a.type = :type)
-    AND a.startDateTime >= :startOfDay
-    AND a.startDateTime <= :endOfDay
-    """,
-    countQuery = """
-    SELECT COUNT(DISTINCT a)
+  
+
+    @Query("""
+    SELECT a
     FROM AppointmentEntity a
     WHERE a.business.id = :businessId
     AND (CAST(:search AS string) IS NULL OR
@@ -67,16 +56,23 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
     AND (:type IS NULL OR a.type = :type)
     AND a.startDateTime >= :startOfDay
     AND a.startDateTime <= :endOfDay
+    ORDER BY a.startDateTime ASC
     """)
-Page<AppointmentEntity> searchAppointmentsByBusiness(
-    @Param("businessId") UUID businessId,
-    @Param("search") String search,
-    @Param("status") AppointmentStatus status,
-    @Param("type") AppointmentType type,
-    @Param("startOfDay") OffsetDateTime startOfDay,
-    @Param("endOfDay") OffsetDateTime endOfDay,
-    Pageable pageable
-);
+  Page<AppointmentEntity> searchAppointmentsByBusiness(
+      @Param("businessId") UUID businessId,
+      @Param("search") String search,
+      @Param("status") AppointmentStatus status,
+      @Param("type") AppointmentType type,
+      @Param("startOfDay") OffsetDateTime startOfDay,
+      @Param("endOfDay") OffsetDateTime endOfDay,
+      Pageable pageable
+  );
+
+  // Add entity graph method
+  @EntityGraph(attributePaths = {"service", "branch", "business", "selectedReminders"})
+  @Query("SELECT a FROM AppointmentEntity a WHERE a.id IN :ids")
+  List<AppointmentEntity> findAllByIdWithAssociations(@Param("ids") List<UUID> ids);
+
   long countByBusinessIdAndStartDateTimeBetween(UUID businessId, OffsetDateTime start, OffsetDateTime end);
   long countByBusinessIdAndStatusAndStartDateTimeBetween(UUID businessId, AppointmentStatus status, OffsetDateTime start, OffsetDateTime end);
   long countByBusinessIdAndTypeAndStartDateTimeBetween(UUID businessId, AppointmentType type, OffsetDateTime start, OffsetDateTime end);
