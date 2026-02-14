@@ -50,6 +50,23 @@ public class AnalyticsService {
         long smsFailed = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
                 businessId, SmsStatus.FAILED, start, end);
 
+        var dailyStats = appointmentRepository.getDailyStats(businessId, start, end);
+        var serviceStats = appointmentRepository.getServiceStats(businessId, start, end);
+        var statusStats = appointmentRepository.getStatusStats(businessId, start, end);
+
+        // Calculate service percentages
+        if (totalAppointments > 0) {
+            serviceStats = serviceStats.stream()
+                .map(stat -> new com.orasa.backend.dto.analytics.ServiceStatsDTO(
+                    stat.serviceName(),
+                    stat.count(),
+                    java.math.BigDecimal.valueOf(stat.count())
+                        .multiply(java.math.BigDecimal.valueOf(100))
+                        .divide(java.math.BigDecimal.valueOf(totalAppointments), 1, java.math.RoundingMode.HALF_UP)
+                ))
+                .toList();
+        }
+
         return new DashboardStats(
                 totalAppointments,
                 scheduledCount,
@@ -57,7 +74,10 @@ public class AnalyticsService {
                 cancelledCount,
                 noShowCount,
                 smsSent,
-                smsFailed
+                smsFailed,
+                dailyStats,
+                serviceStats,
+                statusStats
         );
     }
 }

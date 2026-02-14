@@ -7,5 +7,8 @@ public record DashboardStats(
     long cancelledCount,
     long noShowCount,
     long smsSent,
-    long smsFailed
+    long smsFailed,
+    java.util.List<DailyStatsDTO> dailyStats,
+    java.util.List<ServiceStatsDTO> serviceStats,
+    java.util.List<StatusStatsDTO> statusStats
 ) {}

@@ -76,5 +76,49 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
   long countByBusinessIdAndStartDateTimeBetween(UUID businessId, OffsetDateTime start, OffsetDateTime end);
   long countByBusinessIdAndStatusAndStartDateTimeBetween(UUID businessId, AppointmentStatus status, OffsetDateTime start, OffsetDateTime end);
   long countByBusinessIdAndTypeAndStartDateTimeBetween(UUID businessId, AppointmentType type, OffsetDateTime start, OffsetDateTime end);
-  
+
+  @Query("SELECT new com.orasa.backend.dto.analytics.DailyStatsDTO(" +
+         "CAST(a.startDateTime AS LocalDate), " +
+         "COUNT(a), " +
+         "SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END), " +
+         "SUM(CASE WHEN a.status = 'COMPLETED' THEN a.service.basePrice ELSE 0 END)) " +
+         "FROM AppointmentEntity a " +
+         "WHERE a.business.id = :businessId " +
+         "AND a.startDateTime >= :start " +
+         "AND a.endDateTime <= :end " +
+         "GROUP BY CAST(a.startDateTime AS LocalDate) " +
+         "ORDER BY CAST(a.startDateTime AS LocalDate) ASC")
+  List<com.orasa.backend.dto.analytics.DailyStatsDTO> getDailyStats(
+      @Param("businessId") UUID businessId, 
+      @Param("start") OffsetDateTime start, 
+      @Param("end") OffsetDateTime end);
+
+  @Query("SELECT new com.orasa.backend.dto.analytics.ServiceStatsDTO(" +
+         "s.name, " +
+         "COUNT(a), " +
+         "CAST(0 AS bigdecimal)) " + // Percentage calculated in service layer
+         "FROM AppointmentEntity a " +
+         "JOIN a.service s " +
+         "WHERE a.business.id = :businessId " +
+         "AND a.startDateTime >= :start " +
+         "AND a.endDateTime <= :end " +
+         "GROUP BY s.name " +
+         "ORDER BY COUNT(a) DESC")
+  List<com.orasa.backend.dto.analytics.ServiceStatsDTO> getServiceStats(
+      @Param("businessId") UUID businessId, 
+      @Param("start") OffsetDateTime start, 
+      @Param("end") OffsetDateTime end);
+
+  @Query("SELECT new com.orasa.backend.dto.analytics.StatusStatsDTO(" +
+         "a.status, " +
+         "COUNT(a)) " +
+         "FROM AppointmentEntity a " +
+         "WHERE a.business.id = :businessId " +
+         "AND a.startDateTime >= :start " +
+         "AND a.endDateTime <= :end " +
+         "GROUP BY a.status")
+  List<com.orasa.backend.dto.analytics.StatusStatsDTO> getStatusStats(
+      @Param("businessId") UUID businessId, 
+      @Param("start") OffsetDateTime start, 
+      @Param("end") OffsetDateTime end);
 }
