@@ -22,7 +22,7 @@ public class BusinessEntity extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(unique = true)
+    @Column(unique = true, columnDefinition = "citext")
     private String slug;
 
     @Column(name = "free_sms_credits", nullable = false)
@@ -46,6 +46,8 @@ public class BusinessEntity extends BaseEntity {
 
     @Column(name = "next_credit_reset_date")
     private OffsetDateTime nextCreditResetDate;
+
+
 
     /**
      * Checks if subscription is currently active.

@@ -20,6 +20,7 @@ import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.service.BusinessService;
 import com.orasa.backend.service.SubscriptionService;
+import com.orasa.backend.service.DemoDataService;
 import com.orasa.backend.common.SubscriptionStatus;
 
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ public class PlatformAdminController extends BaseController {
 
     private final BusinessService businessService;
     private final SubscriptionService subscriptionService;
+    private final DemoDataService demoDataService;
 
     @GetMapping("/businesses")
     @PreAuthorize("hasRole('ADMIN')")
@@ -90,4 +92,11 @@ public class PlatformAdminController extends BaseController {
     public record AddCreditsRequest(
             @Min(1) int credits
     ) {}
+
+    @PostMapping("/demo/seed")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> seedDemoData() {
+        demoDataService.seedDemoData();
+        return ResponseEntity.ok(ApiResponse.success("Demo data seeded successfully"));
+    }
 }
