@@ -14,6 +14,7 @@ public class OrasaProperties {
     private Jwt jwt = new Jwt();
     private Google google = new Google();
     private Philsms philsms = new Philsms();
+    private Redis redis = new Redis();
 
     @Data
     public static class App {
@@ -38,5 +39,11 @@ public class OrasaProperties {
         private String apiToken;
         private String senderId = "Orasa";
         private String baseUrl;
+    }
+
+    @Data
+    public static class Redis {
+        private String host;
+        private int port;
     }
 }

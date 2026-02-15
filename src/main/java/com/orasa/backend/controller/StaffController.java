@@ -36,7 +36,7 @@ public class StaffController extends BaseController {
     private final StaffService staffService;
 
     @PostMapping
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<StaffResponse>> createStaff(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -55,7 +55,7 @@ public class StaffController extends BaseController {
     }
 
     @PutMapping("/{staffId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<StaffResponse>> updateStaff(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -98,7 +98,7 @@ public class StaffController extends BaseController {
     }
 
     @DeleteMapping("/{staffId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteStaff(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,

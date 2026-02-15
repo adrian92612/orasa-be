@@ -60,15 +60,25 @@ public class SubscriptionService {
     }
 
     public void validateActiveSubscription(UUID businessId) {
+        validateActiveSubscription(businessId, false);
+    }
+
+    public void validateActiveSubscription(UUID businessId, boolean allowPending) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-        validateActiveSubscription(business);
+        validateActiveSubscription(business, allowPending);
     }
 
     public void validateActiveSubscription(BusinessEntity business) {
+        validateActiveSubscription(business, false);
+    }
 
-
+    public void validateActiveSubscription(BusinessEntity business, boolean allowPending) {
+        if (allowPending && business.getSubscriptionStatus() == SubscriptionStatus.PENDING) {
+            log.debug("Bypassing subscription check for PENDING business {} (allowPending=true)", business.getId());
+            return;
+        }
 
         if (!isSubscriptionActive(business)) {
             String status = business.getSubscriptionStatus().name();
@@ -171,7 +181,7 @@ public class SubscriptionService {
         consumeSmsCredit(business);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = SubscriptionExpiredException.class)
     public void consumeSmsCredit(BusinessEntity business) {
         // 1. Lazy Reset: Check if we moved into a new cycle since last check
         checkAndRefreshCredits(business);

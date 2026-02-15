@@ -63,6 +63,9 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "additional_reminder_minutes")
     private Integer additionalReminderMinutes;
 
+    @Column(name = "additional_reminder_template", columnDefinition = "TEXT")
+    private String additionalReminderTemplate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     private ServiceEntity service;

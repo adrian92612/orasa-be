@@ -10,6 +10,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import java.net.SocketTimeoutException;
+
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.web.client.ResourceAccessException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.orasa.backend.config.OrasaProperties;
@@ -41,10 +47,15 @@ public class PhilSmsProvider {
      * @param message   SMS body text
      * @return SendSmsResult with success status and provider message ID
      */
+    @Retryable(
+        retryFor = { ResourceAccessException.class }, 
+        maxAttempts = 2, 
+        backoff = @Backoff(delay = 5000)
+    )
     public SendSmsResult sendSms(String recipient, String message) {
         try {
             HttpHeaders headers = createHeaders();
-            
+
             Map<String, Object> body = Map.of(
                 "recipient", formatPhoneNumber(recipient),
                 "sender_id", orasaProperties.getPhilsms().getSenderId(),
@@ -61,26 +72,43 @@ public class PhilSmsProvider {
                 String.class
             );
 
-            JsonNode responseBody = objectMapper.readTree(response.getBody());
+            String rawResponseBody = response.getBody();
+            JsonNode responseBody = objectMapper.readTree(rawResponseBody != null ? rawResponseBody : "{}");
             String status = responseBody.path("status").asText();
 
             if ("success".equals(status)) {
                 String uid = responseBody.path("data").path("uid").asText("");
                 log.info("SMS sent successfully to {} with provider ID: {}", recipient, uid);
-                return SendSmsResult.success(uid.isEmpty() ? "sent" : uid);
+                return SendSmsResult.success(uid.isEmpty() ? "sent" : uid, rawResponseBody);
             } else {
                 String errorMessage = responseBody.path("message").asText("Unknown error");
                 log.error("Failed to send SMS to {}: {}", recipient, errorMessage);
-                return SendSmsResult.failure(errorMessage);
+                return SendSmsResult.failure(errorMessage, rawResponseBody);
             }
 
+        } catch (ResourceAccessException e) {
+            // Safety Hatch: Don't retry on Read Timeouts (potential duplicates)
+            if (e.getCause() instanceof SocketTimeoutException) {
+                log.error("Read timeout sending SMS to {}: {} - NOT retrying to avoid duplicates", recipient, e.getMessage());
+                return SendSmsResult.failure("Read timeout - status uncertain", null);
+            }
+            
+            // Connection Timeouts -> Safe to retry
+            log.warn("Connection error sending SMS to {} (attempting retry): {}", recipient, e.getMessage());
+            throw e; 
         } catch (RestClientException e) {
             log.error("HTTP error sending SMS to {}: {}", recipient, e.getMessage());
-            return SendSmsResult.failure("HTTP error: " + e.getMessage());
+            return SendSmsResult.failure("HTTP error: " + e.getMessage(), null);
         } catch (Exception e) {
             log.error("Unexpected error sending SMS to {}: {}", recipient, e.getMessage());
-            return SendSmsResult.failure("Unexpected error: " + e.getMessage());
+            return SendSmsResult.failure("Unexpected error: " + e.getMessage(), null);
         }
+    }
+
+    @Recover
+    public SendSmsResult recover(ResourceAccessException e, String recipient, String message) {
+        log.error("All retry attempts failed for SMS to {}: {}", recipient, e.getMessage());
+        return SendSmsResult.failure("Max retries reached. Connection error: " + e.getMessage(), null);
     }
 
     /**
@@ -104,7 +132,6 @@ public class PhilSmsProvider {
             String status = responseBody.path("status").asText();
 
             if ("success".equals(status)) {
-                // Parse balance from data - actual structure depends on PhilSMS response
                 JsonNode data = responseBody.path("data");
                 int remainingCredits = data.path("remaining_unit").asInt(0);
                 log.info("PhilSMS balance check: {} credits remaining", remainingCredits);
@@ -135,32 +162,32 @@ public class PhilSmsProvider {
      */
     private String formatPhoneNumber(String phone) {
         if (phone == null) return "";
-        
-        // Remove all non-digits
+
         String digits = phone.replaceAll("[^0-9]", "");
-        
-        // Convert 09XX to 639XX format
+
         if (digits.startsWith("09") && digits.length() == 11) {
             return "63" + digits.substring(1);
         }
         
-        // Already in 639 format
         if (digits.startsWith("63") && digits.length() == 12) {
             return digits;
         }
+
+        if (digits.length() == 10 && digits.startsWith("9")) {
+            return "63" + digits;
+        }
         
-        // Return as-is if format is unknown
         return digits;
     }
 
     // ==================== Result Classes ====================
 
-    public record SendSmsResult(boolean success, String providerId, String errorMessage) {
-        public static SendSmsResult success(String providerId) {
-            return new SendSmsResult(true, providerId, null);
+    public record SendSmsResult(boolean success, String providerId, String errorMessage, String rawResponse) {
+        public static SendSmsResult success(String providerId, String rawResponse) {
+            return new SendSmsResult(true, providerId, null, rawResponse);
         }
-        public static SendSmsResult failure(String errorMessage) {
-            return new SendSmsResult(false, null, errorMessage);
+        public static SendSmsResult failure(String errorMessage, String rawResponse) {
+            return new SendSmsResult(false, null, errorMessage, rawResponse);
         }
     }
 

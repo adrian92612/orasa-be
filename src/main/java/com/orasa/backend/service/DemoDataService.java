@@ -5,8 +5,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 import com.orasa.backend.common.SmsStatus;
-import com.orasa.backend.common.SmsTaskStatus;
 import com.orasa.backend.common.SubscriptionStatus;
 import com.orasa.backend.common.UserRole;
 import com.orasa.backend.domain.ActivityLogEntity;
@@ -32,7 +29,6 @@ import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BranchServiceEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
-import com.orasa.backend.domain.ScheduledSmsTaskEntity;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.domain.SmsLogEntity;
 import com.orasa.backend.domain.UserEntity;
@@ -42,10 +38,10 @@ import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessReminderConfigRepository;
 import com.orasa.backend.repository.BusinessRepository;
-import com.orasa.backend.repository.ScheduledSmsTaskRepository;
 import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.SmsLogRepository;
 import com.orasa.backend.repository.UserRepository;
+import com.orasa.backend.config.TimeConfig;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +59,6 @@ public class DemoDataService {
     private final AppointmentRepository appointmentRepository;
     private final BusinessReminderConfigRepository reminderConfigRepository;
     private final ActivityLogRepository activityLogRepository;
-    private final ScheduledSmsTaskRepository scheduledSmsTaskRepository;
     private final SmsLogRepository smsLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
@@ -212,8 +207,8 @@ public class DemoDataService {
             // 1. Delete Sms Logs
             jdbcTemplate.update("DELETE FROM sms_logs WHERE business_id = ?", businessId);
 
-            // 2. Delete Scheduled Sms Tasks
-            jdbcTemplate.update("DELETE FROM scheduled_sms_tasks WHERE business_id = ?", businessId);
+            // 2. Delete Scheduled Sms Tasks (Table likely dropped or unused, but clearing for safety if still exists in DB schema)
+            // jdbcTemplate.update("DELETE FROM scheduled_sms_tasks WHERE business_id = ?", businessId);
             
             // 3. Delete Activity Logs
             jdbcTemplate.update("DELETE FROM activity_logs WHERE business_id = ?", businessId);
@@ -383,7 +378,7 @@ public class DemoDataService {
             AppointmentStatus status, AppointmentType type, String notes, Set<BusinessReminderConfigEntity> reminders, boolean isPast) {
         
         LocalTime time = LocalTime.parse(timeStr);
-        OffsetDateTime start = date.atTime(time).atZone(ZoneId.of("Asia/Manila")).toOffsetDateTime();
+        OffsetDateTime start = date.atTime(time).atZone(TimeConfig.PH_ZONE).toOffsetDateTime();
         OffsetDateTime end = start.plusMinutes(service.getDurationMinutes());
 
         boolean remindersEnabled = (type == AppointmentType.SCHEDULED);
@@ -427,16 +422,7 @@ public class DemoDataService {
 
             } else {
                 // Future -> Scheduled Tasks
-                // Only schedule reminders if not cancelled/completed/no-show
-                if (status == AppointmentStatus.PENDING || status == AppointmentStatus.CONFIRMED) {
-                    for (BusinessReminderConfigEntity config : reminders) {
-                        // Calculate scheduled time
-                        OffsetDateTime scheduledTime = start.minusMinutes(config.getLeadTimeMinutes());
-                        if (scheduledTime.isAfter(OffsetDateTime.now(clock))) {
-                             createScheduledSmsTask(business, appointment, scheduledTime);
-                        }
-                    }
-                }
+                // Skipped for Redisson implementation (We don't seed future tasks in Redis for demo for now)
             }
         }
     }
@@ -451,16 +437,6 @@ public class DemoDataService {
                 .details("{}") // Empty details for demo
                 .build();
         activityLogRepository.save(log);
-    }
-
-    private void createScheduledSmsTask(BusinessEntity business, AppointmentEntity appointment, OffsetDateTime scheduledAt) {
-        ScheduledSmsTaskEntity task = ScheduledSmsTaskEntity.builder()
-                .businessId(business.getId())
-                .appointment(appointment)
-                .scheduledAt(scheduledAt)
-                .status(SmsTaskStatus.PENDING)
-                .build();
-        scheduledSmsTaskRepository.save(task);
     }
 
     private void createSmsLog(BusinessEntity business, AppointmentEntity appointment, String phone, String body, SmsStatus status) {

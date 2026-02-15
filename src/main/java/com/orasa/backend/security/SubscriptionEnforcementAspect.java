@@ -31,8 +31,9 @@ public class SubscriptionEnforcementAspect {
             UUID businessId = user.businessId();
             
             if (businessId != null) {
-                log.debug("Checking subscription for business {}", businessId);
-                subscriptionService.validateActiveSubscription(businessId);
+                log.debug("Checking subscription for business {} (allowPending={})", 
+                        businessId, requiresActiveSubscription.allowPending());
+                subscriptionService.validateActiveSubscription(businessId, requiresActiveSubscription.allowPending());
             }
         }
         

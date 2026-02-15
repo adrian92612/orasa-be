@@ -37,7 +37,7 @@ public class ServiceController extends BaseController {
     private final ServiceService serviceService;
 
     @PostMapping
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<ServiceResponse>> createService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -56,7 +56,7 @@ public class ServiceController extends BaseController {
     }
 
     @PutMapping("/{serviceId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<ServiceResponse>> updateService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -103,7 +103,7 @@ public class ServiceController extends BaseController {
     }
 
     @DeleteMapping("/{serviceId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,

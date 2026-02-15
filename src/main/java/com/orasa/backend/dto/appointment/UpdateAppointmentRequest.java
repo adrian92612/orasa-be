@@ -41,5 +41,7 @@ public class UpdateAppointmentRequest {
 
   private Integer additionalReminderMinutes;
   
+  private String additionalReminderTemplate;
+  
   private Boolean isWalkin;
 }

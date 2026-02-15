@@ -12,4 +12,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequiresActiveSubscription {
+    /**
+     * If true, allows the operation even if the subscription status is PENDING.
+     * Useful for onboarding flows.
+     */
+    boolean allowPending() default false;
 }

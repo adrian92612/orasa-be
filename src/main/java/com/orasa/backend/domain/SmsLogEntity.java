@@ -36,6 +36,9 @@ public class SmsLogEntity extends BaseEntity {
 
     @Column(name = "provider_id", nullable = false)
     private String providerId;
+    
+    @Column(name = "provider_response", columnDefinition = "TEXT")
+    private String providerResponse;
 
     @Column(name = "error_message")
     private String errorMessage;

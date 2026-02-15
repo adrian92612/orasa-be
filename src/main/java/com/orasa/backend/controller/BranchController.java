@@ -43,7 +43,7 @@ public class BranchController extends BaseController {
     private final BranchServiceService branchServiceService;
 
     @PostMapping
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchResponse>> createBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -83,7 +83,7 @@ public class BranchController extends BaseController {
     }
 
     @PutMapping("/{branchId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchResponse>> updateBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -122,7 +122,7 @@ public class BranchController extends BaseController {
     }
 
     @DeleteMapping("/{branchId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -137,7 +137,7 @@ public class BranchController extends BaseController {
     }
 
     @PostMapping("/{branchId}/services")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchServiceResponse>> assignServiceToBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -174,7 +174,7 @@ public class BranchController extends BaseController {
     }
 
     @PutMapping("/{branchId}/services/{branchServiceId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BranchServiceResponse>> updateBranchService(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -195,7 +195,7 @@ public class BranchController extends BaseController {
     }
 
     @DeleteMapping("/{branchId}/services/{branchServiceId}")
-    @RequiresActiveSubscription
+    @RequiresActiveSubscription(allowPending = true)
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> removeServiceFromBranch(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
