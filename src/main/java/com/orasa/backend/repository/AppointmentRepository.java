@@ -31,7 +31,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
       AND (:status IS NULL OR a.status = :status)
       AND (:type IS NULL OR a.type = :type)
       AND a.startDateTime >= :startOfDay
-      AND a.endDateTime <= :endOfDay
+      AND a.startDateTime <= :endOfDay
       ORDER BY a.startDateTime ASC
       """)
   Page<AppointmentEntity> searchAppointments(

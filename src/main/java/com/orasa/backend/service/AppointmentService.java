@@ -3,7 +3,6 @@ package com.orasa.backend.service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -42,6 +41,7 @@ import com.orasa.backend.repository.BusinessReminderConfigRepository;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.service.sms.SmsService;
+import com.orasa.backend.config.TimeConfig;
 
 import lombok.RequiredArgsConstructor;
 
@@ -100,7 +100,8 @@ public class AppointmentService {
         .remindersEnabled(true)
         .status(AppointmentStatus.PENDING)
         .type(request.getIsWalkin() ? AppointmentType.WALK_IN : AppointmentType.SCHEDULED)
-        .additionalReminderMinutes(reminderMinutes);
+        .additionalReminderMinutes(reminderMinutes)
+        .additionalReminderTemplate(request.getAdditionalReminderTemplate());
 
     if (request.getServiceId() != null) {
       ServiceEntity serviceEntity = serviceRepository.findById(request.getServiceId())
@@ -303,6 +304,16 @@ public class AppointmentService {
       }
     }
 
+    if (request.getAdditionalReminderTemplate() != null && !request.getAdditionalReminderTemplate().equals(appointment.getAdditionalReminderTemplate())) {
+        changes.add(FieldChange.builder()
+            .field("Custom Reminder Template")
+            .before(appointment.getAdditionalReminderTemplate() != null ? "customized" : "default")
+            .after("customized")
+            .build());
+        appointment.setAdditionalReminderTemplate(request.getAdditionalReminderTemplate());
+        additionalReminderChanged = true;
+    }
+
     // TRACK IF SELECTED REMINDERS CHANGED
     boolean selectedRemindersChanged = false;
     if (request.getSelectedReminderIds() != null) {
@@ -459,11 +470,14 @@ public class AppointmentService {
 
     validateBranchAccess(user, branch);
 
-    ZoneId zoneId = ZoneId.of("Asia/Manila");
-    OffsetDateTime start = startDate != null ? startDate.atStartOfDay(zoneId).toOffsetDateTime() : MIN_DATE;
-    OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime() : MAX_DATE;
+    OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
+    OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
 
-    return appointmentRepository.searchAppointments(branchId, search, status, type, start, end, pageable)
+    String searchParam = (search == null || search.trim().isEmpty()) 
+        ? null 
+        : "%" + search.trim() + "%";
+
+    return appointmentRepository.searchAppointments(branchId, searchParam, status, type, start, end, pageable)
         .map(this::mapToResponse);
   }
 
@@ -484,9 +498,8 @@ public class AppointmentService {
         throw new ForbiddenException("You do not have permission to search appointments for this business");
     }
 
-    ZoneId zoneId = ZoneId.of("Asia/Manila");
-    OffsetDateTime start = startDate != null ? startDate.atStartOfDay(zoneId).toOffsetDateTime() : MIN_DATE;
-    OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime() : MAX_DATE;
+  OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
+  OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
     String searchParam = (search == null || search.trim().isEmpty()) 
       ? null 
       : "%" + search.trim() + "%";
@@ -565,12 +578,12 @@ public class AppointmentService {
             ? appointment.getSelectedReminders().stream().map(BaseEntity::getId).toList()
             : java.util.Collections.emptyList())
         .additionalReminderMinutes(appointment.getAdditionalReminderMinutes())
+        .additionalReminderTemplate(appointment.getAdditionalReminderTemplate())
         .createdAt(appointment.getCreatedAt())
         .updatedAt(appointment.getUpdatedAt())
         .build();
   }
 
-  private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
   private static final DateTimeFormatter DATE_TIME_FORMATTER = 
       DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
   
@@ -580,7 +593,7 @@ public class AppointmentService {
 
   private String formatDateTime(OffsetDateTime dateTime) {
     if (dateTime == null) return "(not set)";
-    return dateTime.atZoneSameInstant(MANILA_ZONE).format(DATE_TIME_FORMATTER);
+    return dateTime.atZoneSameInstant(TimeConfig.PH_ZONE).format(DATE_TIME_FORMATTER);
   }
 }
 

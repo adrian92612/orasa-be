@@ -2,7 +2,6 @@ package com.orasa.backend.service;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
@@ -19,6 +18,7 @@ import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.ActivityLogResponse;
 import com.orasa.backend.repository.ActivityLogRepository;
+import com.orasa.backend.config.TimeConfig;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +30,7 @@ public class ActivityLogService {
     
     private final ActivityLogRepository activityLogRepository;
     
-    private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =  
             DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
     
     // ==================== LOGGING METHODS ====================
@@ -261,10 +260,10 @@ public class ActivityLogService {
             Pageable pageable) {
         
         OffsetDateTime start = startDate != null 
-            ? startDate.atStartOfDay(MANILA_ZONE).toOffsetDateTime() 
+            ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() 
             : null;
         OffsetDateTime end = endDate != null 
-            ? endDate.plusDays(1).atStartOfDay(MANILA_ZONE).toOffsetDateTime() 
+            ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() 
             : null;
         
         return activityLogRepository.searchActivityLogs(
@@ -291,6 +290,6 @@ public class ActivityLogService {
     }
     
     private String formatDateTime(OffsetDateTime dateTime) {
-        return dateTime.atZoneSameInstant(MANILA_ZONE).format(DATE_TIME_FORMATTER);
+        return dateTime.atZoneSameInstant(TimeConfig.PH_ZONE).format(DATE_TIME_FORMATTER);
     }
 }

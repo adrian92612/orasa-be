@@ -33,6 +33,7 @@ public class AppointmentResponse {
   private String serviceName;
   private List<UUID> selectedReminderIds;
   private Integer additionalReminderMinutes;
+  private String additionalReminderTemplate;
   private OffsetDateTime createdAt;
   private OffsetDateTime updatedAt;
 }

@@ -46,4 +46,6 @@ public class CreateAppointmentRequest {
 
   @Min(value = 0, message = "Additional reminder cannot be negative")
   private Integer additionalReminderMinutes;
+
+  private String additionalReminderTemplate;
 }
