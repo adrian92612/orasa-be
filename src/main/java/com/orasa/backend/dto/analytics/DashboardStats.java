@@ -6,7 +6,7 @@ public record DashboardStats(
     long walkInCount,
     long cancelledCount,
     long noShowCount,
-    long smsSent,
+    long smsDelivered,
     long smsFailed,
     java.util.List<DailyStatsDTO> dailyStats,
     java.util.List<ServiceStatsDTO> serviceStats,

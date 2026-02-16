@@ -246,7 +246,7 @@ public class SmsService {
         try {
             sendSms(business, smsLog);
             // Update the Plan status
-            scheduledTask.setStatus(smsLog.getStatus() == SmsStatus.SENT ? SmsTaskStatus.COMPLETED : SmsTaskStatus.FAILED);
+            scheduledTask.setStatus(smsLog.getStatus() == SmsStatus.DELIVERED ? SmsTaskStatus.COMPLETED : SmsTaskStatus.FAILED);
         } catch (SubscriptionExpiredException e) {
             log.error("Failed to send SMS for appointment {}: {}", appointmentId, e.getMessage());
             
@@ -275,7 +275,7 @@ public class SmsService {
 
         PhilSmsProvider.SendSmsResult result = philSmsProvider.sendSms(smsLog.getRecipientPhone(), smsLog.getMessageBody());
 
-        smsLog.setStatus(result.success() ? SmsStatus.SENT : SmsStatus.FAILED);
+        smsLog.setStatus(result.success() ? SmsStatus.DELIVERED : SmsStatus.FAILED);
         smsLog.setProviderId(result.success() ? result.providerId() : "none");
         smsLog.setProviderResponse(result.rawResponse());
         smsLog.setErrorMessage(result.errorMessage());
@@ -283,8 +283,23 @@ public class SmsService {
         return smsLogRepository.save(smsLog);
     }
 
-    public Page<SmsLogResponse> getSmsLogs(UUID businessId, Pageable pageable) {
-        return smsLogRepository.findByBusinessId(businessId, pageable)
+    public Page<SmsLogResponse> getSmsLogs(
+            UUID businessId,
+            UUID branchId,
+            SmsStatus status,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable) {
+        
+        OffsetDateTime start = startDate != null 
+            ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() 
+            : null;
+        OffsetDateTime end = endDate != null 
+            ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() 
+            : null;
+
+        return smsLogRepository.searchSmsLogs(
+                businessId, branchId, status, start, end, pageable)
                 .map(this::mapToResponse);
     }
 

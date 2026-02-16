@@ -44,8 +44,8 @@ public class AnalyticsService {
         long noShowCount = appointmentRepository.countByBusinessIdAndStatusAndStartDateTimeBetween(
                 businessId, AppointmentStatus.NO_SHOW, start, end);
 
-        long smsSent = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
-                businessId, SmsStatus.SENT, start, end);
+        long smsDelivered = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
+                businessId, SmsStatus.DELIVERED, start, end);
         
         long smsFailed = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
                 businessId, SmsStatus.FAILED, start, end);
@@ -73,7 +73,7 @@ public class AnalyticsService {
                 walkInCount,
                 cancelledCount,
                 noShowCount,
-                smsSent,
+                smsDelivered,
                 smsFailed,
                 dailyStats,
                 serviceStats,

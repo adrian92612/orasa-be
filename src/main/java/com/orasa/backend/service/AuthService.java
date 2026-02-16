@@ -59,6 +59,8 @@ public class AuthService {
       .businessName(user.getBusiness().getName())
       .build();
 
+    activityLogService.logUserLogin(user, user.getBusiness());
+
     return new LoginResult(token, response);
   }
 
@@ -82,6 +84,10 @@ public class AuthService {
         user.getRole().name()
     );
 
+    if (user.getBusiness() != null) {
+        activityLogService.logUserLogin(user, user.getBusiness());
+    }
+
     return new LoginResult(token, AuthResponse.builder()
         .userId(user.getId())
         .username(user.getUsername())
@@ -89,6 +95,16 @@ public class AuthService {
         .businessId(businessId)
         .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
         .build());
+  }
+
+  public void logout(UUID userId) {
+      if (userId == null) return;
+      
+      userRepository.findById(userId).ifPresent(user -> {
+          if (user.getBusiness() != null) {
+              activityLogService.logUserLogout(user, user.getBusiness());
+          }
+      });
   }
 
   public void changePassword(UUID userId, ChangePasswordRequest request) {

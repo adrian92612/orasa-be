@@ -82,23 +82,19 @@ WALK_IN   → NO_SHOW     (Walk-in left before service)
 
 ```typescript
 enum SmsStatus {
-  PENDING = "PENDING", // Scheduled but not sent
-  SENT = "SENT", // Successfully sent to provider
-  DELIVERED = "DELIVERED", // Confirmed delivered (if available)
+  PENDING = "PENDING", // Scheduled but not yet sent
+  DELIVERED = "DELIVERED", // Successfully sent and assumed delivered
   FAILED = "FAILED", // Failed to send
-  INSUFFICIENT_CREDIT = "INSUFFICIENT_CREDIT", // No SMS credits available
 }
 ```
 
 ### Status Icons (Suggested)
 
-| Status              | Icon | Description      |
-| ------------------- | ---- | ---------------- |
-| PENDING             | ⏳   | Clock/hourglass  |
-| SENT                | ✓    | Single checkmark |
-| DELIVERED           | ✓✓   | Double checkmark |
-| FAILED              | ✗    | X mark           |
-| INSUFFICIENT_CREDIT | ⚠    | Warning triangle |
+| Status    | Icon | Description                |
+| --------- | ---- | -------------------------- |
+| PENDING   | ⏳   | Clock/hourglass            |
+| DELIVERED | ✓✓   | Double checkmark (Success) |
+| FAILED    | ✗    | X mark                     |
 
 ---
 
@@ -311,12 +307,7 @@ type AppointmentStatus =
   | "CANCELLED"
   | "NO_SHOW"
   | "COMPLETED";
-type SmsStatus =
-  | "PENDING"
-  | "SENT"
-  | "DELIVERED"
-  | "FAILED"
-  | "INSUFFICIENT_CREDIT";
+type SmsStatus = "PENDING" | "DELIVERED" | "FAILED";
 type SubscriptionStatus = "PENDING" | "ACTIVE" | "EXPIRED" | "CANCELLED";
 
 type ActivityAction =

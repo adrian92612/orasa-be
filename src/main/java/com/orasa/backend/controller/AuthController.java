@@ -49,7 +49,14 @@ public class AuthController extends BaseController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse response) {
+  public ResponseEntity<ApiResponse<Void>> logout(
+      @AuthenticationPrincipal AuthenticatedUser user,
+      HttpServletResponse response
+  ) {
+    if (user != null) {
+        authService.logout(user.userId());
+    }
+
     ResponseCookie cookie = ResponseCookie.from("token", "")
         .httpOnly(true)
         .secure(true)

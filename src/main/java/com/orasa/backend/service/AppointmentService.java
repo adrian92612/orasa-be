@@ -207,7 +207,8 @@ public class AppointmentService {
 
     // TRACK IF START TIME CHANGED
     boolean startTimeChanged = false;
-    if (request.getStartDateTime() != null && !request.getStartDateTime().equals(appointment.getStartDateTime())) {
+    if (request.getStartDateTime() != null && !request.getStartDateTime().isEqual(beforeStartDateTime)) {
+      // Only validate future time if the start time is actually being changed
       if (request.getStartDateTime().isBefore(OffsetDateTime.now(clock))) {
         throw new InvalidAppointmentException("Start time must be in the future");
       }
@@ -220,10 +221,7 @@ public class AppointmentService {
       startTimeChanged = true;
     }
 
-    if (request.getEndDateTime() != null && !request.getEndDateTime().equals(appointment.getEndDateTime())) {
-      if (request.getEndDateTime().isBefore(OffsetDateTime.now(clock))) {
-        throw new InvalidAppointmentException("End time must be in the future");
-      }
+    if (request.getEndDateTime() != null && !request.getEndDateTime().isEqual(beforeEndDateTime)) {
       changes.add(FieldChange.builder()
           .field("End Time")
           .before(formatDateTime(beforeEndDateTime))

@@ -20,6 +20,12 @@ import com.orasa.backend.service.sms.SmsService;
 
 import lombok.RequiredArgsConstructor;
 
+import com.orasa.backend.common.SmsStatus;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.time.LocalDate;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/sms")
 @RequiredArgsConstructor
@@ -31,11 +37,16 @@ public class SmsController extends BaseController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<PageResponse<SmsLogResponse>>> getSmsLogs(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @RequestParam(required = false) UUID branchId,
+            @RequestParam(required = false) SmsStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         validateBusinessExists(authenticatedUser);
 
-        Page<SmsLogResponse> logs = smsService.getSmsLogs(authenticatedUser.businessId(), pageable);
+        Page<SmsLogResponse> logs = smsService.getSmsLogs(
+                authenticatedUser.businessId(), branchId, status, startDate, endDate, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
     }
 

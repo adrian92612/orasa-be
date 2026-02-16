@@ -22,10 +22,10 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLogEntity, 
     @Query("""
         SELECT a FROM ActivityLogEntity a
         WHERE a.business.id = :businessId
-        AND (:branchId IS NULL OR a.branch.id = :branchId)
-        AND (:action IS NULL OR a.action = :action)
-        AND (:startDate IS NULL OR a.createdAt >= :startDate)
-        AND (:endDate IS NULL OR a.createdAt <= :endDate)
+        AND (cast(:branchId as uuid) IS NULL OR a.branch.id = :branchId)
+        AND (cast(:action as string) IS NULL OR a.action = :action)
+        AND (cast(:startDate as offsetdatetime) IS NULL OR a.createdAt >= :startDate)
+        AND (cast(:endDate as offsetdatetime) IS NULL OR a.createdAt <= :endDate)
         ORDER BY a.createdAt DESC
         """)
     Page<ActivityLogEntity> searchActivityLogs(

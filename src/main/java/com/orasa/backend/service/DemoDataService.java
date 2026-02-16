@@ -417,7 +417,7 @@ public class DemoDataService {
                 for (BusinessReminderConfigEntity config : reminders) {
                     createSmsLog(business, appointment, customerPhone, 
                         config.getMessageTemplate().replace("{{customer_name}}", customerName), // Use config to make it real
-                        SmsStatus.SENT);
+                        SmsStatus.DELIVERED);
                 }
 
             } else {

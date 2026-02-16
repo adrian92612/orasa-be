@@ -470,7 +470,7 @@ GET /appointments/branch/{branchId}/search?search=john&startDate=2026-02-01&endD
         "customerName": "John Doe",
         "recipientPhone": "09123456789",
         "messageBody": "Reminder: Your appointment...",
-        "status": "SENT",
+        "status": "DELIVERED",
         "errorMessage": null,
         "createdAt": "2026-02-04T09:00:00Z"
       }
@@ -618,7 +618,7 @@ Retrieves aggregated statistics for the owner dashboard.
     "walkInCount": 30,
     "cancelledCount": 5,
     "noShowCount": 2,
-    "smsSent": 115,
+    "smsDelivered": 115,
     "smsFailed": 5
   }
 }
