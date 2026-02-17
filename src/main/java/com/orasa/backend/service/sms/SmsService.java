@@ -180,6 +180,10 @@ public class SmsService {
             log.info("Skipping task {} - Status is already {}", scheduledTaskId, scheduledTask.getStatus());
             return;
         }
+
+        // Mark as PROCESSING before sending to prevent duplicate sends on retry
+        scheduledTask.setStatus(SmsTaskStatus.PROCESSING);
+        scheduledSmsTaskRepository.save(scheduledTask);
         
         AppointmentEntity appointment = appointmentRepository.findById(appointmentId)
                 .orElse(null);
