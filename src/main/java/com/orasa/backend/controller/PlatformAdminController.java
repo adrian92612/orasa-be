@@ -21,7 +21,10 @@ import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.service.BusinessService;
 import com.orasa.backend.service.SubscriptionService;
 import com.orasa.backend.service.DemoDataService;
+import com.orasa.backend.service.sms.SmsService;
 import com.orasa.backend.common.SubscriptionStatus;
+import com.orasa.backend.dto.sms.SmsBalanceResponse;
+import com.orasa.backend.service.sms.PhilSmsProvider;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -35,6 +38,7 @@ public class PlatformAdminController extends BaseController {
     private final BusinessService businessService;
     private final SubscriptionService subscriptionService;
     private final DemoDataService demoDataService;
+    private final SmsService smsService;
 
     @GetMapping("/businesses")
     @PreAuthorize("hasRole('ADMIN')")
@@ -45,6 +49,17 @@ public class PlatformAdminController extends BaseController {
     ) {
         Page<BusinessResponse> businesses = businessService.getAllBusinesses(query, status, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(businesses)));
+    }
+
+    @GetMapping("/sms-balance")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<SmsBalanceResponse>> getSmsBalance() {
+        PhilSmsProvider.BalanceResult balance = smsService.getBalance();
+        return ResponseEntity.ok(ApiResponse.success(new SmsBalanceResponse(
+            balance.remainingCredits(),
+            balance.success(),
+            balance.errorMessage()
+        )));
     }
 
     @PostMapping("/businesses/{businessId}/subscription/extend")

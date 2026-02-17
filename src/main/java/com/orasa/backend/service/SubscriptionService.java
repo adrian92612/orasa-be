@@ -217,8 +217,7 @@ public class SubscriptionService {
             // Advance reset date by 1 month
             // Ensure we don't fall behind if multiple months passed (though rare if system is active)
             while (!business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
-                 business.setNextCreditResetDate(business.getNextCreditResetDate().plusMinutes(5));
-                //  business.setNextCreditResetDate(business.getNextCreditResetDate().plusMonths(1));
+                 business.setNextCreditResetDate(business.getNextCreditResetDate().plusMonths(1));
             }
             
             businessRepository.save(business);

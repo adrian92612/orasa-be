@@ -120,7 +120,7 @@ public class AppointmentService {
       builder.endDateTime(request.getEndDateTime());
     }
 
-    if (request.getSelectedReminderIds() != null && !request.getSelectedReminderIds().isEmpty()) {
+    if (request.getSelectedReminderIds() != null) {
       List<BusinessReminderConfigEntity> selectedReminders = 
           reminderConfigRepository.findAllById(request.getSelectedReminderIds());
       builder.selectedReminders(new java.util.HashSet<>(selectedReminders));

@@ -87,7 +87,7 @@ public class SmsService {
 
         // 2. Add selected or default reminder lead times
         List<BusinessReminderConfigEntity> configsToSchedule;
-        if (appointment.getSelectedReminders() != null && !appointment.getSelectedReminders().isEmpty()) {
+        if (appointment.getSelectedReminders() != null) {
             configsToSchedule = new ArrayList<>(appointment.getSelectedReminders());
         } else {
             configsToSchedule = reminderConfigService.getEnabledConfigs(appointment.getBusiness().getId());

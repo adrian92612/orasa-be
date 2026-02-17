@@ -127,14 +127,19 @@ public class PhilSmsProvider {
                 request,
                 String.class
             );
-
+            
             JsonNode responseBody = objectMapper.readTree(response.getBody());
             String status = responseBody.path("status").asText();
-
+            
             if ("success".equals(status)) {
                 JsonNode data = responseBody.path("data");
-                int remainingCredits = data.path("remaining_unit").asInt(0);
-                log.info("PhilSMS balance check: {} credits remaining", remainingCredits);
+                String balanceStr = data.path("remaining_balance").asText("0");
+                
+                // Extract only digits (handles currency symbols like ₱ or ?)
+                String numericBalance = balanceStr.replaceAll("[^0-9]", "");
+                int remainingCredits = numericBalance.isEmpty() ? 0 : Integer.parseInt(numericBalance);
+                
+                log.info("PhilSMS balance check: {} credits remaining (raw: {})", remainingCredits, balanceStr);
                 return BalanceResult.success(remainingCredits);
             } else {
                 String errorMessage = responseBody.path("message").asText("Unknown error");
