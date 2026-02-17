@@ -127,7 +127,6 @@ public class SubscriptionService {
 
         // Reset SMS credits from start
         business.setFreeSmsCredits(100); 
-        business.setPaidSmsCredits(0);
         
         // Set next credit reset date
         business.setNextCreditResetDate(OffsetDateTime.now(clock).plusMonths(1));
@@ -214,12 +213,12 @@ public class SubscriptionService {
             log.info("Lazy-refreshing credits for business {}", business.getId());
             
             business.setFreeSmsCredits(100);
-            business.setPaidSmsCredits(0); // Resetting paid credits? Rules say they don't roll over.
             
             // Advance reset date by 1 month
             // Ensure we don't fall behind if multiple months passed (though rare if system is active)
             while (!business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
-                 business.setNextCreditResetDate(business.getNextCreditResetDate().plusMonths(1));
+                 business.setNextCreditResetDate(business.getNextCreditResetDate().plusMinutes(5));
+                //  business.setNextCreditResetDate(business.getNextCreditResetDate().plusMonths(1));
             }
             
             businessRepository.save(business);
