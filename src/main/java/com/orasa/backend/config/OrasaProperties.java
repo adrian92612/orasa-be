@@ -15,6 +15,7 @@ public class OrasaProperties {
     private Google google = new Google();
     private Philsms philsms = new Philsms();
     private Redis redis = new Redis();
+    private Payloro payloro = new Payloro();
 
     @Data
     public static class App {
@@ -45,5 +46,12 @@ public class OrasaProperties {
     public static class Redis {
         private String host;
         private int port;
+    }
+
+    @Data
+    public static class Payloro {
+        private String merchantNo;
+        private String privateKey;
+        private String baseUrl = "https://testgateway.payloro.ph/api";
     }
 }

@@ -50,18 +50,13 @@ public class SmsReminderWorker {
             log.info("SmsReminderWorker started, listening for tasks...");
             while (isRunning && !Thread.currentThread().isInterrupted()) {
                 try {
-                    // This blocks until a task is available (respecting the delay set during add)
                     SmsReminderTask task = blockingQueue.take();
-                    
-                    // Submit to worker pool for processing
                     workerExecutor.submit(() -> processTask(task));
-                    
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     log.warn("SmsReminderWorker polling interrupted");
                 } catch (Exception e) {
                     log.error("Error retrieving SMS reminder task", e);
-                    // Add a small sleep to prevent tight loop on persistent errors
                     try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }
             }
