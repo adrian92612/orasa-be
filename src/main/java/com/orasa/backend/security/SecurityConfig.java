@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/admin/demo/seed").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/webhooks/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

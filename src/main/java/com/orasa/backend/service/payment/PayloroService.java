@@ -2,8 +2,7 @@ package com.orasa.backend.service.payment;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.Signature;
+
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
@@ -33,7 +32,9 @@ public class PayloroService {
     private final OrasaProperties orasaProperties;
 
     public PayloroResponse createPayment(PayloroRequest request) {
+        System.out.println("[PAYLORO] Initiating payment request for order: " + request.getMerchantOrderNo() + " (Amount: " + request.getPayAmount() + ")");
         try {
+
             request.setMerchantNo(orasaProperties.getPayloro().getMerchantNo());
             String sign = generateSignature(request);
             request.setSign(sign);
@@ -49,7 +50,8 @@ public class PayloroService {
                 String.class
             );
 
-            log.debug("Payloro response: {}", response.getBody());
+            System.out.println("[PAYLORO] Raw Response Body: " + response.getBody());
+            log.info("Payloro response: {}", response.getBody());
 
             JsonNode root = objectMapper.readTree(response.getBody());
             if ("200".equals(root.path("status").asText())) {
@@ -63,6 +65,7 @@ public class PayloroService {
                 );
             } else {
                 String error = root.path("message").asText("Unknown error from Payloro");
+                System.err.println("[PAYLORO] Error Status: " + root.path("status").asText() + ", Message: " + error);
                 log.error("Payloro error response: {}", error);
                 return new PayloroResponse(false, null, null, null, error);
             }
@@ -74,18 +77,20 @@ public class PayloroService {
     }
 
     private String generateSignature(PayloroRequest request) throws Exception {
-        // Order according to payloro.md: 
-        // description + email + merchantNo + merchantOrderNo + method + mobile + name + payAmount
-        String data = String.format("%s%s%s%s%s%s%s%s",
-            request.getDescription(),
-            request.getEmail(),
-            request.getMerchantNo(),
-            request.getMerchantOrderNo(),
-            request.getMethod(),
-            request.getMobile(),
-            request.getName(),
-            request.getPayAmount()
-        );
+        // Order alphabetically: description + email + merchantNo + merchantOrderNo + method + mobile + name + notifyUrl + payAmount
+        StringBuilder sb = new StringBuilder();
+        sb.append(request.getDescription());
+        sb.append(request.getEmail());
+        sb.append(request.getMerchantNo());
+        sb.append(request.getMerchantOrderNo());
+        sb.append(request.getMethod());
+        sb.append(request.getMobile());
+        sb.append(request.getName());
+        if (request.getNotifyUrl() != null && !request.getNotifyUrl().isEmpty()) {
+            sb.append(request.getNotifyUrl());
+        }
+        sb.append(request.getPayAmount());
+        String data = sb.toString();
 
         log.debug("Data to sign: [{}]", data);
         return sign(data, orasaProperties.getPayloro().getPrivateKey());
@@ -104,17 +109,38 @@ public class PayloroService {
         byte[] keyBytes = Base64.getDecoder().decode(realPK);
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = kf.generatePrivate(spec);
+        java.security.interfaces.RSAPrivateKey privateKey = 
+            (java.security.interfaces.RSAPrivateKey) kf.generatePrivate(spec);
 
-        // Payloro likely uses SHA256withRSA based on standard practices, 
-        // though the doc just says "RSA". PHP's openssl_sign usually defaults to SHA1 or SHA256.
-        // I'll stick with SHA256withRSA for now.
-        Signature signature = Signature.getInstance("SHA256withRSA");
-        signature.initSign(privateKey);
-        signature.update(data.getBytes(StandardCharsets.UTF_8));
-        byte[] signed = signature.sign();
+        // Payloro uses RSA Cipher private-key encryption (NOT Signature),
+        // with URL-safe Base64 encoding and split-codec for long data
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RSA");
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, privateKey);
+        byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
+        byte[] encrypted = rsaSplitCodec(cipher, dataBytes, privateKey.getModulus().bitLength());
 
-        return Base64.getEncoder().encodeToString(signed);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(encrypted);
+    }
+
+    private byte[] rsaSplitCodec(javax.crypto.Cipher cipher, byte[] data, int keySize) throws Exception {
+        int maxBlock = keySize / 8 - 11;
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int offSet = 0;
+        int i = 0;
+        while (data.length > offSet) {
+            byte[] buff;
+            if (data.length - offSet > maxBlock) {
+                buff = cipher.doFinal(data, offSet, maxBlock);
+            } else {
+                buff = cipher.doFinal(data, offSet, data.length - offSet);
+            }
+            out.write(buff, 0, buff.length);
+            i++;
+            offSet = i * maxBlock;
+        }
+        byte[] result = out.toByteArray();
+        out.close();
+        return result;
     }
 
     @Data
@@ -122,12 +148,13 @@ public class PayloroService {
     public static class PayloroRequest {
         private String merchantNo;
         private String merchantOrderNo;
-        private String payAmount; // Format "0.00"
+        private String payAmount; 
         private String description;
-        private String method; // grabpay, gcash, maya, qrph
+        private String method;
         private String name;
         private String mobile;
         private String email;
+        private String notifyUrl;
         private String sign;
     }
 

@@ -35,6 +35,7 @@ public class PaymentController extends BaseController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateSubscriptionPaymentRequest request
     ) {
+        System.out.println("[PAYMENT] Processing subscription renewal for User: " + user.userId() + " (" + request.getMonths() + " months)");
         validateBusinessExists(user);
         PayloroService.PayloroResponse response = paymentService.createSubscriptionPayment(
             user.businessId(), 
@@ -55,6 +56,7 @@ public class PaymentController extends BaseController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateCreditsPaymentRequest request
     ) {
+        System.out.println("[PAYMENT] Processing credits top-up for User: " + user.userId() + " (" + request.getCredits() + " credits)");
         validateBusinessExists(user);
         PayloroService.PayloroResponse response = paymentService.createCreditsPayment(user.businessId(), request.getCredits(), request.getMethod());
         

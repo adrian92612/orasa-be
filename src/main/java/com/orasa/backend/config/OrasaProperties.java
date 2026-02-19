@@ -53,5 +53,6 @@ public class OrasaProperties {
         private String merchantNo;
         private String privateKey;
         private String baseUrl = "https://testgateway.payloro.ph/api";
+        private String notifyUrl;
     }
 }
