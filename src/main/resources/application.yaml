@@ -56,6 +56,12 @@ orasa:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
 
+  payloro:
+    merchant-no: ${PAYLORO_MERCHANT_NO}
+    private-key: ${PAYLORO_PRIVATE_KEY}
+    base-url: ${PAYLORO_BASE_URL:https://testgateway.payloro.ph/api}
+    notify-url: ${PAYLORO_NOTIFY_URL:}
+
 server:
   port: 8080
   servlet:

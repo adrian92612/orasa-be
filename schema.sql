@@ -9,6 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "citext"; -- native case-insensitivity
 
 -- 0. Cleanup (Reverse Dependency Order)
 DROP TABLE IF EXISTS scheduled_sms_tasks CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS sms_logs CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS appointment_reminders CASCADE;
@@ -241,6 +242,27 @@ CREATE TABLE appointment_reminders (
     reminder_config_id UUID NOT NULL REFERENCES business_reminder_configs(id) ON DELETE CASCADE,
     PRIMARY KEY (appointment_id, reminder_config_id)
 );
+
+-- 13. Payments
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    merchant_order_no VARCHAR(255) NOT NULL,
+    plat_order_no VARCHAR(255),
+    amount DECIMAL(10, 2) NOT NULL,
+    description TEXT NOT NULL,
+    method VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    payment_link TEXT,
+    payment_image TEXT,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_payments_biz ON payments(business_id);
+CREATE INDEX idx_payments_order ON payments(merchant_order_no);
 
 -- 13. System Admin Insert
 INSERT INTO users (business_id, username, email, role, created_by)
