@@ -21,6 +21,7 @@ import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.dto.service.CreateServiceRequest;
 import com.orasa.backend.dto.service.ServiceResponse;
 import com.orasa.backend.dto.service.UpdateServiceRequest;
+import com.orasa.backend.dto.common.ListResponse;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.ServiceService;
@@ -77,14 +78,12 @@ public class ServiceController extends BaseController {
 
     @GetMapping
     @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
-    public ResponseEntity<ApiResponse<List<ServiceResponse>>> getMyServices(
+    public ResponseEntity<ApiResponse<List<ServiceResponse>>> getServices(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @RequestParam(required = false) UUID branchId
-    ) {
-        validateBusinessExists(authenticatedUser);
-
-        List<ServiceResponse> services = serviceService.getServicesByBusiness(authenticatedUser.businessId(), branchId);
-        return ResponseEntity.ok(ApiResponse.success(services));
+            @RequestParam(required = false) UUID branchId) {
+        
+        ListResponse<ServiceResponse> responseWrapper = serviceService.getServicesByBusiness(authenticatedUser.businessId(), branchId);
+        return ResponseEntity.ok(ApiResponse.success(responseWrapper.getData()));
     }
 
     @GetMapping("/{serviceId}")

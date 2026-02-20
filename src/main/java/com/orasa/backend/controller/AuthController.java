@@ -12,12 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.auth.AuthResponse;
 import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.dto.common.ApiResponse;
-import com.orasa.backend.exception.ResourceNotFoundException;
-import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.AuthService;
 import com.orasa.backend.service.GoogleOAuthService;
@@ -34,7 +31,6 @@ public class AuthController extends BaseController {
   
   private final AuthService authService;
   private final GoogleOAuthService googleOAuthService;
-  private final UserRepository userRepository;
   private final OrasaProperties orasaProperties;
 
   @PostMapping("/staff/login")
@@ -73,27 +69,19 @@ public class AuthController extends BaseController {
   public ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser(
     @AuthenticationPrincipal AuthenticatedUser user
   ) {
-    UserEntity currentUser = userRepository.findByIdWithRelations(user.userId())
-        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    if (user == null) {
+        return ResponseEntity.status(401).body(ApiResponse.error("User not authenticated"));
+    }
 
-    AuthResponse userData = AuthResponse.builder()
-      .userId(currentUser.getId())
-      .username(currentUser.getUsername())
-      .businessId(currentUser.getBusiness() != null ? currentUser.getBusiness().getId() : null)
-      .businessName(currentUser.getBusiness() != null ? currentUser.getBusiness().getName() : null)
-      .role(currentUser.getRole())
-      .build();
+    AuthResponse userData = authService.getCurrentUser(user.userId());
     return ResponseEntity.ok(ApiResponse.success(userData));
   }
 
-  // Step 1: Frontend calls this to start Google login
   @GetMapping("/google")
   public void redirectToGoogle(HttpServletResponse response) throws IOException {
     String authUrl = googleOAuthService.getAuthorizationUrl();
     response.sendRedirect(authUrl);
   }
-
-  // Step 2: Google redirects back here with code
   @GetMapping("/google/callback")
   public void handleGoogleCallback(
       @RequestParam("code") String code,

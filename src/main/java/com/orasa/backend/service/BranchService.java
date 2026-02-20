@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.branch.BranchResponse;
 import com.orasa.backend.dto.branch.CreateBranchRequest;
 import com.orasa.backend.dto.branch.UpdateBranchRequest;
+import com.orasa.backend.dto.common.ListResponse;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.repository.BranchRepository;
@@ -45,6 +49,11 @@ public class BranchService {
     private final BranchServiceRepository branchServiceRepository;
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "branches", key = "#businessId"),
+        @CacheEvict(value = "user-branches", allEntries = true),
+        @CacheEvict(value = "currentUser", key = "#ownerId")
+    })
     public BranchResponse createBranch(UUID ownerId, UUID businessId, CreateBranchRequest request) {
         log.info("Creating new branch '{}' for business {}", request.getName(), businessId);
         UserEntity owner = userRepository.findById(ownerId)
@@ -91,23 +100,32 @@ public class BranchService {
         return mapToResponse(saved);
     }
 
-    public List<BranchResponse> getBranchesByBusiness(UUID businessId) {
-        // Logging in controller is sufficient, avoiding spam here
-        return branchRepository.findByBusinessId(businessId).stream()
+    @Cacheable(value = "branches", key = "#businessId")
+    public ListResponse<BranchResponse> getBranchesByBusiness(UUID businessId) {
+        List<BranchEntity> branches = branchRepository.findByBusinessId(businessId);
+        List<BranchResponse> responseList = branches.stream()
                 .map(this::mapToResponse)
                 .toList();
+        return new ListResponse<>(responseList);
     }
 
-    public List<BranchResponse> getBranchesForUser(UUID userId) {
+    @Cacheable(value = "user-branches", key = "#userId")
+    public ListResponse<BranchResponse> getBranchesForUser(UUID userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        return user.getBranches().stream()
+        List<BranchResponse> responseList = user.getBranches().stream()
                 .map(this::mapToResponse)
                 .toList();
+        return new ListResponse<>(responseList);
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "branches", key = "#businessId"),
+        @CacheEvict(value = "branch", key = "#branchId"),
+        @CacheEvict(value = "user-branches", allEntries = true)
+    })
     public BranchResponse updateBranch(UUID userId, UUID branchId, UUID businessId, UpdateBranchRequest request) {
         log.info("Updating branch {} for business {}", branchId, businessId);
         UserEntity actor = userRepository.findById(userId)
@@ -276,6 +294,11 @@ public class BranchService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "branches", key = "#businessId"),
+        @CacheEvict(value = "branch", key = "#branchId"),
+        @CacheEvict(value = "user-branches", allEntries = true)
+    })
     public void deleteBranch(UUID userId, UUID branchId, UUID businessId) {
         log.info("Deleting branch {} for business {}", branchId, businessId);
         UserEntity actor = userRepository.findById(userId)
@@ -294,6 +317,7 @@ public class BranchService {
         branchRepository.delete(branch);
     }
 
+    @Cacheable(value = "branch", key = "#branchId")
     public BranchResponse getBranchById(UUID branchId) {
         BranchEntity branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));

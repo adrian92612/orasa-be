@@ -72,10 +72,6 @@ public class CreditResetScheduler {
         }
     }
 
-    /**
-     * Fallback: catches any resets that Redis missed (e.g. Redis crash).
-     * Runs every 5 minutes.
-     */
     @Scheduled(fixedRate = 300_000)
     public void recoverOverdueResets() {
         List<BusinessEntity> dueBusinesses = businessRepository

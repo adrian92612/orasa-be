@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Set;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,7 @@ public class AppointmentService {
   private final Clock clock;
 
   @Transactional
+  @CacheEvict(value = "analytics", allEntries = true)
   public AppointmentResponse createAppointment(UUID userId, CreateAppointmentRequest request) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -148,6 +150,7 @@ public class AppointmentService {
   }
 
   @Transactional
+  @CacheEvict(value = "analytics", allEntries = true)
   public UpdateResult updateAppointment(UUID userId, UUID id, UpdateAppointmentRequest request) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -369,6 +372,7 @@ public class AppointmentService {
   }
 
   @Transactional
+  @CacheEvict(value = "analytics", allEntries = true)
   public AppointmentResponse updateAppointmentStatus(UUID userId, UUID id, AppointmentStatus newStatus) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -532,6 +536,7 @@ public class AppointmentService {
   }
 
   @Transactional
+  @CacheEvict(value = "analytics", allEntries = true)
   public void deleteAppointment(UUID userId, UUID id) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));

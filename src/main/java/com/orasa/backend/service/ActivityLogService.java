@@ -5,6 +5,9 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.activity.ActivityLogResponse;
+import com.orasa.backend.dto.common.PageResponse;
 import com.orasa.backend.repository.ActivityLogRepository;
 import com.orasa.backend.config.TimeConfig;
 
@@ -49,6 +53,10 @@ public class ActivityLogService {
      * General-purpose logging method with details for expandable view.
      */
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "business-activity-logs", key = "#business.id"),
+        @CacheEvict(value = "branch-activity-logs", key = "#branch.id", condition = "#branch != null")
+    })
     public void logAction(UserEntity user, BusinessEntity business, BranchEntity branch, 
                           ActivityAction action, String description, String details) {
         try {
@@ -233,15 +241,19 @@ public class ActivityLogService {
     // ==================== QUERY METHODS ====================
     
     @Transactional(readOnly = true)
-    public Page<ActivityLogResponse> getActivityLogsByBusiness(UUID businessId, Pageable pageable) {
-        return activityLogRepository.findByBusinessIdOrderByCreatedAtDesc(businessId, pageable)
+    @Cacheable(value = "business-activity-logs", key = "#businessId", condition = "#pageable.pageNumber == 0")
+    public PageResponse<ActivityLogResponse> getActivityLogsByBusiness(UUID businessId, Pageable pageable) {
+        Page<ActivityLogResponse> page = activityLogRepository.findByBusinessIdOrderByCreatedAtDesc(businessId, pageable)
                 .map(this::mapToResponse);
+        return PageResponse.from(page);
     }
     
     @Transactional(readOnly = true)
-    public Page<ActivityLogResponse> getActivityLogsByBranch(UUID branchId, Pageable pageable) {
-        return activityLogRepository.findByBranchIdOrderByCreatedAtDesc(branchId, pageable)
+    @Cacheable(value = "branch-activity-logs", key = "#branchId", condition = "#pageable.pageNumber == 0")
+    public PageResponse<ActivityLogResponse> getActivityLogsByBranch(UUID branchId, Pageable pageable) {
+        Page<ActivityLogResponse> page = activityLogRepository.findByBranchIdOrderByCreatedAtDesc(branchId, pageable)
                 .map(this::mapToResponse);
+        return PageResponse.from(page);
     }
     
     @Transactional(readOnly = true)

@@ -22,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import com.orasa.backend.dto.activity.FieldChange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,7 @@ public class BusinessService {
      * @return BusinessResponse with both businessId and firstBranchId
      */
     @Transactional
+    @CacheEvict(value = "currentUser", key = "#ownerId")
     public BusinessResponse createBusinessWithBranch(UUID ownerId, CreateBusinessRequest request) {
         // Verify owner exists and doesn't already have a business
         UserEntity owner = userRepository.findById(ownerId)
@@ -93,6 +96,7 @@ public class BusinessService {
      * Gets a business by ID.
      */
     @Transactional
+    @Cacheable(value = "business", key = "#businessId")
     public BusinessResponse getBusinessById(UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -103,6 +107,7 @@ public class BusinessService {
     }
 
     @Transactional
+    @CacheEvict(value = "business", key = "#businessId")
     public BusinessResponse updateBusiness(UUID businessId, UpdateBusinessRequest request) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));

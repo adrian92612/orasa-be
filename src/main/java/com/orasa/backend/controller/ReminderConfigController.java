@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.dto.common.ListResponse;
 import com.orasa.backend.dto.sms.CreateReminderConfigRequest;
 import com.orasa.backend.dto.sms.ReminderConfigResponse;
 import com.orasa.backend.dto.sms.UpdateReminderConfigRequest;
@@ -78,10 +79,10 @@ public class ReminderConfigController extends BaseController {
     ) {
         validateBusinessExists(authenticatedUser);
 
-        List<ReminderConfigResponse> configs = reminderConfigService.getConfigsByBusiness(
+        ListResponse<ReminderConfigResponse> responseWrapper = reminderConfigService.getConfigsByBusiness(
                 authenticatedUser.businessId()
         );
-        return ResponseEntity.ok(ApiResponse.success(configs));
+        return ResponseEntity.ok(ApiResponse.success(responseWrapper.getData()));
     }
 
     @DeleteMapping("/{configId}")

@@ -16,6 +16,9 @@ import java.util.concurrent.TimeUnit;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -164,6 +167,10 @@ public class SmsService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "sms-logs", key = "#task.businessId"),
+        @CacheEvict(value = "analytics", allEntries = true)
+    })
     public void processScheduledTask(SmsReminderTask task) {
         UUID appointmentId = task.getAppointmentId();
         UUID scheduledTaskId = task.getScheduledTaskId();
@@ -274,6 +281,10 @@ public class SmsService {
 
     @Transactional
     @RequiresActiveSubscription
+    @Caching(evict = {
+        @CacheEvict(value = "sms-logs", key = "#business.id"),
+        @CacheEvict(value = "analytics", allEntries = true)
+    })
     public SmsLogEntity sendSms(BusinessEntity business, SmsLogEntity smsLog) {
         subscriptionService.consumeSmsCredit(business);
 
@@ -287,7 +298,8 @@ public class SmsService {
         return smsLogRepository.save(smsLog);
     }
 
-    public Page<SmsLogResponse> getSmsLogs(
+    @Cacheable(value = "sms-logs", key = "#businessId", condition = "#pageable.pageNumber == 0 && #branchId == null && #status == null && #startDate == null && #endDate == null")
+    public com.orasa.backend.dto.common.PageResponse<SmsLogResponse> getSmsLogs(
             UUID businessId,
             UUID branchId,
             SmsStatus status,
@@ -302,9 +314,11 @@ public class SmsService {
             ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() 
             : null;
 
-        return smsLogRepository.searchSmsLogs(
+        Page<SmsLogResponse> page = smsLogRepository.searchSmsLogs(
                 businessId, branchId, status, start, end, pageable)
                 .map(this::mapToResponse);
+                
+        return com.orasa.backend.dto.common.PageResponse.from(page);
     }
 
     public PhilSmsProvider.BalanceResult getBalance() {

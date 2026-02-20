@@ -1,6 +1,5 @@
 package com.orasa.backend.controller;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -45,9 +44,9 @@ public class SmsController extends BaseController {
     ) {
         validateBusinessExists(authenticatedUser);
 
-        Page<SmsLogResponse> logs = smsService.getSmsLogs(
+        PageResponse<SmsLogResponse> logs = smsService.getSmsLogs(
                 authenticatedUser.businessId(), branchId, status, startDate, endDate, pageable);
-        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
+        return ResponseEntity.ok(ApiResponse.success(logs));
     }
 
     @GetMapping("/balance")

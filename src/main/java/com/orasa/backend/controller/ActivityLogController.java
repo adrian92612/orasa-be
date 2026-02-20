@@ -39,8 +39,8 @@ public class ActivityLogController extends BaseController {
             @PathVariable UUID businessId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<ActivityLogResponse> logs = activityLogService.getActivityLogsByBusiness(businessId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
+        PageResponse<ActivityLogResponse> logs = activityLogService.getActivityLogsByBusiness(businessId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(logs));
     }
     
     /**
@@ -52,8 +52,8 @@ public class ActivityLogController extends BaseController {
             @PathVariable UUID branchId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<ActivityLogResponse> logs = activityLogService.getActivityLogsByBranch(branchId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
+        PageResponse<ActivityLogResponse> logs = activityLogService.getActivityLogsByBranch(branchId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(logs));
     }
     
     /**

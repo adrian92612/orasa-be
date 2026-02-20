@@ -3,10 +3,13 @@ package com.orasa.backend.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
+import com.orasa.backend.dto.common.ListResponse;
 import com.orasa.backend.dto.sms.CreateReminderConfigRequest;
 import com.orasa.backend.dto.sms.ReminderConfigResponse;
 import com.orasa.backend.dto.sms.UpdateReminderConfigRequest;
@@ -26,6 +29,7 @@ public class ReminderConfigService {
     private final BusinessReminderConfigRepository reminderConfigRepository;
 
     @Transactional
+    @CacheEvict(value = "reminder-configs", key = "#businessId")
     public ReminderConfigResponse createConfig(UUID businessId, CreateReminderConfigRequest request) {
         log.info("SMS request: {}", request);
         List<BusinessReminderConfigEntity> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
@@ -48,6 +52,7 @@ public class ReminderConfigService {
     }
 
     @Transactional
+    @CacheEvict(value = "reminder-configs", key = "#businessId")
     public ReminderConfigResponse updateConfig(UUID configId, UUID businessId, UpdateReminderConfigRequest request) {
         BusinessReminderConfigEntity config = getConfigById(configId, businessId);
 
@@ -75,19 +80,32 @@ public class ReminderConfigService {
         return mapToResponse(saved);
     }
 
-    public List<ReminderConfigResponse> getConfigsByBusiness(UUID businessId) {
-        return reminderConfigRepository.findByBusinessId(businessId).stream()
+    @Cacheable(value = "reminder-configs", key = "#businessId")
+    public ListResponse<ReminderConfigResponse> getConfigsByBusiness(UUID businessId) {
+        List<ReminderConfigResponse> responseList = reminderConfigRepository.findByBusinessId(businessId).stream()
                 .map(this::mapToResponse)
                 .toList();
+        return new ListResponse<>(responseList);
     }
 
     public List<BusinessReminderConfigEntity> getEnabledConfigs(UUID businessId) {
-        return reminderConfigRepository.findByBusinessId(businessId).stream()
-                .filter(BusinessReminderConfigEntity::isEnabled)
+        return getConfigsByBusiness(businessId).getData().stream()
+                .filter(ReminderConfigResponse::isEnabled)
+                .map(dto -> {
+                    BusinessReminderConfigEntity entity = BusinessReminderConfigEntity.builder()
+                        .businessId(dto.getBusinessId())
+                        .leadTimeMinutes(dto.getLeadTimeMinutes())
+                        .messageTemplate(dto.getMessageTemplate())
+                        .isEnabled(dto.isEnabled())
+                        .build();
+                    entity.setId(dto.getId());
+                    return entity;
+                })
                 .toList();
     }
 
     @Transactional
+    @CacheEvict(value = "reminder-configs", key = "#businessId")
     public void deleteConfig(UUID configId, UUID businessId) {
         BusinessReminderConfigEntity config = getConfigById(configId, businessId);
         reminderConfigRepository.delete(config);

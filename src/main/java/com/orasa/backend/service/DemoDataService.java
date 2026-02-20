@@ -60,6 +60,7 @@ public class DemoDataService {
     private final BusinessReminderConfigRepository reminderConfigRepository;
     private final ActivityLogRepository activityLogRepository;
     private final SmsLogRepository smsLogRepository;
+    private final org.redisson.api.RedissonClient redissonClient;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final JdbcTemplate jdbcTemplate;
@@ -248,6 +249,28 @@ public class DemoDataService {
 
             // 12. Delete Business
             jdbcTemplate.update("DELETE FROM businesses WHERE id = ?", businessId);
+
+            // 13. Clear Redis Delay Queue (prevent zombie tasks)
+            try {
+                org.redisson.api.RBlockingQueue<com.orasa.backend.dto.sms.SmsReminderTask> blockingQueue = redissonClient.getBlockingQueue("smsRemindersQueue");
+                @SuppressWarnings("deprecation")
+                org.redisson.api.RDelayedQueue<com.orasa.backend.dto.sms.SmsReminderTask> delayedQueue = redissonClient.getDelayedQueue(blockingQueue);
+                
+                delayedQueue.destroy();
+                blockingQueue.delete();
+
+                // Clear Credit Reset Queue
+                org.redisson.api.RBlockingQueue<com.orasa.backend.dto.CreditResetTask> creditBlockingQueue = redissonClient.getBlockingQueue("creditResetQueue");
+                @SuppressWarnings("deprecation")
+                org.redisson.api.RDelayedQueue<com.orasa.backend.dto.CreditResetTask> creditDelayedQueue = redissonClient.getDelayedQueue(creditBlockingQueue);
+
+                creditDelayedQueue.destroy();
+                creditBlockingQueue.delete();
+                
+                log.info("Cleared Redis SMS and Credit Reset queues for clean slate.");
+            } catch (Exception e) {
+                log.warn("Failed to clear Redis queues: {}", e.getMessage());
+            }
 
         } catch (Exception e) {
             log.warn("Could not clear demo data (likely didn't exist): {}", e.getMessage());

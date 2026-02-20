@@ -6,7 +6,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BranchServiceEntity;
+import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.dto.service.AssignServiceToBranchRequest;
 import com.orasa.backend.dto.service.BranchServiceResponse;
 import com.orasa.backend.exception.BusinessException;
@@ -28,21 +30,21 @@ public class BranchServiceService {
 
     @Transactional
     public BranchServiceResponse assignServiceToBranch(UUID branchId, UUID businessId, AssignServiceToBranchRequest request) {
-        var branch = branchRepository.findById(branchId)
+        BranchEntity branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
         if (!branch.getBusiness().getId().equals(businessId)) {
             throw new BusinessException("Branch does not belong to your business");
         }
 
-        var service = serviceRepository.findById(request.getServiceId())
+        ServiceEntity service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         if (!service.getBusinessId().equals(businessId)) {
             throw new BusinessException("Service does not belong to your business");
         }
 
-        var existingAssignments = branchServiceRepository.findByBranchId(branchId);
+        List<BranchServiceEntity> existingAssignments = branchServiceRepository.findByBranchId(branchId);
         boolean alreadyAssigned = existingAssignments.stream()
                 .anyMatch(bs -> bs.getService().getId().equals(request.getServiceId()));
 
@@ -72,7 +74,7 @@ public class BranchServiceService {
         BranchServiceEntity branchService = branchServiceRepository.findById(branchServiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch service assignment not found"));
 
-        var branch = branchRepository.findById(branchService.getBranchId())
+        BranchEntity branch = branchRepository.findById(branchService.getBranchId())
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
         if (!branch.getBusiness().getId().equals(businessId)) {
@@ -93,7 +95,7 @@ public class BranchServiceService {
         BranchServiceEntity branchService = branchServiceRepository.findById(branchServiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch service assignment not found"));
 
-        var branch = branchRepository.findById(branchService.getBranchId())
+        BranchEntity branch = branchRepository.findById(branchService.getBranchId())
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
         if (!branch.getBusiness().getId().equals(businessId)) {
@@ -104,7 +106,7 @@ public class BranchServiceService {
     }
 
     private BranchServiceResponse mapToResponse(BranchServiceEntity branchService) {
-        var service = branchService.getService();
+        ServiceEntity service = branchService.getService();
         return BranchServiceResponse.builder()
                 .id(branchService.getId())
                 .branchId(branchService.getBranchId())

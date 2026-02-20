@@ -7,6 +7,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.orasa.backend.common.UserRole;
@@ -18,6 +20,8 @@ import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.security.JwtService;
 import com.orasa.backend.dto.profile.ChangePasswordRequest;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import lombok.RequiredArgsConstructor;
@@ -97,6 +101,7 @@ public class AuthService {
         .build());
   }
 
+  @CacheEvict(value = "currentUser", key = "#userId")
   public void logout(UUID userId) {
       if (userId == null) return;
       
@@ -121,7 +126,7 @@ public class AuthService {
     activityLogService.logPasswordChanged(user, user.getBusiness());
   }
 
-  private UserEntity createNewOwner(String email) {
+    private UserEntity createNewOwner(String email) {
     UserEntity owner = UserEntity.builder()
         .email(email)
         .username(email)
@@ -129,5 +134,28 @@ public class AuthService {
         .business(null)
         .build();
     return userRepository.save(owner);
+  }
+
+  @Cacheable(value = "currentUser", key = "#userId")
+  @Transactional(readOnly = true)
+  public AuthResponse getCurrentUser(UUID userId) {
+      if (userId == null) {
+          throw new IllegalArgumentException("User ID cannot be null");
+      }
+      
+      UserEntity user = userRepository.findById(userId)
+          .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+      // Force initialize lazy collections if needed for response
+      // But for AuthResponse we only need basic fields + business info which is EAGER usually or single join
+      // Actually business is ManyToOne so it's eager by default in hibernate unless specified
+      
+      return AuthResponse.builder()
+        .userId(user.getId())
+        .username(user.getUsername())
+        .role(user.getRole())
+        .businessId(user.getBusiness() != null ? user.getBusiness().getId() : null)
+        .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
+        .build();
   }
 }

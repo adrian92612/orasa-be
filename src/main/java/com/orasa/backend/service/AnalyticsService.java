@@ -4,6 +4,11 @@ import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 import com.orasa.backend.common.SmsStatus;
 import com.orasa.backend.dto.analytics.DashboardStats;
+import com.orasa.backend.dto.analytics.DailyStatsDTO;
+import com.orasa.backend.dto.analytics.ServiceStatsDTO;
+import com.orasa.backend.dto.analytics.StatusStatsDTO;
+import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
 import com.orasa.backend.repository.AppointmentRepository;
 import com.orasa.backend.repository.SmsLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +30,7 @@ public class AnalyticsService {
     private final SmsLogRepository smsLogRepository;
     private final Clock clock;
 
+    @Cacheable(value = "analytics", key = "{#businessId, #startDate, #endDate}")
     public DashboardStats getDashboardStats(UUID businessId, LocalDate startDate, LocalDate endDate) {
         ZoneId zoneId = clock.getZone();
         OffsetDateTime start = startDate.atStartOfDay(zoneId).toOffsetDateTime();
@@ -50,11 +56,10 @@ public class AnalyticsService {
         long smsFailed = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
                 businessId, SmsStatus.FAILED, start, end);
 
-        var dailyStats = appointmentRepository.getDailyStats(businessId, start, end);
-        var serviceStats = appointmentRepository.getServiceStats(businessId, start, end);
-        var statusStats = appointmentRepository.getStatusStats(businessId, start, end);
+        List<DailyStatsDTO> dailyStats = appointmentRepository.getDailyStats(businessId, start, end);
+        List<ServiceStatsDTO> serviceStats = appointmentRepository.getServiceStats(businessId, start, end);
+        List<StatusStatsDTO> statusStats = appointmentRepository.getStatusStats(businessId, start, end);
 
-        // Calculate service percentages
         if (totalAppointments > 0) {
             serviceStats = serviceStats.stream()
                 .map(stat -> new com.orasa.backend.dto.analytics.ServiceStatsDTO(
@@ -67,17 +72,17 @@ public class AnalyticsService {
                 .toList();
         }
 
-        return new DashboardStats(
-                totalAppointments,
-                scheduledCount,
-                walkInCount,
-                cancelledCount,
-                noShowCount,
-                smsDelivered,
-                smsFailed,
-                dailyStats,
-                serviceStats,
-                statusStats
-        );
+        return DashboardStats.builder()
+                .totalAppointments(totalAppointments)
+                .scheduledCount(scheduledCount)
+                .walkInCount(walkInCount)
+                .cancelledCount(cancelledCount)
+                .noShowCount(noShowCount)
+                .smsDelivered(smsDelivered)
+                .smsFailed(smsFailed)
+                .dailyStats(dailyStats)
+                .serviceStats(serviceStats)
+                .statusStats(statusStats)
+                .build();
     }
 }

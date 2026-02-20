@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,7 @@ import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.service.CreateServiceRequest;
 import com.orasa.backend.dto.service.ServiceResponse;
 import com.orasa.backend.dto.service.UpdateServiceRequest;
+import com.orasa.backend.dto.common.ListResponse;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BranchRepository;
@@ -40,6 +44,10 @@ public class ServiceService {
     private final ActivityLogService activityLogService;
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "services", key = "#businessId"),
+        @CacheEvict(value = "branches", key = "#businessId")
+    })
     public ServiceResponse createService(UUID actorUserId, UUID businessId, CreateServiceRequest request) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -74,6 +82,10 @@ public class ServiceService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "services", key = "#businessId"),
+        @CacheEvict(value = "service", key = "#serviceId")
+    })
     public ServiceResponse updateService(UUID actorUserId, UUID serviceId, UUID businessId, UpdateServiceRequest request) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -142,18 +154,21 @@ public class ServiceService {
         return mapToResponse(serviceOffering);
     }
 
-    public List<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
+    @Cacheable(value = "services", key = "{#businessId, #branchId}")
+    public ListResponse<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
         List<ServiceEntity> services;
         if (branchId != null) {
             services = serviceRepository.findServicesForBranch(businessId, branchId);
         } else {
             services = serviceRepository.findByBusinessId(businessId);
         }
-        return services.stream()
+        List<ServiceResponse> responseList = services.stream()
                 .map(this::mapToResponse)
                 .toList();
+        return new ListResponse<>(responseList);
     }
 
+    @Cacheable(value = "service", key = "#serviceId")
     public ServiceResponse getServiceById(UUID serviceId) {
         ServiceEntity serviceOffering = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
@@ -162,6 +177,11 @@ public class ServiceService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "services", key = "#businessId"),
+        @CacheEvict(value = "branches", key = "#businessId"),
+        @CacheEvict(value = "service", key = "#serviceId")
+    })
     public void deleteService(UUID actorUserId, UUID serviceId, UUID businessId) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
