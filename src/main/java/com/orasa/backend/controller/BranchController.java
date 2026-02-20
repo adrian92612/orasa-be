@@ -20,7 +20,7 @@ import com.orasa.backend.dto.branch.BranchResponse;
 import com.orasa.backend.dto.branch.CreateBranchRequest;
 import com.orasa.backend.dto.branch.UpdateBranchRequest;
 import com.orasa.backend.dto.common.ApiResponse;
-import com.orasa.backend.dto.common.ListResponse;
+
 import com.orasa.backend.dto.service.AssignServiceToBranchRequest;
 import com.orasa.backend.dto.service.BranchServiceResponse;
 import com.orasa.backend.exception.BusinessException;
@@ -72,14 +72,13 @@ public class BranchController extends BaseController {
         validateBusinessExists(authenticatedUser);
         log.info("Fetching branches for user {} (Role: {})", authenticatedUser.userId(), authenticatedUser.role());
 
-        ListResponse<BranchResponse> responseWrapper;
+        List<BranchResponse> branches;
         if (authenticatedUser.role() == UserRole.OWNER) {
-             responseWrapper = branchService.getBranchesByBusiness(authenticatedUser.businessId());
+             branches = branchService.getBranchesByBusiness(authenticatedUser.businessId());
         } else {
-             responseWrapper = branchService.getBranchesForUser(authenticatedUser.userId());
+             branches = branchService.getBranchesForUser(authenticatedUser.userId());
         }
         
-        List<BranchResponse> branches = responseWrapper.getData();
         log.info("Found {} branches for user {}", branches.size(), authenticatedUser.userId());
         return ResponseEntity.ok(ApiResponse.success(branches));
     }
