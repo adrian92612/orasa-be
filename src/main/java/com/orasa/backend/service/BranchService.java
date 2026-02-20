@@ -23,7 +23,7 @@ import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.branch.BranchResponse;
 import com.orasa.backend.dto.branch.CreateBranchRequest;
 import com.orasa.backend.dto.branch.UpdateBranchRequest;
-import com.orasa.backend.dto.common.ListResponse;
+
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.repository.BranchRepository;
@@ -101,23 +101,21 @@ public class BranchService {
     }
 
     @Cacheable(value = "branches", key = "#businessId")
-    public ListResponse<BranchResponse> getBranchesByBusiness(UUID businessId) {
+    public List<BranchResponse> getBranchesByBusiness(UUID businessId) {
         List<BranchEntity> branches = branchRepository.findByBusinessId(businessId);
-        List<BranchResponse> responseList = branches.stream()
+        return branches.stream()
                 .map(this::mapToResponse)
                 .toList();
-        return new ListResponse<>(responseList);
     }
 
     @Cacheable(value = "user-branches", key = "#userId")
-    public ListResponse<BranchResponse> getBranchesForUser(UUID userId) {
+    public List<BranchResponse> getBranchesForUser(UUID userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        List<BranchResponse> responseList = user.getBranches().stream()
+        return user.getBranches().stream()
                 .map(this::mapToResponse)
                 .toList();
-        return new ListResponse<>(responseList);
     }
 
     @Transactional

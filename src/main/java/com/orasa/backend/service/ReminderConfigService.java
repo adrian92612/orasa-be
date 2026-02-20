@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
-import com.orasa.backend.dto.common.ListResponse;
+
 import com.orasa.backend.dto.sms.CreateReminderConfigRequest;
 import com.orasa.backend.dto.sms.ReminderConfigResponse;
 import com.orasa.backend.dto.sms.UpdateReminderConfigRequest;
@@ -81,15 +81,14 @@ public class ReminderConfigService {
     }
 
     @Cacheable(value = "reminder-configs", key = "#businessId")
-    public ListResponse<ReminderConfigResponse> getConfigsByBusiness(UUID businessId) {
-        List<ReminderConfigResponse> responseList = reminderConfigRepository.findByBusinessId(businessId).stream()
+    public List<ReminderConfigResponse> getConfigsByBusiness(UUID businessId) {
+        return reminderConfigRepository.findByBusinessId(businessId).stream()
                 .map(this::mapToResponse)
                 .toList();
-        return new ListResponse<>(responseList);
     }
 
     public List<BusinessReminderConfigEntity> getEnabledConfigs(UUID businessId) {
-        return getConfigsByBusiness(businessId).getData().stream()
+        return getConfigsByBusiness(businessId).stream()
                 .filter(ReminderConfigResponse::isEnabled)
                 .map(dto -> {
                     BusinessReminderConfigEntity entity = BusinessReminderConfigEntity.builder()

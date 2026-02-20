@@ -20,7 +20,7 @@ import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.service.CreateServiceRequest;
 import com.orasa.backend.dto.service.ServiceResponse;
 import com.orasa.backend.dto.service.UpdateServiceRequest;
-import com.orasa.backend.dto.common.ListResponse;
+
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BranchRepository;
@@ -155,17 +155,16 @@ public class ServiceService {
     }
 
     @Cacheable(value = "services", key = "{#businessId, #branchId}")
-    public ListResponse<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
+    public List<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
         List<ServiceEntity> services;
         if (branchId != null) {
             services = serviceRepository.findServicesForBranch(businessId, branchId);
         } else {
             services = serviceRepository.findByBusinessId(businessId);
         }
-        List<ServiceResponse> responseList = services.stream()
+        return services.stream()
                 .map(this::mapToResponse)
                 .toList();
-        return new ListResponse<>(responseList);
     }
 
     @Cacheable(value = "service", key = "#serviceId")
