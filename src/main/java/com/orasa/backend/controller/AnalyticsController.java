@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/analytics")
@@ -28,13 +29,15 @@ public class AnalyticsController extends BaseController {
     public ResponseEntity<ApiResponse<DashboardStats>> getDashboardStats(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) UUID branchId,
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
         validateBusinessExists(authenticatedUser);
 
         DashboardStats stats = analyticsService.getDashboardStats(
-                authenticatedUser.businessId(), 
-                startDate, 
+                authenticatedUser.businessId(),
+                branchId,
+                startDate,
                 endDate
         );
         return ResponseEntity.ok(ApiResponse.success(stats));

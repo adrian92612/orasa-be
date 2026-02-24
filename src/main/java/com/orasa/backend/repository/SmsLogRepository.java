@@ -16,7 +16,21 @@ import org.springframework.data.repository.query.Param;
 public interface SmsLogRepository extends JpaRepository<SmsLogEntity, UUID>{
   Page<SmsLogEntity> findByBusinessId(UUID businessId, Pageable pageable);
   long countByBusinessIdAndCreatedAtBetween(UUID businessId, OffsetDateTime start, OffsetDateTime end);
-  long countByBusinessIdAndStatusAndCreatedAtBetween(UUID businessId, SmsStatus status, OffsetDateTime start, OffsetDateTime end);
+  
+  @Query("""
+      SELECT COUNT(s) FROM SmsLogEntity s 
+      WHERE s.business.id = :businessId 
+      AND (CAST(:branchId AS uuid) IS NULL OR s.appointment.branch.id = :branchId) 
+      AND s.status = :status 
+      AND s.createdAt >= :start 
+      AND s.createdAt <= :end
+  """)
+  long countByBusinessIdAndBranchIdOptionalAndStatusAndCreatedAtBetween(
+      @Param("businessId") UUID businessId, 
+      @Param("branchId") UUID branchId, 
+      @Param("status") SmsStatus status, 
+      @Param("start") OffsetDateTime start, 
+      @Param("end") OffsetDateTime end);
 
   @Query("""
       SELECT s FROM SmsLogEntity s

@@ -30,35 +30,35 @@ public class AnalyticsService {
     private final SmsLogRepository smsLogRepository;
     private final Clock clock;
 
-    @Cacheable(value = "analytics", key = "{#businessId, #startDate, #endDate}")
-    public DashboardStats getDashboardStats(UUID businessId, LocalDate startDate, LocalDate endDate) {
+    @Cacheable(value = "analytics", key = "{#businessId, #branchId, #startDate, #endDate}")
+    public DashboardStats getDashboardStats(UUID businessId, UUID branchId, LocalDate startDate, LocalDate endDate) {
         ZoneId zoneId = clock.getZone();
         OffsetDateTime start = startDate.atStartOfDay(zoneId).toOffsetDateTime();
         OffsetDateTime end = endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime().minusNanos(1);
 
-        long totalAppointments = appointmentRepository.countByBusinessIdAndStartDateTimeBetween(businessId, start, end);
+        long totalAppointments = appointmentRepository.countByBusinessIdAndBranchIdOptionalAndStartDateTimeBetween(businessId, branchId, start, end);
         
-        long scheduledCount = appointmentRepository.countByBusinessIdAndTypeAndStartDateTimeBetween(
-                businessId, AppointmentType.SCHEDULED, start, end);
+        long scheduledCount = appointmentRepository.countByBusinessIdAndBranchIdOptionalAndTypeAndStartDateTimeBetween(
+                businessId, branchId, AppointmentType.SCHEDULED, start, end);
         
-        long walkInCount = appointmentRepository.countByBusinessIdAndTypeAndStartDateTimeBetween(
-                businessId, AppointmentType.WALK_IN, start, end);
+        long walkInCount = appointmentRepository.countByBusinessIdAndBranchIdOptionalAndTypeAndStartDateTimeBetween(
+                businessId, branchId, AppointmentType.WALK_IN, start, end);
         
-        long cancelledCount = appointmentRepository.countByBusinessIdAndStatusAndStartDateTimeBetween(
-                businessId, AppointmentStatus.CANCELLED, start, end);
+        long cancelledCount = appointmentRepository.countByBusinessIdAndBranchIdOptionalAndStatusAndStartDateTimeBetween(
+                businessId, branchId, AppointmentStatus.CANCELLED, start, end);
         
-        long noShowCount = appointmentRepository.countByBusinessIdAndStatusAndStartDateTimeBetween(
-                businessId, AppointmentStatus.NO_SHOW, start, end);
+        long noShowCount = appointmentRepository.countByBusinessIdAndBranchIdOptionalAndStatusAndStartDateTimeBetween(
+                businessId, branchId, AppointmentStatus.NO_SHOW, start, end);
 
-        long smsDelivered = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
-                businessId, SmsStatus.DELIVERED, start, end);
+        long smsDelivered = smsLogRepository.countByBusinessIdAndBranchIdOptionalAndStatusAndCreatedAtBetween(
+                businessId, branchId, SmsStatus.DELIVERED, start, end);
         
-        long smsFailed = smsLogRepository.countByBusinessIdAndStatusAndCreatedAtBetween(
-                businessId, SmsStatus.FAILED, start, end);
+        long smsFailed = smsLogRepository.countByBusinessIdAndBranchIdOptionalAndStatusAndCreatedAtBetween(
+                businessId, branchId, SmsStatus.FAILED, start, end);
 
-        List<DailyStatsDTO> dailyStats = appointmentRepository.getDailyStats(businessId, start, end);
-        List<ServiceStatsDTO> serviceStats = appointmentRepository.getServiceStats(businessId, start, end);
-        List<StatusStatsDTO> statusStats = appointmentRepository.getStatusStats(businessId, start, end);
+        List<DailyStatsDTO> dailyStats = appointmentRepository.getDailyStats(businessId, branchId, start, end);
+        List<ServiceStatsDTO> serviceStats = appointmentRepository.getServiceStats(businessId, branchId, start, end);
+        List<StatusStatsDTO> statusStats = appointmentRepository.getStatusStats(businessId, branchId, start, end);
 
         if (totalAppointments > 0) {
             serviceStats = serviceStats.stream()
