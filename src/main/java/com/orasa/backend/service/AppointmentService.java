@@ -34,6 +34,7 @@ import com.orasa.backend.exception.ForbiddenException;
 import com.orasa.backend.exception.InvalidAppointmentException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.AppointmentRepository;
+import com.orasa.backend.repository.AppointmentSpecification;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
@@ -475,12 +476,10 @@ public class AppointmentService {
     OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
     OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
 
-    String searchParam = (search == null || search.trim().isEmpty()) 
-        ? null 
-        : "%" + search.trim() + "%";
-
-    return appointmentRepository.searchAppointments(branchId, searchParam, status, type, start, end, pageable)
-        .map(this::mapToResponse);
+    return appointmentRepository.findAll(
+        AppointmentSpecification.buildSearchSpec(branchId, null, search, status, type, start, end),
+        pageable
+    ).map(this::mapToResponse);
   }
 
   public Page<AppointmentResponse> searchAppointmentsByBusiness(
@@ -500,14 +499,13 @@ public class AppointmentService {
         throw new ForbiddenException("You do not have permission to search appointments for this business");
     }
 
-  OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
-  OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
-    String searchParam = (search == null || search.trim().isEmpty()) 
-      ? null 
-      : "%" + search.trim() + "%";
+    OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
+    OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
     
-    Page<AppointmentEntity> page = appointmentRepository.searchAppointmentsByBusiness(
-        businessId, searchParam, status, type, start, end, pageable);
+    Page<AppointmentEntity> page = appointmentRepository.findAll(
+        AppointmentSpecification.buildSearchSpec(null, businessId, search, status, type, start, end),
+        pageable
+    );
     
     if (!page.getContent().isEmpty()) {
         List<UUID> ids = page.getContent().stream()

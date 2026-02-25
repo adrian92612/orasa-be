@@ -145,10 +145,18 @@ CREATE INDEX idx_appt_dashboard_perf
 ON appointments (business_id, status, start_date_time DESC) 
 WHERE is_deleted = FALSE;
 
--- SPEED INDEX 2: The Trigram Search
--- Targets: Fast fuzzy search across Name and Phone
-CREATE INDEX idx_appt_fuzzy_search 
-ON appointments USING gin ((customer_name || ' ' || customer_phone) gin_trgm_ops) 
+-- SPEED INDEX 2: Trigram Indexes for ILIKE Search
+-- Separate per-column GIN indexes; PostgreSQL combines via bitmap scans
+CREATE INDEX idx_appt_trgm_name
+ON appointments USING gin (customer_name gin_trgm_ops)
+WHERE is_deleted = FALSE;
+
+CREATE INDEX idx_appt_trgm_phone
+ON appointments USING gin (customer_phone gin_trgm_ops)
+WHERE is_deleted = FALSE;
+
+CREATE INDEX idx_appt_trgm_notes
+ON appointments USING gin (notes gin_trgm_ops)
 WHERE is_deleted = FALSE;
 
 -- SPEED INDEX 3: Business Date Range (New)

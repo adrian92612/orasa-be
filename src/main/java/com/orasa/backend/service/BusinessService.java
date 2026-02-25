@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -41,6 +44,7 @@ public class BusinessService {
     private final UserRepository userRepository;
     private final SubscriptionService subscriptionService;
     private final ActivityLogService activityLogService;
+    private final UserService userService;
 
     /**
      * Creates a new business with its first branch atomically.
@@ -51,8 +55,8 @@ public class BusinessService {
      * @return BusinessResponse with both businessId and firstBranchId
      */
     @Transactional
-    @CacheEvict(value = "currentUser", key = "#ownerId")
     public BusinessResponse createBusinessWithBranch(UUID ownerId, CreateBusinessRequest request) {
+        log.info("[DEBUG] createBusinessWithBranch START for ownerId={}", ownerId);
         // Verify owner exists and doesn't already have a business
         UserEntity owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -61,7 +65,6 @@ public class BusinessService {
             throw new BusinessException("User already has a business");
         }
 
-        // Create the business
         BusinessEntity business = BusinessEntity.builder()
                 .name(request.getName())
                 .slug(generateSlug(request.getName()))
@@ -69,7 +72,6 @@ public class BusinessService {
 
         BusinessEntity savedBusiness = businessRepository.save(business);
 
-        // Create the first branch
         BranchEntity branch = BranchEntity.builder()
                 .business(savedBusiness)
                 .name(request.getBranch().getName())
@@ -79,16 +81,21 @@ public class BusinessService {
 
         BranchEntity savedBranch = branchRepository.save(branch);
 
-
-
-        // Link business to owner
         owner.setBusiness(savedBusiness);
         owner.getBranches().add(savedBranch);
         userRepository.save(owner);
 
         activityLogService.logBusinessCreated(owner, savedBusiness);
         activityLogService.logBranchCreated(owner,savedBusiness, savedBranch);
+        
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                userService.evictAuthenticatedUser(ownerId);
+            }
+        });
 
+        log.info("[DEBUG] createBusinessWithBranch END for ownerId={}, businessId={}", ownerId, savedBusiness.getId());
         return mapToResponse(savedBusiness, savedBranch.getId());
     }
 
@@ -181,7 +188,6 @@ public class BusinessService {
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
 
-        // Ensure uniqueness by appending a short random suffix
         String uniqueSuffix = UUID.randomUUID().toString().substring(0, 6);
         return baseSlug + "-" + uniqueSuffix;
     }

@@ -20,14 +20,14 @@ import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.security.JwtService;
 import com.orasa.backend.dto.profile.ChangePasswordRequest;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
   
   private final UserRepository userRepository;
@@ -101,7 +101,7 @@ public class AuthService {
         .build());
   }
 
-  @CacheEvict(value = "currentUser", key = "#userId")
+
   public void logout(UUID userId) {
       if (userId == null) return;
       
@@ -136,9 +136,9 @@ public class AuthService {
     return userRepository.save(owner);
   }
 
-  @Cacheable(value = "currentUser", key = "#userId")
   @Transactional(readOnly = true)
   public AuthResponse getCurrentUser(UUID userId) {
+
       if (userId == null) {
           throw new IllegalArgumentException("User ID cannot be null");
       }
@@ -146,16 +146,16 @@ public class AuthService {
       UserEntity user = userRepository.findById(userId)
           .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-      // Force initialize lazy collections if needed for response
-      // But for AuthResponse we only need basic fields + business info which is EAGER usually or single join
-      // Actually business is ManyToOne so it's eager by default in hibernate unless specified
+      UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
+
       
       return AuthResponse.builder()
         .userId(user.getId())
         .username(user.getUsername())
         .role(user.getRole())
-        .businessId(user.getBusiness() != null ? user.getBusiness().getId() : null)
+        .businessId(businessId)
         .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
         .build();
   }
+
 }

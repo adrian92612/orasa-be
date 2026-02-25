@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.cache.annotation.CacheEvict;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,12 +30,9 @@ public class UserService {
     private final ActivityLogService activityLogService;
 
     // In-memory cache for AuthenticatedUser to avoid DB hit on every request.
-    // Records are final and cannot be serialized to Redis with NON_FINAL typing,
-    // so we use a simple local cache instead.
     private final Map<UUID, AuthenticatedUser> authUserCache = new ConcurrentHashMap<>();
 
     @Transactional
-    @CacheEvict(value = "currentUser", key = "#userId")
     public AuthResponse updateProfile(UUID userId, UpdateProfileRequest request) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -73,7 +70,7 @@ public class UserService {
 
     public AuthenticatedUser loadAuthenticatedUser(UUID userId) {
         return authUserCache.computeIfAbsent(userId, id ->
-            userRepository.findById(id)
+            userRepository.findByIdWithRelations(id)
                 .map(user -> new AuthenticatedUser(
                     user.getId(),
                     user.getBusiness() != null ? user.getBusiness().getId() : null,

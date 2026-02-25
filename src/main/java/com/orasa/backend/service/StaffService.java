@@ -90,7 +90,6 @@ public class StaffService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(value = "currentUser", key = "#staffId"),
         @CacheEvict(value = "staff", key = "#staffId"),
         @CacheEvict(value = "business-staff", key = "#businessId")
     })
@@ -186,7 +185,6 @@ public class StaffService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(value = "currentUser", key = "#staffId"),
         @CacheEvict(value = "staff", key = "#staffId"),
         @CacheEvict(value = "business-staff", key = "#businessId")
     })

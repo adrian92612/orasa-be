@@ -51,8 +51,7 @@ public class BranchService {
     @Transactional
     @Caching(evict = {
         @CacheEvict(value = "branches", key = "#businessId"),
-        @CacheEvict(value = "user-branches", allEntries = true),
-        @CacheEvict(value = "currentUser", key = "#ownerId")
+        @CacheEvict(value = "user-branches", allEntries = true)
     })
     public BranchResponse createBranch(UUID ownerId, UUID businessId, CreateBranchRequest request) {
         log.info("Creating new branch '{}' for business {}", request.getName(), businessId);
