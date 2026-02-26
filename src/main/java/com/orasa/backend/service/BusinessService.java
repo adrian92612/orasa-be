@@ -25,8 +25,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import com.orasa.backend.common.CacheName;
 import com.orasa.backend.dto.activity.FieldChange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +44,7 @@ public class BusinessService {
     private final UserRepository userRepository;
     private final SubscriptionService subscriptionService;
     private final ActivityLogService activityLogService;
+    private final CacheService cacheService;
     private final UserService userService;
 
     /**
@@ -103,7 +104,7 @@ public class BusinessService {
      * Gets a business by ID.
      */
     @Transactional
-    @Cacheable(value = "business", key = "#businessId")
+    @Cacheable(value = CacheName.BUSINESS, key = "#businessId")
     public BusinessResponse getBusinessById(UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -114,7 +115,6 @@ public class BusinessService {
     }
 
     @Transactional
-    @CacheEvict(value = "business", key = "#businessId")
     public BusinessResponse updateBusiness(UUID businessId, UpdateBusinessRequest request) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -133,6 +133,7 @@ public class BusinessService {
             activityLogService.logBusinessUpdated(actor, savedBusiness, FieldChange.toJson(changes));
         }
         
+        cacheService.evict(CacheName.BUSINESS, businessId);
         return mapToResponse(savedBusiness, null);
     }
 

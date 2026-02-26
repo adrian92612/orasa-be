@@ -26,9 +26,9 @@ import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
+
+import com.orasa.backend.common.CacheName;
 
 @Service
 @RequiredArgsConstructor
@@ -41,9 +41,9 @@ public class StaffService {
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
     private final UserService userService;
+    private final CacheService cacheService;
 
     @Transactional
-    @CacheEvict(value = "business-staff", key = "#businessId")
     public StaffResponse createStaff(UUID actorUserId, UUID businessId, CreateStaffRequest request) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -85,14 +85,11 @@ public class StaffService {
         // Log staff creation
         activityLogService.logStaffCreated(actor, business, saved.getUsername());
         
+        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
         return mapToResponse(saved);
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "staff", key = "#staffId"),
-        @CacheEvict(value = "business-staff", key = "#businessId")
-    })
     public StaffResponse updateStaff(UUID actorUserId, UUID staffId, UUID businessId, UpdateStaffRequest request) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -166,10 +163,12 @@ public class StaffService {
             activityLogService.logStaffUpdated(actor, staff.getBusiness(), staff.getUsername(), details);
         }
         
+        cacheService.evict(CacheName.STAFF, staffId);
+        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
         return mapToResponse(saved);
     }
 
-    @Cacheable(value = "business-staff", key = "#businessId")
+    @Cacheable(value = CacheName.BUSINESS_STAFF, key = "#businessId")
     public List<StaffResponse> getStaffByBusiness(UUID businessId) {
         return userRepository.findByBusinessId(businessId).stream()
                 .filter(user -> user.getRole() == UserRole.STAFF)
@@ -177,17 +176,13 @@ public class StaffService {
                 .toList();
     }
 
-    @Cacheable(value = "staff", key = "#staffId")
+    @Cacheable(value = CacheName.STAFF, key = "#staffId")
     public StaffResponse getStaffMember(UUID staffId, UUID businessId) {
         UserEntity staff = getStaffById(staffId, businessId);
         return mapToResponse(staff);
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "staff", key = "#staffId"),
-        @CacheEvict(value = "business-staff", key = "#businessId")
-    })
     public void deleteStaff(UUID actorUserId, UUID staffId, UUID businessId) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -201,6 +196,8 @@ public class StaffService {
         userService.evictAuthenticatedUser(staffId);
         
         userRepository.delete(staff);
+        cacheService.evict(CacheName.STAFF, staffId);
+        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
     }
 
 

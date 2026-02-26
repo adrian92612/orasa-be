@@ -3,7 +3,10 @@ package com.orasa.backend.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import com.orasa.backend.common.CacheName;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BranchEntity;
@@ -27,6 +30,7 @@ public class BranchServiceService {
     private final BranchServiceRepository branchServiceRepository;
     private final BranchRepository branchRepository;
     private final ServiceRepository serviceRepository;
+    private final CacheService cacheService;
 
     @Transactional
     public BranchServiceResponse assignServiceToBranch(UUID branchId, UUID businessId, AssignServiceToBranchRequest request) {
@@ -60,9 +64,11 @@ public class BranchServiceService {
                 .build();
 
         BranchServiceEntity saved = branchServiceRepository.save(branchService);
+        cacheService.evict(CacheName.BRANCH_SERVICES, branchId);
         return mapToResponse(saved);
     }
 
+    @Cacheable(value = CacheName.BRANCH_SERVICES, key = "#branchId")
     public List<BranchServiceResponse> getServicesByBranch(UUID branchId) {
         return branchServiceRepository.findByBranchId(branchId).stream()
                 .map(this::mapToResponse)
@@ -87,6 +93,7 @@ public class BranchServiceService {
         branchService.setActive(request.getActive());
 
         BranchServiceEntity saved = branchServiceRepository.save(branchService);
+        cacheService.evict(CacheName.BRANCH_SERVICES, branchService.getBranchId());
         return mapToResponse(saved);
     }
 
@@ -103,6 +110,7 @@ public class BranchServiceService {
         }
 
         branchServiceRepository.delete(branchService);
+        cacheService.evict(CacheName.BRANCH_SERVICES, branchService.getBranchId());
     }
 
     private BranchServiceResponse mapToResponse(BranchServiceEntity branchService) {

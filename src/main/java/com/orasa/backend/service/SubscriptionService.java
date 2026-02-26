@@ -19,9 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RedissonClient;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.orasa.backend.common.CacheName;
 
 @Service
 @RequiredArgsConstructor
@@ -29,9 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class SubscriptionService {
 
+
     private final BusinessRepository businessRepository;
     private final RedissonClient redissonClient;
     private final Clock clock;
+    private final CacheService cacheService;
 
     @Transactional
     public boolean isSubscriptionActive(UUID businessId) {
@@ -125,7 +128,6 @@ public class SubscriptionService {
     ) {}
 
     @Transactional
-    @CacheEvict(value = "business", key = "#businessId")
     public void activateSubscription(UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -147,12 +149,13 @@ public class SubscriptionService {
         businessRepository.save(business);
         log.info("Activated subscription for business {}", businessId);
 
+        evictBusinessCache(businessId);
+
         // Schedule next credit reset
         scheduleCreditReset(businessId, business.getNextCreditResetDate());
     }
 
     @Transactional
-    @CacheEvict(value = "business", key = "#businessId")
     public void cancelSubscription(UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -163,10 +166,10 @@ public class SubscriptionService {
         
         businessRepository.save(business);
         log.info("Cancelled subscription for business {}", businessId);
+        evictBusinessCache(businessId);
     }
 
     @Transactional
-    @CacheEvict(value = "business", key = "#businessId")
     public void extendSubscription(UUID businessId, int months) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -177,6 +180,7 @@ public class SubscriptionService {
                 business.setSubscriptionEndDate(business.getSubscriptionEndDate().plusMonths(months - 1));
                 businessRepository.save(business);
             }
+            evictBusinessCache(businessId);
             return;
         }
         
@@ -188,10 +192,10 @@ public class SubscriptionService {
         businessRepository.save(business);
         log.info("Extended subscription for business {} by {} months. New end date: {}", 
                 businessId, months, business.getSubscriptionEndDate());
+        evictBusinessCache(businessId);
     }
 
     @Transactional
-    @CacheEvict(value = "business", key = "#businessId")
     public void consumeSmsCredit(UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
@@ -200,7 +204,6 @@ public class SubscriptionService {
     }
 
     @Transactional(noRollbackFor = SubscriptionExpiredException.class)
-    @CacheEvict(value = "business", key = "#business.id")
     public void consumeSmsCredit(BusinessEntity business) {
         // 1. Lazy Reset: Check if we moved into a new cycle since last check
         checkAndRefreshCredits(business);
@@ -215,10 +218,10 @@ public class SubscriptionService {
         }
         
         businessRepository.save(business);
+        evictBusinessCache(business.getId());
     }
 
     @Transactional
-    @CacheEvict(value = "business", key = "#business.id")
     public void checkAndRefreshCredits(BusinessEntity business) {
         // 1. Check for Expiry First
         if (handleExpiryCheck(business)) {
@@ -236,16 +239,26 @@ public class SubscriptionService {
             business.setFreeSmsCredits(100);
             
             // Advance reset date by 1 month
-            // Ensure we don't fall behind if multiple months passed (though rare if system is active)
             while (!business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
                  business.setNextCreditResetDate(business.getNextCreditResetDate().plusMonths(1));
             }
             
             businessRepository.save(business);
+            evictBusinessCache(business.getId());
             
             // Schedule the NEXT reset
             scheduleCreditReset(business.getId(), business.getNextCreditResetDate());
         }
+    }
+
+    @Transactional
+    public void addPaidCredits(UUID businessId, int credits) {
+        BusinessEntity business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+
+        business.setPaidSmsCredits(business.getPaidSmsCredits() + credits);
+        businessRepository.save(business);
+        evictBusinessCache(businessId);
     }
 
     private boolean handleExpiryCheck(BusinessEntity business) {
@@ -257,19 +270,14 @@ public class SubscriptionService {
             business.setSubscriptionStatus(SubscriptionStatus.EXPIRED);
             business.setFreeSmsCredits(0);
             businessRepository.save(business);
+            evictBusinessCache(business.getId());
             return true;
         }
         return false;
-        
     }
-    @Transactional
-    @CacheEvict(value = "business", key = "#businessId")
-    public void addPaidCredits(UUID businessId, int credits) {
-        BusinessEntity business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-        business.setPaidSmsCredits(business.getPaidSmsCredits() + credits);
-        businessRepository.save(business);
+    private void evictBusinessCache(UUID businessId) {
+        cacheService.evict(CacheName.BUSINESS, businessId);
     }
 
     private void scheduleCreditReset(UUID businessId, OffsetDateTime resetDate) {
@@ -279,7 +287,7 @@ public class SubscriptionService {
             RDelayedQueue<CreditResetTask> delayedQueue = redissonClient.getDelayedQueue(blockingQueue);
 
             long delay = Duration.between(OffsetDateTime.now(clock), resetDate).toMillis();
-            if (delay < 0) delay = 0; // If already passed, run immediately (or close to it)
+            if (delay < 0) delay = 0;
 
             delayedQueue.offer(new CreditResetTask(businessId, resetDate), delay, TimeUnit.MILLISECONDS);
             log.info("Scheduled credit reset for business {} at {}", businessId, resetDate);

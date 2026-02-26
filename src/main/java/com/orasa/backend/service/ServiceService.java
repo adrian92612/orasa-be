@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+
+import com.orasa.backend.common.CacheName;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BusinessEntity;
@@ -42,12 +42,9 @@ public class ServiceService {
     private final BranchRepository branchRepository;
     private final BranchServiceRepository branchServiceRepository;
     private final ActivityLogService activityLogService;
+    private final CacheService cacheService;
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "services", key = "#businessId"),
-        @CacheEvict(value = "branches", key = "#businessId")
-    })
     public ServiceResponse createService(UUID actorUserId, UUID businessId, CreateServiceRequest request) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -78,14 +75,12 @@ public class ServiceService {
 
         activityLogService.logServiceCreated(actor, business, saved.getName());
         
+        cacheService.evict(CacheName.SERVICES, businessId);
+        cacheService.evict(CacheName.BRANCHES, businessId);
         return mapToResponse(saved);
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "services", key = "#businessId"),
-        @CacheEvict(value = "service", key = "#serviceId")
-    })
     public ServiceResponse updateService(UUID actorUserId, UUID serviceId, UUID businessId, UpdateServiceRequest request) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -149,12 +144,15 @@ public class ServiceService {
             // Log service update with details
             String details = FieldChange.toJson(changes);
             activityLogService.logServiceUpdated(actor, business, serviceOffering.getName(), details);
+
+            cacheService.evict(CacheName.SERVICES, businessId);
+            cacheService.evict(CacheName.SERVICE, serviceId);
         }
 
         return mapToResponse(serviceOffering);
     }
 
-    @Cacheable(value = "services", key = "{#businessId, #branchId}")
+    @Cacheable(value = CacheName.SERVICES, key = "{#businessId, #branchId}")
     public List<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
         List<ServiceEntity> services;
         if (branchId != null) {
@@ -167,7 +165,7 @@ public class ServiceService {
                 .toList();
     }
 
-    @Cacheable(value = "service", key = "#serviceId")
+    @Cacheable(value = CacheName.SERVICE, key = "#serviceId")
     public ServiceResponse getServiceById(UUID serviceId) {
         ServiceEntity serviceOffering = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
@@ -176,11 +174,6 @@ public class ServiceService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "services", key = "#businessId"),
-        @CacheEvict(value = "branches", key = "#businessId"),
-        @CacheEvict(value = "service", key = "#serviceId")
-    })
     public void deleteService(UUID actorUserId, UUID serviceId, UUID businessId) {
         UserEntity actor = userRepository.findById(actorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -201,6 +194,9 @@ public class ServiceService {
         branchServiceRepository.deleteAll(branchLinks);
 
         serviceRepository.delete(serviceOffering);
+        cacheService.evict(CacheName.SERVICES, businessId);
+        cacheService.evict(CacheName.BRANCHES, businessId);
+        cacheService.evict(CacheName.SERVICE, serviceId);
     }
 
     private ServiceResponse mapToResponse(ServiceEntity serviceOffering) {

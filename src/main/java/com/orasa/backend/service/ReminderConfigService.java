@@ -3,9 +3,10 @@ package com.orasa.backend.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import com.orasa.backend.common.CacheName;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
@@ -27,9 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 public class ReminderConfigService {
 
     private final BusinessReminderConfigRepository reminderConfigRepository;
+    private final CacheService cacheService;
 
     @Transactional
-    @CacheEvict(value = "reminder-configs", key = "#businessId")
     public ReminderConfigResponse createConfig(UUID businessId, CreateReminderConfigRequest request) {
         log.info("SMS request: {}", request);
         List<BusinessReminderConfigEntity> existingConfigs = reminderConfigRepository.findByBusinessId(businessId);
@@ -48,11 +49,11 @@ public class ReminderConfigService {
                 .build();
 
         BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
+        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId);
         return mapToResponse(saved);
     }
 
     @Transactional
-    @CacheEvict(value = "reminder-configs", key = "#businessId")
     public ReminderConfigResponse updateConfig(UUID configId, UUID businessId, UpdateReminderConfigRequest request) {
         BusinessReminderConfigEntity config = getConfigById(configId, businessId);
 
@@ -77,10 +78,11 @@ public class ReminderConfigService {
         }
 
         BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
+        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId);
         return mapToResponse(saved);
     }
 
-    @Cacheable(value = "reminder-configs", key = "#businessId")
+    @Cacheable(value = CacheName.REMINDER_CONFIGS, key = "#businessId")
     public List<ReminderConfigResponse> getConfigsByBusiness(UUID businessId) {
         return reminderConfigRepository.findByBusinessId(businessId).stream()
                 .map(this::mapToResponse)
@@ -104,10 +106,10 @@ public class ReminderConfigService {
     }
 
     @Transactional
-    @CacheEvict(value = "reminder-configs", key = "#businessId")
     public void deleteConfig(UUID configId, UUID businessId) {
         BusinessReminderConfigEntity config = getConfigById(configId, businessId);
         reminderConfigRepository.delete(config);
+        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId);
     }
 
     private BusinessReminderConfigEntity getConfigById(UUID configId, UUID businessId) {

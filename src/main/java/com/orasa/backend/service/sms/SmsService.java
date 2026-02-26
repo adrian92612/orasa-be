@@ -16,9 +16,7 @@ import java.util.concurrent.TimeUnit;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RedissonClient;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -41,6 +39,8 @@ import com.orasa.backend.repository.SmsLogRepository;
 import com.orasa.backend.repository.ScheduledSmsTaskRepository;
 import com.orasa.backend.service.ReminderConfigService;
 import com.orasa.backend.service.SubscriptionService;
+import com.orasa.backend.service.CacheService;
+import com.orasa.backend.common.CacheName;
 import com.orasa.backend.common.SmsTaskStatus;
 import com.orasa.backend.domain.ScheduledSmsTaskEntity;
 import com.orasa.backend.exception.SubscriptionExpiredException;
@@ -64,6 +64,7 @@ public class SmsService {
     private final ScheduledSmsTaskRepository scheduledSmsTaskRepository;
     private final RedissonClient redissonClient;
     private final Clock clock;
+    private final CacheService cacheService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
@@ -167,10 +168,6 @@ public class SmsService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "sms-logs", key = "#task.businessId"),
-        @CacheEvict(value = "analytics", allEntries = true)
-    })
     public void processScheduledTask(SmsReminderTask task) {
         UUID appointmentId = task.getAppointmentId();
         UUID scheduledTaskId = task.getScheduledTaskId();
@@ -277,14 +274,12 @@ public class SmsService {
         }
         
         scheduledSmsTaskRepository.save(scheduledTask);
+        cacheService.evict(CacheName.SMS_LOGS, task.getBusinessId());
+        cacheService.evictAll(CacheName.ANALYTICS);
     }
 
     @Transactional
     @RequiresActiveSubscription
-    @Caching(evict = {
-        @CacheEvict(value = "sms-logs", key = "#business.id"),
-        @CacheEvict(value = "analytics", allEntries = true)
-    })
     public SmsLogEntity sendSms(BusinessEntity business, SmsLogEntity smsLog) {
         subscriptionService.consumeSmsCredit(business);
 
@@ -295,10 +290,13 @@ public class SmsService {
         smsLog.setProviderResponse(result.rawResponse());
         smsLog.setErrorMessage(result.errorMessage());
 
-        return smsLogRepository.save(smsLog);
+        SmsLogEntity saved = smsLogRepository.save(smsLog);
+        cacheService.evict(CacheName.SMS_LOGS, business.getId());
+        cacheService.evictAll(CacheName.ANALYTICS);
+        return saved;
     }
 
-    @Cacheable(value = "sms-logs", key = "#businessId", condition = "#pageable.pageNumber == 0 && #branchId == null && #status == null && #startDate == null && #endDate == null")
+    @Cacheable(value = CacheName.SMS_LOGS, key = "#businessId", condition = "#pageable.pageNumber == 0 && #branchId == null && #status == null && #startDate == null && #endDate == null")
     public com.orasa.backend.dto.common.PageResponse<SmsLogResponse> getSmsLogs(
             UUID businessId,
             UUID branchId,

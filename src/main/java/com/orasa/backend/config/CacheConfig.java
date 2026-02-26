@@ -2,6 +2,8 @@ package com.orasa.backend.config;
 
 import java.time.Duration;
 
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -16,12 +18,18 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import lombok.RequiredArgsConstructor;
+
 @Configuration
-public class CacheConfig {
+@RequiredArgsConstructor
+public class CacheConfig implements CachingConfigurer {
+
+    private final RedisConnectionFactory connectionFactory;
 
     @SuppressWarnings({"removal", "deprecation"})
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    @Override
+    public CacheManager cacheManager() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -46,4 +54,3 @@ public class CacheConfig {
                 .build();
     }
 }
-

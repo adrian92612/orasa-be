@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Set;
 
-import org.springframework.cache.annotation.CacheEvict;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +45,8 @@ import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.service.sms.SmsService;
 import com.orasa.backend.config.TimeConfig;
 
+import com.orasa.backend.common.CacheName;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -61,9 +63,9 @@ public class AppointmentService {
   private final ServiceRepository serviceRepository;
   private final BusinessReminderConfigRepository reminderConfigRepository;
   private final Clock clock;
+  private final CacheService cacheService;
 
   @Transactional
-  @CacheEvict(value = "analytics", allEntries = true)
   public AppointmentResponse createAppointment(UUID userId, CreateAppointmentRequest request) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -147,11 +149,11 @@ public class AppointmentService {
         }
     }
 
+    cacheService.evictAll(CacheName.ANALYTICS);
     return mapToResponse(saved);
   }
 
   @Transactional
-  @CacheEvict(value = "analytics", allEntries = true)
   public UpdateResult updateAppointment(UUID userId, UUID id, UpdateAppointmentRequest request) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -369,11 +371,11 @@ public class AppointmentService {
         smsService.scheduleRemindersForAppointment(saved);
     }
 
+    cacheService.evictAll(CacheName.ANALYTICS);
     return new UpdateResult(mapToResponse(saved), true);
   }
 
   @Transactional
-  @CacheEvict(value = "analytics", allEntries = true)
   public AppointmentResponse updateAppointmentStatus(UUID userId, UUID id, AppointmentStatus newStatus) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -417,6 +419,7 @@ public class AppointmentService {
         }
     }
 
+    cacheService.evictAll(CacheName.ANALYTICS);
     return mapToResponse(saved);
   }
 
@@ -534,7 +537,6 @@ public class AppointmentService {
   }
 
   @Transactional
-  @CacheEvict(value = "analytics", allEntries = true)
   public void deleteAppointment(UUID userId, UUID id) {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -557,6 +559,7 @@ public class AppointmentService {
     smsService.cancelRemindersForAppointment(id);
 
     appointmentRepository.delete(appointment);
+    cacheService.evictAll(CacheName.ANALYTICS);
   }
 
   // Helper methods

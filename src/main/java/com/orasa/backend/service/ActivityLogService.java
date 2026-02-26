@@ -5,9 +5,9 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
+
+import com.orasa.backend.common.CacheName;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ActivityLogService {
     
     private final ActivityLogRepository activityLogRepository;
+    private final CacheService cacheService;
     
     private static final DateTimeFormatter DATE_TIME_FORMATTER =  
             DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
@@ -53,10 +54,6 @@ public class ActivityLogService {
      * General-purpose logging method with details for expandable view.
      */
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "business-activity-logs", key = "#business.id"),
-        @CacheEvict(value = "branch-activity-logs", key = "#branch.id", condition = "#branch != null")
-    })
     public void logAction(UserEntity user, BusinessEntity business, BranchEntity branch, 
                           ActivityAction action, String description, String details) {
         try {
@@ -71,6 +68,10 @@ public class ActivityLogService {
             
             activityLogRepository.save(activityLog);
             log.debug("Logged action: {} by user {} - {}", action, user.getId(), description);
+            cacheService.evict(CacheName.BUSINESS_ACTIVITY_LOGS, business.getId());
+            if (branch != null) {
+                cacheService.evict(CacheName.BRANCH_ACTIVITY_LOGS, branch.getId());
+            }
         } catch (Exception e) {
             log.error("Failed to log activity: {} - {}", action, e.getMessage());
             // Activity logging should never break the main flow
@@ -241,7 +242,7 @@ public class ActivityLogService {
     // ==================== QUERY METHODS ====================
     
     @Transactional(readOnly = true)
-    @Cacheable(value = "business-activity-logs", key = "#businessId", condition = "#pageable.pageNumber == 0")
+    @Cacheable(value = CacheName.BUSINESS_ACTIVITY_LOGS, key = "#businessId", condition = "#pageable.pageNumber == 0")
     public PageResponse<ActivityLogResponse> getActivityLogsByBusiness(UUID businessId, Pageable pageable) {
         Page<ActivityLogResponse> page = activityLogRepository.findByBusinessIdOrderByCreatedAtDesc(businessId, pageable)
                 .map(this::mapToResponse);
@@ -249,7 +250,7 @@ public class ActivityLogService {
     }
     
     @Transactional(readOnly = true)
-    @Cacheable(value = "branch-activity-logs", key = "#branchId", condition = "#pageable.pageNumber == 0")
+    @Cacheable(value = CacheName.BRANCH_ACTIVITY_LOGS, key = "#branchId", condition = "#pageable.pageNumber == 0")
     public PageResponse<ActivityLogResponse> getActivityLogsByBranch(UUID branchId, Pageable pageable) {
         Page<ActivityLogResponse> page = activityLogRepository.findByBranchIdOrderByCreatedAtDesc(branchId, pageable)
                 .map(this::mapToResponse);
