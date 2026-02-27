@@ -23,7 +23,7 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLogEntity, 
         SELECT a FROM ActivityLogEntity a
         WHERE a.business.id = :businessId
         AND (cast(:branchId as uuid) IS NULL OR a.branch.id = :branchId)
-        AND (cast(:action as string) IS NULL OR a.action = :action)
+        AND (:hasActions = false OR a.action IN :actions)
         AND (cast(:startDate as offsetdatetime) IS NULL OR a.createdAt >= :startDate)
         AND (cast(:endDate as offsetdatetime) IS NULL OR a.createdAt <= :endDate)
         ORDER BY a.createdAt DESC
@@ -31,7 +31,8 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLogEntity, 
     Page<ActivityLogEntity> searchActivityLogs(
         @Param("businessId") UUID businessId,
         @Param("branchId") UUID branchId,
-        @Param("action") String action,
+        @Param("hasActions") boolean hasActions,
+        @Param("actions") java.util.List<String> actions,
         @Param("startDate") OffsetDateTime startDate,
         @Param("endDate") OffsetDateTime endDate,
         Pageable pageable

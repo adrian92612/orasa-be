@@ -267,7 +267,7 @@ public class ActivityLogService {
     public Page<ActivityLogResponse> searchActivityLogs(
             UUID businessId,
             UUID branchId,
-            String action,
+            java.util.List<String> actions,
             LocalDate startDate,
             LocalDate endDate,
             Pageable pageable) {
@@ -278,9 +278,11 @@ public class ActivityLogService {
         OffsetDateTime end = endDate != null 
             ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() 
             : null;
+            
+        boolean hasActions = actions != null && !actions.isEmpty();
         
         return activityLogRepository.searchActivityLogs(
-                businessId, branchId, action, start, end, pageable)
+                businessId, branchId, hasActions, actions, start, end, pageable)
                 .map(this::mapToResponse);
     }
     

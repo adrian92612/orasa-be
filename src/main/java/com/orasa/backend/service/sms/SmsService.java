@@ -22,7 +22,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 import com.orasa.backend.common.RequiresActiveSubscription;
 import com.orasa.backend.common.SmsStatus;
@@ -32,9 +31,7 @@ import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.domain.SmsLogEntity;
 import com.orasa.backend.dto.sms.SmsLogResponse;
 import com.orasa.backend.dto.sms.SmsReminderTask;
-import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.AppointmentRepository;
-import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.SmsLogRepository;
 import com.orasa.backend.repository.ScheduledSmsTaskRepository;
 import com.orasa.backend.service.ReminderConfigService;
@@ -43,7 +40,6 @@ import com.orasa.backend.service.CacheService;
 import com.orasa.backend.common.CacheName;
 import com.orasa.backend.common.SmsTaskStatus;
 import com.orasa.backend.domain.ScheduledSmsTaskEntity;
-import com.orasa.backend.exception.SubscriptionExpiredException;
 import com.orasa.backend.config.TimeConfig;
 
 import lombok.RequiredArgsConstructor;
@@ -57,7 +53,6 @@ public class SmsService {
 
     private final PhilSmsProvider philSmsProvider;
     private final SmsLogRepository smsLogRepository;
-    private final BusinessRepository businessRepository;
     private final AppointmentRepository appointmentRepository;
     private final ReminderConfigService reminderConfigService;
     private final SubscriptionService subscriptionService;
@@ -65,6 +60,7 @@ public class SmsService {
     private final RedissonClient redissonClient;
     private final Clock clock;
     private final CacheService cacheService;
+    private final SmsTaskHelper smsTaskHelper;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
@@ -167,116 +163,48 @@ public class SmsService {
         log.info("Cancelled {} pending reminders for appointment {}", pendingTasks.size(), appointmentId);
     }
 
-    @Transactional
     public void processScheduledTask(SmsReminderTask task) {
-        UUID appointmentId = task.getAppointmentId();
-        UUID scheduledTaskId = task.getScheduledTaskId();
+        // Step 1: Build the reminder message (read-only, no transaction needed)
+        String message = buildReminderMessageForTask(task);
+        if (message == null) return;
 
-        ScheduledSmsTaskEntity scheduledTask = scheduledSmsTaskRepository.findById(scheduledTaskId)
-                .orElse(null);
+        // Step 2: Prepare - validate, consume credit, create log (Transactional via SmsTaskHelper)
+        SmsTaskHelper.TaskPreparationResult preparation = smsTaskHelper.prepareTask(task, message);
+        if (preparation == null) return;
 
-        if (scheduledTask == null) {
-            log.warn("Skipping reminder task - ScheduledTask record {} not found", scheduledTaskId);
-            return;
-        }
+        SmsLogEntity smsLog = preparation.smsLog();
 
-        if (scheduledTask.getStatus() != SmsTaskStatus.PENDING) {
-            log.info("Skipping task {} - Status is already {}", scheduledTaskId, scheduledTask.getStatus());
-            return;
-        }
-
-        // Mark as PROCESSING before sending to prevent duplicate sends on retry
-        scheduledTask.setStatus(SmsTaskStatus.PROCESSING);
-        scheduledSmsTaskRepository.save(scheduledTask);
-        
-        AppointmentEntity appointment = appointmentRepository.findById(appointmentId)
-                .orElse(null);
-
-        if (appointment == null) {
-            log.warn("Skipping reminder for appointment {} - Appointment not found (deleted?)", appointmentId);
-            scheduledTask.setStatus(SmsTaskStatus.FAILED);
-            scheduledSmsTaskRepository.save(scheduledTask);
-            return;
-        }
-
-        if (appointment.getStatus() == AppointmentStatus.CANCELLED || appointment.getStatus() == AppointmentStatus.NO_SHOW) {
-            log.info("Skipping reminder for appointment {} - Appointment status is {}", appointmentId, appointment.getStatus());
-            scheduledTask.setStatus(SmsTaskStatus.CANCELLED);
-            scheduledSmsTaskRepository.save(scheduledTask);
-            return;
-        }
-
-        if (!appointment.isRemindersEnabled()) {
-             log.info("Skipping reminder for appointment {} - Reminders disabled", appointmentId);
-             scheduledTask.setStatus(SmsTaskStatus.SKIPPED);
-             scheduledSmsTaskRepository.save(scheduledTask);
-             return;
-        }
-
-        OffsetDateTime currentTargetTime = appointment.getStartDateTime().minusMinutes(task.getLeadTimeMinutes());
-        if (!currentTargetTime.isEqual(task.getScheduledAt())) {
-             log.info("Skipping stale reminder for appointment {} - Appointment time changed. Task Scheduled: {}, Current Target: {}", 
-                 appointmentId, task.getScheduledAt(), currentTargetTime);
-             scheduledTask.setStatus(SmsTaskStatus.SKIPPED);
-             scheduledSmsTaskRepository.save(scheduledTask);
-             return;
-        }
-        
-        if (appointment.getStartDateTime().isBefore(OffsetDateTime.now(clock))) {
-            log.info("Skipping reminder for appointment {} - Appointment already started/passed", appointmentId);
-            scheduledTask.setStatus(SmsTaskStatus.SKIPPED);
-            scheduledSmsTaskRepository.save(scheduledTask);
-            return;
-        }
-
-        BusinessEntity business = businessRepository.findById(task.getBusinessId())
-                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
-
-        if (!business.hasActiveSubscription()) {
-            log.warn("Skipping reminder for appointment {} - Business {} subscription expired", appointmentId, business.getId());
-            scheduledTask.setStatus(SmsTaskStatus.FAILED);
-            scheduledSmsTaskRepository.save(scheduledTask);
-            return;
-        }
-
-        // Create the Log (The Receipt) just before sending
-        String message = buildReminderMessage(appointment, task.getLeadTimeMinutes());
-        SmsLogEntity smsLog = SmsLogEntity.builder()
-                .business(business)
-                .appointment(appointment)
-                .recipientPhone(appointment.getCustomerPhone())
-                .messageBody(message)
-                .status(SmsStatus.PENDING)
-                .providerId("none")
-                .build();
-        smsLog = smsLogRepository.save(smsLog);
-
+        // Step 3: External API Call (No transaction - DB connection is free)
+        PhilSmsProvider.SendSmsResult result;
         try {
-            sendSms(business, smsLog);
-            // Update the Plan status
-            scheduledTask.setStatus(smsLog.getStatus() == SmsStatus.DELIVERED ? SmsTaskStatus.COMPLETED : SmsTaskStatus.FAILED);
-        } catch (SubscriptionExpiredException e) {
-            log.error("Failed to send SMS for appointment {}: {}", appointmentId, e.getMessage());
-            
-            smsLog.setStatus(SmsStatus.FAILED);
-            smsLog.setErrorMessage(e.getMessage());
-            smsLogRepository.save(smsLog);
-            
-            scheduledTask.setStatus(SmsTaskStatus.FAILED);
+            log.debug("Sending SMS for appointment {} (log ID: {})", task.getAppointmentId(), smsLog.getId());
+            result = philSmsProvider.sendSms(smsLog.getRecipientPhone(), smsLog.getMessageBody());
         } catch (Exception e) {
-            log.error("Unexpected error sending SMS for appointment {}", appointmentId, e);
-            
-            smsLog.setStatus(SmsStatus.FAILED);
-            smsLog.setErrorMessage("Unexpected error: " + e.getMessage());
-            smsLogRepository.save(smsLog);
-            
-            scheduledTask.setStatus(SmsTaskStatus.FAILED);
+            log.error("Unexpected error calling PhilSMS for appointment {}", task.getAppointmentId(), e);
+            result = PhilSmsProvider.SendSmsResult.failure("Unexpected API error: " + e.getMessage(), null);
         }
+
+        // Step 4: Finalize status (Transactional via SmsTaskHelper)
+        smsTaskHelper.finalizeTaskStatus(preparation.scheduledTask(), smsLog, result);
         
-        scheduledSmsTaskRepository.save(scheduledTask);
         cacheService.evict(CacheName.SMS_LOGS, task.getBusinessId());
         cacheService.evictAll(CacheName.ANALYTICS);
     }
+
+    /**
+     * Builds the reminder message for a task. Returns null if the appointment can't be found.
+     */
+    private String buildReminderMessageForTask(SmsReminderTask task) {
+        AppointmentEntity appointment = appointmentRepository.findById(task.getAppointmentId())
+                .orElse(null);
+        if (appointment == null) {
+            log.warn("Cannot build message for appointment {} - not found", task.getAppointmentId());
+            return null;
+        }
+        return buildReminderMessage(appointment, task.getLeadTimeMinutes());
+    }
+
+
 
     @Transactional
     @RequiresActiveSubscription
@@ -286,6 +214,7 @@ public class SmsService {
         PhilSmsProvider.SendSmsResult result = philSmsProvider.sendSms(smsLog.getRecipientPhone(), smsLog.getMessageBody());
 
         smsLog.setStatus(result.success() ? SmsStatus.DELIVERED : SmsStatus.FAILED);
+
         smsLog.setProviderId(result.success() ? result.providerId() : "none");
         smsLog.setProviderResponse(result.rawResponse());
         smsLog.setErrorMessage(result.errorMessage());

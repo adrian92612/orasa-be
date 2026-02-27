@@ -83,7 +83,7 @@ public class ActivityLogController extends BaseController {
     public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> searchActivityLogs(
             @PathVariable UUID businessId,
             @RequestParam(required = false) UUID branchId,
-            @RequestParam(required = false) String action,
+            @RequestParam(required = false) java.util.List<String> action,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 20) Pageable pageable
