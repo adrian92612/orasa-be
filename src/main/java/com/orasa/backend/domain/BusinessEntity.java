@@ -47,7 +47,8 @@ public class BusinessEntity extends BaseEntity {
     @Column(name = "next_credit_reset_date")
     private OffsetDateTime nextCreditResetDate;
 
-
+    @Column(name = "terms_accepted_at")
+    private OffsetDateTime termsAcceptedAt;
 
     /**
      * Checks if subscription is currently active.

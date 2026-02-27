@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.OffsetDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,6 +18,9 @@ public class CreateBusinessRequest {
 
     @NotBlank(message = "Business name is required")
     private String name;
+
+    @NotNull(message = "Terms acceptance timestamp is required")
+    private OffsetDateTime termsAcceptedAt;
 
     @NotNull(message = "First branch is required")
     @Valid

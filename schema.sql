@@ -33,6 +33,7 @@ CREATE TABLE businesses (
     subscription_start_date TIMESTAMP WITH TIME ZONE,
     subscription_end_date TIMESTAMP WITH TIME ZONE,
     next_credit_reset_date TIMESTAMP WITH TIME ZONE,
+    terms_accepted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),

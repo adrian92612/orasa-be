@@ -69,6 +69,7 @@ public class BusinessService {
         BusinessEntity business = BusinessEntity.builder()
                 .name(request.getName())
                 .slug(generateSlug(request.getName()))
+                .termsAcceptedAt(request.getTermsAcceptedAt())
                 .build();
 
         BusinessEntity savedBusiness = businessRepository.save(business);
