@@ -86,6 +86,14 @@ public class StaffService {
         activityLogService.logStaffCreated(actor, business, saved.getUsername());
         
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+
+        // Evict branch caches
+        cacheService.evict(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES);
+        for (UUID branchId : request.getBranchIds()) {
+            cacheService.evict(CacheName.BRANCH, branchId);
+        }
+
         return mapToResponse(saved);
     }
 
@@ -165,6 +173,14 @@ public class StaffService {
         
         cacheService.evict(CacheName.STAFF, staffId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+
+        // Evict branch caches
+        cacheService.evict(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES);
+        for (BranchEntity branch : staff.getBranches()) {
+            cacheService.evict(CacheName.BRANCH, branch.getId());
+        }
+
         return mapToResponse(saved);
     }
 
@@ -198,6 +214,13 @@ public class StaffService {
         userRepository.delete(staff);
         cacheService.evict(CacheName.STAFF, staffId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+
+        // Evict branch caches
+        cacheService.evict(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES);
+        for (BranchEntity branch : staff.getBranches()) {
+            cacheService.evict(CacheName.BRANCH, branch.getId());
+        }
     }
 
 
