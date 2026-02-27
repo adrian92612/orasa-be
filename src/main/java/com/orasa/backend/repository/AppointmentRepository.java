@@ -23,7 +23,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
   Page<AppointmentEntity> findByBranchIdAndStartDateTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
 
   // Add entity graph method
-  @EntityGraph(attributePaths = {"service", "branch", "business", "selectedReminders"})
+  @EntityGraph(attributePaths = {"branch", "business", "selectedReminders"})
   @Query("SELECT a FROM AppointmentEntity a WHERE a.id IN :ids")
   List<AppointmentEntity> findAllByIdWithAssociations(@Param("ids") List<UUID> ids);
 

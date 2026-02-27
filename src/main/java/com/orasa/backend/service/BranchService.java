@@ -95,6 +95,7 @@ public class BranchService {
         log.info("Branch created with ID: {}", saved.getId());
         cacheService.evict(CacheName.BRANCHES, businessId);
         cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.SERVICES);
         return mapToResponse(saved);
     }
 
@@ -228,6 +229,7 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCHES, businessId);
         cacheService.evict(CacheName.BRANCH, branchId);
         cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.SERVICES);
         return mapToResponse(saved);
     }
 
@@ -307,6 +309,7 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCHES, businessId);
         cacheService.evict(CacheName.BRANCH, branchId);
         cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.SERVICES);
     }
 
     @Cacheable(value = CacheName.BRANCH, key = "#branchId")

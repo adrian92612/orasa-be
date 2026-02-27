@@ -75,7 +75,8 @@ public class ServiceService {
 
         activityLogService.logServiceCreated(actor, business, saved.getName());
         
-        cacheService.evict(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES);
         cacheService.evict(CacheName.BRANCHES, businessId);
         return mapToResponse(saved);
     }
@@ -145,7 +146,8 @@ public class ServiceService {
             String details = FieldChange.toJson(changes);
             activityLogService.logServiceUpdated(actor, business, serviceOffering.getName(), details);
 
-            cacheService.evict(CacheName.SERVICES, businessId);
+            cacheService.evictAll(CacheName.SERVICES);
+            cacheService.evictAll(CacheName.BRANCH_SERVICES);
             cacheService.evict(CacheName.SERVICE, serviceId);
         }
 
@@ -194,7 +196,8 @@ public class ServiceService {
         branchServiceRepository.deleteAll(branchLinks);
 
         serviceRepository.delete(serviceOffering);
-        cacheService.evict(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES);
         cacheService.evict(CacheName.BRANCHES, businessId);
         cacheService.evict(CacheName.SERVICE, serviceId);
     }

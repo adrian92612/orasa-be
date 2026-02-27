@@ -6,11 +6,14 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "appointments")
@@ -66,9 +69,13 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "additional_reminder_template", columnDefinition = "TEXT")
     private String additionalReminderTemplate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "service_id")
+    @NotFound(action = NotFoundAction.IGNORE)
     private ServiceEntity service;
+
+    @Column(name = "service_id", insertable = false, updatable = false)
+    private UUID rawServiceId;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -65,6 +65,7 @@ public class BranchServiceService {
 
         BranchServiceEntity saved = branchServiceRepository.save(branchService);
         cacheService.evict(CacheName.BRANCH_SERVICES, branchId);
+        cacheService.evictAll(CacheName.SERVICES);
         return mapToResponse(saved);
     }
 
@@ -94,6 +95,7 @@ public class BranchServiceService {
 
         BranchServiceEntity saved = branchServiceRepository.save(branchService);
         cacheService.evict(CacheName.BRANCH_SERVICES, branchService.getBranchId());
+        cacheService.evictAll(CacheName.SERVICES);
         return mapToResponse(saved);
     }
 
@@ -111,6 +113,7 @@ public class BranchServiceService {
 
         branchServiceRepository.delete(branchService);
         cacheService.evict(CacheName.BRANCH_SERVICES, branchService.getBranchId());
+        cacheService.evictAll(CacheName.SERVICES);
     }
 
     private BranchServiceResponse mapToResponse(BranchServiceEntity branchService) {

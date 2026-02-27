@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Set;
 
+import org.hibernate.ObjectNotFoundException;
+
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -171,7 +173,7 @@ public class AppointmentService {
     OffsetDateTime beforeEndDateTime = appointment.getEndDateTime();
     String beforeNotes = appointment.getNotes();
     AppointmentStatus beforeStatus = appointment.getStatus();
-    ServiceEntity beforeService = appointment.getService();
+    ServiceEntity beforeService = resolveService(appointment);
     boolean isOriginallyWalkin = appointment.getType() == AppointmentType.WALK_IN;
     
     // CAPTURE REMINDER STATE BEFORE UPDATES
@@ -284,7 +286,8 @@ public class AppointmentService {
          }
     }
 
-    if (request.getServiceId() != null && (appointment.getService() == null || !request.getServiceId().equals(appointment.getService().getId()))) {
+    ServiceEntity currentService = resolveService(appointment);
+    if (request.getServiceId() != null && (currentService == null || !request.getServiceId().equals(currentService.getId()))) {
       ServiceEntity serviceEntity = serviceRepository.findById(request.getServiceId())
           .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
       changes.add(FieldChange.builder()
@@ -562,8 +565,25 @@ public class AppointmentService {
     cacheService.evictAll(CacheName.ANALYTICS);
   }
 
+  /**
+   * Safely resolves a service from a lazy proxy.
+   * Returns null if the service was soft-deleted (filtered by @SQLRestriction).
+   */
+  private ServiceEntity resolveService(AppointmentEntity appointment) {
+    try {
+      ServiceEntity service = appointment.getService();
+      if (service != null) {
+        service.getId(); // force proxy initialization
+      }
+      return service;
+    } catch (ObjectNotFoundException e) {
+      return null;
+    }
+  }
+
   // Helper methods
   private AppointmentResponse mapToResponse(AppointmentEntity appointment) {
+    ServiceEntity service = resolveService(appointment);
     return AppointmentResponse.builder()
         .id(appointment.getId())
         .businessId(appointment.getBusiness().getId())
@@ -576,8 +596,9 @@ public class AppointmentService {
         .endDateTime(appointment.getEndDateTime())
         .status(appointment.getStatus())
         .notes(appointment.getNotes())
-        .serviceId(appointment.getService() != null ? appointment.getService().getId() : null)
-        .serviceName(appointment.getService() != null ? appointment.getService().getName() : null)
+        .serviceId(service != null ? service.getId() : null)
+        .serviceName(service != null ? service.getName() : null)
+        .serviceDeleted(service == null && appointment.getRawServiceId() != null)
         .selectedReminderIds(appointment.getSelectedReminders() != null 
             ? appointment.getSelectedReminders().stream().map(BaseEntity::getId).toList()
             : java.util.Collections.emptyList())

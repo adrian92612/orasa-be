@@ -31,6 +31,7 @@ public class AppointmentResponse {
   private AppointmentStatus status;
   private UUID serviceId;
   private String serviceName;
+  private boolean serviceDeleted;
   private List<UUID> selectedReminderIds;
   private Integer additionalReminderMinutes;
   private String additionalReminderTemplate;
