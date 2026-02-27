@@ -96,6 +96,9 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCHES, businessId);
         cacheService.evictAll(CacheName.USER_BRANCHES);
         cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.STAFF);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES);
         return mapToResponse(saved);
     }
 
@@ -230,6 +233,9 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCH, branchId);
         cacheService.evictAll(CacheName.USER_BRANCHES);
         cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.STAFF);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES);
         return mapToResponse(saved);
     }
 
@@ -310,6 +316,9 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCH, branchId);
         cacheService.evictAll(CacheName.USER_BRANCHES);
         cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.STAFF);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES);
     }
 
     @Cacheable(value = CacheName.BRANCH, key = "#branchId")
