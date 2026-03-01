@@ -30,42 +30,39 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SmsController extends BaseController {
 
-    private final SmsService smsService;
+        private final SmsService smsService;
 
-    @GetMapping("/logs")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<PageResponse<SmsLogResponse>>> getSmsLogs(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @RequestParam(required = false) UUID branchId,
-            @RequestParam(required = false) SmsStatus status,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @PageableDefault(size = 20) Pageable pageable
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @GetMapping("/logs")
+        public ResponseEntity<ApiResponse<PageResponse<SmsLogResponse>>> getSmsLogs(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @RequestParam(required = false) UUID branchId,
+                        @RequestParam(required = false) SmsStatus status,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                        @PageableDefault(size = 20) Pageable pageable) {
+                validateBusinessExists(authenticatedUser);
 
-        PageResponse<SmsLogResponse> logs = smsService.getSmsLogs(
-                authenticatedUser.businessId(), branchId, status, startDate, endDate, pageable);
-        return ResponseEntity.ok(ApiResponse.success(logs));
-    }
+                PageResponse<SmsLogResponse> logs = smsService.getSmsLogs(
+                                authenticatedUser.businessId(), branchId, status, startDate, endDate, pageable);
+                return ResponseEntity.ok(ApiResponse.success(logs));
+        }
 
-    @GetMapping("/balance")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<SmsBalanceResponse>> getBalance(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @GetMapping("/balance")
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<SmsBalanceResponse>> getBalance(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
+                validateBusinessExists(authenticatedUser);
 
-        PhilSmsProvider.BalanceResult result = smsService.getBalance();
-        
-        SmsBalanceResponse response = new SmsBalanceResponse(
-                result.success(),
-                result.remainingCredits(),
-                result.errorMessage()
-        );
+                PhilSmsProvider.BalanceResult result = smsService.getBalance();
 
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+                SmsBalanceResponse response = new SmsBalanceResponse(
+                                result.success(),
+                                result.remainingCredits(),
+                                result.errorMessage());
 
-    public record SmsBalanceResponse(boolean success, int remainingCredits, String errorMessage) {}
+                return ResponseEntity.ok(ApiResponse.success(response));
+        }
+
+        public record SmsBalanceResponse(boolean success, int remainingCredits, String errorMessage) {
+        }
 }
