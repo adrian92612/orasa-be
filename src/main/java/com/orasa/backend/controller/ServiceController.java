@@ -25,7 +25,6 @@ import com.orasa.backend.dto.service.UpdateServiceRequest;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.ServiceService;
-import com.orasa.backend.common.RequiresActiveSubscription;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,82 +34,74 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ServiceController extends BaseController {
 
-    private final ServiceService serviceService;
+        private final ServiceService serviceService;
 
-    @PostMapping
-    @RequiresActiveSubscription(allowPending = true)
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<ServiceResponse>> createService(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @Valid @RequestBody CreateServiceRequest request
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @PostMapping
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<ServiceResponse>> createService(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @Valid @RequestBody CreateServiceRequest request) {
+                validateBusinessExists(authenticatedUser);
 
-        ServiceResponse service = serviceService.createService(
-                authenticatedUser.userId(),
-                authenticatedUser.businessId(),
-                request
-        );
+                ServiceResponse service = serviceService.createService(
+                                authenticatedUser.userId(),
+                                authenticatedUser.businessId(),
+                                request);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Service created successfully", service));
-    }
-
-    @PutMapping("/{serviceId}")
-    @RequiresActiveSubscription(allowPending = true)
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<ServiceResponse>> updateService(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @PathVariable UUID serviceId,
-            @Valid @RequestBody UpdateServiceRequest request
-    ) {
-        validateBusinessExists(authenticatedUser);
-
-        ServiceResponse service = serviceService.updateService(
-                authenticatedUser.userId(),
-                serviceId,
-                authenticatedUser.businessId(),
-                request
-        );
-
-        return ResponseEntity.ok(ApiResponse.success("Service updated successfully", service));
-    }
-
-    @GetMapping
-    @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
-    public ResponseEntity<ApiResponse<List<ServiceResponse>>> getServices(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @RequestParam(required = false) UUID branchId) {
-        
-        List<ServiceResponse> services = serviceService.getServicesByBusiness(authenticatedUser.businessId(), branchId);
-        return ResponseEntity.ok(ApiResponse.success(services));
-    }
-
-    @GetMapping("/{serviceId}")
-    @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
-    public ResponseEntity<ApiResponse<ServiceResponse>> getServiceById(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @PathVariable UUID serviceId
-    ) {
-        ServiceResponse service = serviceService.getServiceById(serviceId);
-
-        if (!service.getBusinessId().equals(authenticatedUser.businessId())) {
-            throw new BusinessException("Service does not belong to your business");
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(ApiResponse.success("Service created successfully", service));
         }
 
-        return ResponseEntity.ok(ApiResponse.success(service));
-    }
+        @PutMapping("/{serviceId}")
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<ServiceResponse>> updateService(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @PathVariable UUID serviceId,
+                        @Valid @RequestBody UpdateServiceRequest request) {
+                validateBusinessExists(authenticatedUser);
 
-    @DeleteMapping("/{serviceId}")
-    @RequiresActiveSubscription(allowPending = true)
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<Void>> deleteService(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @PathVariable UUID serviceId
-    ) {
-        validateBusinessExists(authenticatedUser);
+                ServiceResponse service = serviceService.updateService(
+                                authenticatedUser.userId(),
+                                serviceId,
+                                authenticatedUser.businessId(),
+                                request);
 
-        serviceService.deleteService(authenticatedUser.userId(), serviceId, authenticatedUser.businessId());
-        return ResponseEntity.ok(ApiResponse.success("Service deleted successfully"));
-    }
+                return ResponseEntity.ok(ApiResponse.success("Service updated successfully", service));
+        }
+
+        @GetMapping
+        @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
+        public ResponseEntity<ApiResponse<List<ServiceResponse>>> getServices(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @RequestParam(required = false) UUID branchId) {
+
+                List<ServiceResponse> services = serviceService.getServicesByBusiness(authenticatedUser.businessId(),
+                                branchId);
+                return ResponseEntity.ok(ApiResponse.success(services));
+        }
+
+        @GetMapping("/{serviceId}")
+        @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
+        public ResponseEntity<ApiResponse<ServiceResponse>> getServiceById(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @PathVariable UUID serviceId) {
+                ServiceResponse service = serviceService.getServiceById(serviceId);
+
+                if (!service.getBusinessId().equals(authenticatedUser.businessId())) {
+                        throw new BusinessException("Service does not belong to your business");
+                }
+
+                return ResponseEntity.ok(ApiResponse.success(service));
+        }
+
+        @DeleteMapping("/{serviceId}")
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<Void>> deleteService(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @PathVariable UUID serviceId) {
+                validateBusinessExists(authenticatedUser);
+
+                serviceService.deleteService(authenticatedUser.userId(), serviceId, authenticatedUser.businessId());
+                return ResponseEntity.ok(ApiResponse.success("Service deleted successfully"));
+        }
 }

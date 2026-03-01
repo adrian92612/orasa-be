@@ -23,7 +23,6 @@ import com.orasa.backend.dto.staff.UpdateStaffRequest;
 
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.StaffService;
-import com.orasa.backend.common.RequiresActiveSubscription;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,81 +32,71 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class StaffController extends BaseController {
 
-    private final StaffService staffService;
+        private final StaffService staffService;
 
-    @PostMapping
-    @RequiresActiveSubscription(allowPending = true)
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<StaffResponse>> createStaff(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @Valid @RequestBody CreateStaffRequest request
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @PostMapping
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<StaffResponse>> createStaff(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @Valid @RequestBody CreateStaffRequest request) {
+                validateBusinessExists(authenticatedUser);
 
-        StaffResponse staff = staffService.createStaff(
-                authenticatedUser.userId(),
-                authenticatedUser.businessId(),
-                request
-        );
+                StaffResponse staff = staffService.createStaff(
+                                authenticatedUser.userId(),
+                                authenticatedUser.businessId(),
+                                request);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Staff member created successfully", staff));
-    }
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(ApiResponse.success("Staff member created successfully", staff));
+        }
 
-    @PutMapping("/{staffId}")
-    @RequiresActiveSubscription(allowPending = true)
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<StaffResponse>> updateStaff(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @PathVariable UUID staffId,
-            @Valid @RequestBody UpdateStaffRequest request
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @PutMapping("/{staffId}")
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<StaffResponse>> updateStaff(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @PathVariable UUID staffId,
+                        @Valid @RequestBody UpdateStaffRequest request) {
+                validateBusinessExists(authenticatedUser);
 
-        StaffResponse staff = staffService.updateStaff(
-                authenticatedUser.userId(),
-                staffId,
-                authenticatedUser.businessId(),
-                request
-        );
+                StaffResponse staff = staffService.updateStaff(
+                                authenticatedUser.userId(),
+                                staffId,
+                                authenticatedUser.businessId(),
+                                request);
 
-        return ResponseEntity.ok(ApiResponse.success("Staff member updated successfully", staff));
-    }
+                return ResponseEntity.ok(ApiResponse.success("Staff member updated successfully", staff));
+        }
 
-    @GetMapping
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<List<StaffResponse>>> getMyStaff(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @GetMapping
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<List<StaffResponse>>> getMyStaff(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
+                validateBusinessExists(authenticatedUser);
 
-        List<StaffResponse> staffList = staffService.getStaffByBusiness(authenticatedUser.businessId());
-        return ResponseEntity.ok(ApiResponse.success(staffList));
-    }
+                List<StaffResponse> staffList = staffService.getStaffByBusiness(authenticatedUser.businessId());
+                return ResponseEntity.ok(ApiResponse.success(staffList));
+        }
 
-    @GetMapping("/{staffId}")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<StaffResponse>> getStaffById(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @PathVariable UUID staffId
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @GetMapping("/{staffId}")
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<StaffResponse>> getStaffById(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @PathVariable UUID staffId) {
+                validateBusinessExists(authenticatedUser);
 
-        StaffResponse staff = staffService.getStaffMember(staffId, authenticatedUser.businessId());
-        return ResponseEntity.ok(ApiResponse.success(staff));
-    }
+                StaffResponse staff = staffService.getStaffMember(staffId, authenticatedUser.businessId());
+                return ResponseEntity.ok(ApiResponse.success(staff));
+        }
 
-    @DeleteMapping("/{staffId}")
-    @RequiresActiveSubscription(allowPending = true)
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<Void>> deleteStaff(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @PathVariable UUID staffId
-    ) {
-        validateBusinessExists(authenticatedUser);
+        @DeleteMapping("/{staffId}")
+        @PreAuthorize("hasRole('OWNER')")
+        public ResponseEntity<ApiResponse<Void>> deleteStaff(
+                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                        @PathVariable UUID staffId) {
+                validateBusinessExists(authenticatedUser);
 
-        staffService.deleteStaff(authenticatedUser.userId(), staffId, authenticatedUser.businessId());
-        return ResponseEntity.ok(ApiResponse.success("Staff member deleted successfully"));
-    }
+                staffService.deleteStaff(authenticatedUser.userId(), staffId, authenticatedUser.businessId());
+                return ResponseEntity.ok(ApiResponse.success("Staff member deleted successfully"));
+        }
 
 }
