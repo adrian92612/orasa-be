@@ -19,7 +19,6 @@ import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.security.AuthenticatedUser;
-import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.security.JwtService;
 import com.orasa.backend.dto.profile.ChangePasswordRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
