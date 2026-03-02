@@ -151,14 +151,13 @@ public class SmsService {
     public void cancelRemindersForAppointment(UUID appointmentId) {
         // Explicitly cancel pending tasks in DB
         // The worker will check this status and skip processing
-        List<ScheduledSmsTaskEntity> pendingTasks = scheduledSmsTaskRepository.findAll().stream()
-                .filter(t -> t.getAppointment().getId().equals(appointmentId) && t.getStatus() == SmsTaskStatus.PENDING)
-                .toList();
+        List<ScheduledSmsTaskEntity> pendingTasks = scheduledSmsTaskRepository.findByAppointmentIdAndStatus(appointmentId, SmsTaskStatus.PENDING);
         
         for (ScheduledSmsTaskEntity task : pendingTasks) {
             task.setStatus(SmsTaskStatus.CANCELLED);
-            scheduledSmsTaskRepository.save(task);
         }
+        
+        scheduledSmsTaskRepository.saveAll(pendingTasks);
         
         log.info("Cancelled {} pending reminders for appointment {}", pendingTasks.size(), appointmentId);
     }

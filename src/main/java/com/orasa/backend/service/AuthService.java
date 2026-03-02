@@ -59,8 +59,8 @@ public class AuthService {
       .userId(user.getId())
       .username(user.getUsername())
       .role(user.getRole())
-      .businessId(user.getBusiness().getId())
-      .businessName(user.getBusiness().getName())
+      .businessId(user.getBusiness() != null ? user.getBusiness().getId() : null)
+      .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
       .build();
 
     activityLogService.logUserLogin(user, user.getBusiness());

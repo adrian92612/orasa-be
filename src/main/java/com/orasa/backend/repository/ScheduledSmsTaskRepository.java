@@ -16,4 +16,6 @@ public interface ScheduledSmsTaskRepository extends JpaRepository<ScheduledSmsTa
 
     @Query("SELECT t FROM ScheduledSmsTaskEntity t WHERE t.status = 'PENDING' AND t.scheduledAt < :cutoff")
     List<ScheduledSmsTaskEntity> findOverduePendingTasks(@Param("cutoff") OffsetDateTime cutoff);
+
+    List<ScheduledSmsTaskEntity> findByAppointmentIdAndStatus(UUID appointmentId, com.orasa.backend.common.SmsTaskStatus status);
 }
