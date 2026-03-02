@@ -75,7 +75,7 @@ public class AuthController extends BaseController {
         return ResponseEntity.status(401).body(ApiResponse.error("User not authenticated"));
     }
 
-    AuthResponse userData = authService.getCurrentUser(user.userId());
+    AuthResponse userData = authService.getCurrentUserFromPrincipal(user);
     return ResponseEntity.ok(ApiResponse.success(userData));
   }
 
@@ -103,7 +103,7 @@ public class AuthController extends BaseController {
 
   private void addTokenCookie(HttpServletResponse response, String token) {
     ResponseCookie cookie = ResponseCookie.from("token", token)
-        .httpOnly(true)
+        .httpOnly(false)
         .secure(true)
         .path("/")
         .maxAge(orasaProperties.getJwt().getExpiration() / 1000)

@@ -97,7 +97,7 @@ public class AuthServiceTest {
             .thenReturn(new UsernamePasswordAuthenticationToken("staffuser", "password"));
         
         when(userRepository.findByUsernameWithRelations("staffuser")).thenReturn(Optional.of(staff));
-        when(jwtService.generateToken(staff.getId(), staff.getUsername(), staff.getRole().name()))
+        when(jwtService.generateToken(staff.getId(), staff.getUsername(), staff.getRole().name(), staff.getBusiness().getId(), staff.getBusiness().getName()))
             .thenReturn("mock-jwt-token");
 
         // Act
@@ -128,7 +128,7 @@ public class AuthServiceTest {
 
         when(googleOAuthService.exchangeCodeForUserInfo(code)).thenReturn(mockPayload);
         when(userRepository.findByEmailWithRelations(email)).thenReturn(Optional.of(owner));
-        when(jwtService.generateToken(owner.getId(), owner.getUsername(), owner.getRole().name()))
+        when(jwtService.generateToken(owner.getId(), owner.getUsername(), owner.getRole().name(), owner.getBusiness().getId(), owner.getBusiness().getName()))
             .thenReturn("mock-jwt-token");
 
         // Act
@@ -167,7 +167,7 @@ public class AuthServiceTest {
         when(googleOAuthService.exchangeCodeForUserInfo(code)).thenReturn(mockPayload);
         when(userRepository.findByEmailWithRelations(email)).thenReturn(Optional.empty());
         when(userRepository.save(any(UserEntity.class))).thenReturn(newOwner);
-        when(jwtService.generateToken(newOwner.getId(), newOwner.getUsername(), newOwner.getRole().name()))
+        when(jwtService.generateToken(newOwner.getId(), newOwner.getUsername(), newOwner.getRole().name(), null, null))
             .thenReturn("mock-jwt-token");
 
         // Act

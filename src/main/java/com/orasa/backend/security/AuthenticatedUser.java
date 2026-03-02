@@ -2,10 +2,10 @@ package com.orasa.backend.security;
 
 import java.util.UUID;
 
-import com.orasa.backend.common.UserRole;
-
 public record AuthenticatedUser(
         UUID userId,
+        String username,
         UUID businessId,
-        UserRole role
+        String businessName,
+        com.orasa.backend.common.UserRole role
 ) {}
