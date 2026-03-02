@@ -34,6 +34,8 @@ import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
 import com.orasa.backend.dto.appointment.CreateAppointmentRequest;
+import com.orasa.backend.dto.appointment.UpdateAppointmentRequest;
+import com.orasa.backend.dto.appointment.UpdateResult;
 import com.orasa.backend.exception.ForbiddenException;
 import com.orasa.backend.exception.InvalidAppointmentException;
 import com.orasa.backend.repository.AppointmentRepository;
@@ -99,49 +101,49 @@ public class AppointmentServiceTest {
         staffId = UUID.randomUUID();
         businessId = UUID.randomUUID();
         branchId = UUID.randomUUID();
-        
+
         now = OffsetDateTime.of(2026, 3, 2, 8, 0, 0, 0, ZoneOffset.UTC);
 
         business = BusinessEntity.builder()
-            .name("Test Business")
-            .build();
+                .name("Test Business")
+                .build();
         business.setId(businessId);
 
         branch = BranchEntity.builder()
-            .name("Test Branch")
-            .business(business)
-            .build();
+                .name("Test Branch")
+                .business(business)
+                .build();
         branch.setId(branchId);
 
         ownerUser = UserEntity.builder()
-            .username("owneruser")
-            .email("owner@test.com")
-            .role(UserRole.OWNER)
-            .business(business)
-            .build();
+                .username("owneruser")
+                .email("owner@test.com")
+                .role(UserRole.OWNER)
+                .business(business)
+                .build();
         ownerUser.setId(ownerId);
 
         staffUser = UserEntity.builder()
-            .username("staffuser")
-            .role(UserRole.STAFF)
-            .business(business)
-            .branches(Set.of(branch))
-            .build();
+                .username("staffuser")
+                .role(UserRole.STAFF)
+                .business(business)
+                .branches(Set.of(branch))
+                .build();
         staffUser.setId(staffId);
     }
 
     @Nested
     @DisplayName("Create Appointment")
     class CreateAppointmentTests {
-        
+
         private CreateAppointmentRequest.CreateAppointmentRequestBuilder baseRequestBuilder() {
             return CreateAppointmentRequest.builder()
-                .businessId(businessId)
-                .branchId(branchId)
-                .customerName("John Doe")
-                .customerPhone("639123456789")
-                .isWalkin(false)
-                .startDateTime(now.plusDays(1));
+                    .businessId(businessId)
+                    .branchId(branchId)
+                    .customerName("John Doe")
+                    .customerPhone("639123456789")
+                    .isWalkin(false)
+                    .startDateTime(now.plusDays(1));
         }
 
         @Test
@@ -149,14 +151,14 @@ public class AppointmentServiceTest {
         void createScheduledAppointment_withService_success() {
             // Arrange
             ServiceEntity service = ServiceEntity.builder()
-                .name("Haircut")
-                .durationMinutes(30)
-                .build();
+                    .name("Haircut")
+                    .durationMinutes(30)
+                    .build();
             service.setId(UUID.randomUUID());
 
             CreateAppointmentRequest request = baseRequestBuilder()
-                .serviceId(service.getId())
-                .build();
+                    .serviceId(service.getId())
+                    .build();
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
             when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
@@ -166,15 +168,15 @@ public class AppointmentServiceTest {
             when(clock.getZone()).thenReturn(now.getOffset());
 
             AppointmentEntity savedAppointment = AppointmentEntity.builder()
-                .customerName(request.getCustomerName())
-                .startDateTime(request.getStartDateTime())
-                .endDateTime(request.getStartDateTime().plusMinutes(service.getDurationMinutes()))
-                .status(AppointmentStatus.PENDING)
-                .type(AppointmentType.SCHEDULED)
-                .branch(branch)
-                .business(business)
-                .service(service)
-                .build();
+                    .customerName(request.getCustomerName())
+                    .startDateTime(request.getStartDateTime())
+                    .endDateTime(request.getStartDateTime().plusMinutes(service.getDurationMinutes()))
+                    .status(AppointmentStatus.PENDING)
+                    .type(AppointmentType.SCHEDULED)
+                    .branch(branch)
+                    .business(business)
+                    .service(service)
+                    .build();
             savedAppointment.setId(UUID.randomUUID());
 
             when(appointmentRepository.save(any(AppointmentEntity.class))).thenReturn(savedAppointment);
@@ -191,35 +193,35 @@ public class AppointmentServiceTest {
             verify(appointmentRepository).save(appointmentCaptor.capture());
             AppointmentEntity captured = appointmentCaptor.getValue();
             assertThat(captured.getEndDateTime()).isEqualTo(request.getStartDateTime().plusMinutes(30));
-            
+
             verify(activityLogService).logAppointmentCreated(eq(ownerUser), any(AppointmentEntity.class));
             verify(smsService).scheduleRemindersForAppointment(savedAppointment);
             verify(cacheService).evictAll(com.orasa.backend.common.CacheName.ANALYTICS);
         }
-        
+
         @Test
         @DisplayName("Should successfully create a walkin appointment and not schedule reminders")
         void createWalkinAppointment_success() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder()
-                .isWalkin(true)
-                .startDateTime(now)
-                .endDateTime(now.plusMinutes(60))
-                .build();
+                    .isWalkin(true)
+                    .startDateTime(now)
+                    .endDateTime(now.plusMinutes(60))
+                    .build();
 
             when(userRepository.findById(staffId)).thenReturn(Optional.of(staffUser));
             when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
             when(branchRepository.findById(branchId)).thenReturn(Optional.of(branch));
-            
+
             AppointmentEntity savedAppointment = AppointmentEntity.builder()
-                .customerName(request.getCustomerName())
-                .startDateTime(request.getStartDateTime())
-                .endDateTime(request.getEndDateTime())
-                .status(AppointmentStatus.PENDING)
-                .type(AppointmentType.WALK_IN)
-                .branch(branch)
-                .business(business)
-                .build();
+                    .customerName(request.getCustomerName())
+                    .startDateTime(request.getStartDateTime())
+                    .endDateTime(request.getEndDateTime())
+                    .status(AppointmentStatus.PENDING)
+                    .type(AppointmentType.WALK_IN)
+                    .branch(branch)
+                    .business(business)
+                    .build();
             savedAppointment.setId(UUID.randomUUID());
 
             when(appointmentRepository.save(any(AppointmentEntity.class))).thenReturn(savedAppointment);
@@ -239,9 +241,9 @@ public class AppointmentServiceTest {
         void createScheduledAppointment_pastStartTime_throwsException() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder()
-                .startDateTime(now.minusHours(1)) // Past
-                .endDateTime(now.plusHours(1))
-                .build();
+                    .startDateTime(now.minusHours(1)) // Past
+                    .endDateTime(now.plusHours(1))
+                    .build();
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
             when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
@@ -251,18 +253,18 @@ public class AppointmentServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.createAppointment(ownerId, request))
-                .isInstanceOf(InvalidAppointmentException.class)
-                .hasMessage("Appointment time must be in the future");
+                    .isInstanceOf(InvalidAppointmentException.class)
+                    .hasMessage("Appointment time must be in the future");
         }
-        
+
         @Test
         @DisplayName("Should throw InvalidAppointmentException if no service and no end time is provided")
         void createAppointment_noServiceNoEndTime_throwsException() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder()
-                .serviceId(null)
-                .endDateTime(null)
-                .build();
+                    .serviceId(null)
+                    .endDateTime(null)
+                    .build();
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
             when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
@@ -272,20 +274,20 @@ public class AppointmentServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.createAppointment(ownerId, request))
-                .isInstanceOf(InvalidAppointmentException.class)
-                .hasMessage("End time or Service is required");
+                    .isInstanceOf(InvalidAppointmentException.class)
+                    .hasMessage("End time or Service is required");
         }
-        
+
         @Test
         @DisplayName("Should throw ForbiddenException if user tries to create appointment in unassigned branch")
         void createAppointment_unassignedBranch_throwsForbidden() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder().build();
-            
+
             // Re-create staff with different branch
             BranchEntity otherBranch = BranchEntity.builder().name("Other").business(business).build();
             otherBranch.setId(UUID.randomUUID());
-            
+
             staffUser.setBranches(Set.of(otherBranch));
 
             when(userRepository.findById(staffId)).thenReturn(Optional.of(staffUser));
@@ -294,19 +296,19 @@ public class AppointmentServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.createAppointment(staffId, request))
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage("You are not assigned to this branch");
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("You are not assigned to this branch");
         }
-        
+
         @Test
         @DisplayName("Should throw InvalidAppointmentException if branch doesn't belong to business")
         void createAppointment_branchNotBelongToBusiness_throwsException() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder().build();
-            
+
             BusinessEntity otherBusiness = BusinessEntity.builder().name("Other").build();
             otherBusiness.setId(UUID.randomUUID());
-            
+
             BranchEntity detachedBranch = BranchEntity.builder().business(otherBusiness).build();
             detachedBranch.setId(branchId);
 
@@ -316,8 +318,8 @@ public class AppointmentServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.createAppointment(ownerId, request))
-                .isInstanceOf(InvalidAppointmentException.class)
-                .hasMessage("Branch does not belong to the specified business");
+                    .isInstanceOf(InvalidAppointmentException.class)
+                    .hasMessage("Branch does not belong to the specified business");
         }
     }
 
@@ -330,9 +332,9 @@ public class AppointmentServiceTest {
         void deleteAppointment_owner_success() {
             // Arrange
             AppointmentEntity appointment = AppointmentEntity.builder()
-                .business(business)
-                .branch(branch)
-                .build();
+                    .business(business)
+                    .branch(branch)
+                    .build();
             appointment.setId(UUID.randomUUID());
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
@@ -353,9 +355,9 @@ public class AppointmentServiceTest {
         void deleteAppointment_staff_throwsForbidden() {
             // Arrange
             AppointmentEntity appointment = AppointmentEntity.builder()
-                .business(business)
-                .branch(branch)
-                .build();
+                    .business(business)
+                    .branch(branch)
+                    .build();
             appointment.setId(UUID.randomUUID());
 
             when(userRepository.findById(staffId)).thenReturn(Optional.of(staffUser));
@@ -363,9 +365,9 @@ public class AppointmentServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.deleteAppointment(staffId, appointment.getId()))
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage("Only business owners can delete appointments");
-            
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("Only business owners can delete appointments");
+
             verify(appointmentRepository, never()).delete(any(AppointmentEntity.class));
         }
 
@@ -375,11 +377,11 @@ public class AppointmentServiceTest {
             // Arrange
             BusinessEntity otherBusiness = BusinessEntity.builder().name("Other").build();
             otherBusiness.setId(UUID.randomUUID());
-            
+
             AppointmentEntity appointment = AppointmentEntity.builder()
-                .business(otherBusiness)
-                .branch(branch)
-                .build();
+                    .business(otherBusiness)
+                    .branch(branch)
+                    .build();
             appointment.setId(UUID.randomUUID());
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
@@ -387,10 +389,300 @@ public class AppointmentServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.deleteAppointment(ownerId, appointment.getId()))
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage("You can only delete appointments for your own business");
-            
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("You can only delete appointments for your own business");
+
             verify(appointmentRepository, never()).delete(any(AppointmentEntity.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Update Appointment")
+    class UpdateAppointmentTests {
+
+        private AppointmentEntity existingAppointment;
+        private UUID appointmentId;
+
+        @BeforeEach
+        void setUpAppointment() {
+            appointmentId = UUID.randomUUID();
+            existingAppointment = AppointmentEntity.builder()
+                    .business(business)
+                    .branch(branch)
+                    .customerName("Old Name")
+                    .customerPhone("639000000000")
+                    .status(AppointmentStatus.PENDING)
+                    .type(AppointmentType.SCHEDULED)
+                    .startDateTime(now.plusDays(1))
+                    .endDateTime(now.plusDays(1).plusHours(1))
+                    .build();
+            existingAppointment.setId(appointmentId);
+        }
+
+        @Test
+        @DisplayName("Should update customer name and phone and log changes")
+        void updateAppointment_customerNameAndPhone_updatesAndLogs() {
+            // Arrange
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName("New Name")
+                    .customerPhone("639999999999")
+                    .startDateTime(existingAppointment.getStartDateTime())
+                    .endDateTime(existingAppointment.getEndDateTime())
+                    .status(AppointmentStatus.PENDING)
+                    .build();
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(appointmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            // Act
+            UpdateResult result = appointmentService.updateAppointment(ownerId,
+                    appointmentId, request);
+
+            // Assert
+            assertThat(result.isModified()).isTrue();
+            assertThat(existingAppointment.getCustomerName()).isEqualTo("New Name");
+            assertThat(existingAppointment.getCustomerPhone()).isEqualTo("639999999999");
+            verify(appointmentRepository).save(existingAppointment);
+            verify(activityLogService).logAppointmentUpdated(eq(ownerUser), any(), any());
+            // No status change, no SMS cancel
+            verify(smsService, never()).cancelRemindersForAppointment(any());
+        }
+
+        @Test
+        @DisplayName("Should return wasUpdated=false when no fields changed")
+        void updateAppointment_noChanges_returnsNotUpdated() {
+            // Arrange — identical values
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName(existingAppointment.getCustomerName())
+                    .customerPhone(existingAppointment.getCustomerPhone())
+                    .startDateTime(existingAppointment.getStartDateTime())
+                    .endDateTime(existingAppointment.getEndDateTime())
+                    .status(existingAppointment.getStatus())
+                    .build();
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+
+            // Act
+            UpdateResult result = appointmentService.updateAppointment(ownerId,
+                    appointmentId, request);
+
+            // Assert
+            assertThat(result.isModified()).isFalse();
+            verify(appointmentRepository, never()).save(any());
+            verify(activityLogService, never()).logAppointmentUpdated(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should throw InvalidAppointmentException when trying to change appointment type")
+        void updateAppointment_changeType_throwsException() {
+            // Arrange — existing is SCHEDULED, request claims WALK_IN
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName(existingAppointment.getCustomerName())
+                    .customerPhone(existingAppointment.getCustomerPhone())
+                    .startDateTime(existingAppointment.getStartDateTime())
+                    .endDateTime(existingAppointment.getEndDateTime())
+                    .status(AppointmentStatus.PENDING)
+                    .isWalkin(true) // SCHEDULED -> WALK_IN: not allowed
+                    .build();
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+
+            // Act & Assert
+            assertThatThrownBy(() -> appointmentService.updateAppointment(ownerId, appointmentId, request))
+                    .isInstanceOf(InvalidAppointmentException.class)
+                    .hasMessage("Cannot change appointment type after creation");
+        }
+
+        @Test
+        @DisplayName("Should throw InvalidAppointmentException when updating start time to the past")
+        void updateAppointment_pastStartTime_throwsException() {
+            // Arrange
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName(existingAppointment.getCustomerName())
+                    .customerPhone(existingAppointment.getCustomerPhone())
+                    .startDateTime(now.minusHours(1)) // past
+                    .endDateTime(existingAppointment.getEndDateTime())
+                    .status(AppointmentStatus.PENDING)
+                    .build();
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(clock.instant()).thenReturn(now.toInstant());
+            when(clock.getZone()).thenReturn(now.getOffset());
+
+            // Act & Assert
+            assertThatThrownBy(() -> appointmentService.updateAppointment(ownerId, appointmentId, request))
+                    .isInstanceOf(InvalidAppointmentException.class)
+                    .hasMessage("Start time must be in the future");
+        }
+
+        @Test
+        @DisplayName("Should cancel SMS reminders when status changes to CANCELLED")
+        void updateAppointment_statusChangeToCancelled_cancelsReminders() {
+            // Arrange
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName(existingAppointment.getCustomerName())
+                    .customerPhone(existingAppointment.getCustomerPhone())
+                    .startDateTime(existingAppointment.getStartDateTime())
+                    .endDateTime(existingAppointment.getEndDateTime())
+                    .status(AppointmentStatus.CANCELLED) // <- status change
+                    .build();
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(appointmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            // Act
+            appointmentService.updateAppointment(ownerId, appointmentId, request);
+
+            // Assert — status change logs via logAppointmentStatusChanged
+            verify(activityLogService).logAppointmentStatusChanged(eq(ownerUser), any(), eq("PENDING"),
+                    eq("CANCELLED"));
+            verify(smsService).cancelRemindersForAppointment(appointmentId);
+            verify(smsService, never()).scheduleRemindersForAppointment(any());
+        }
+
+        @Test
+        @DisplayName("Should reschedule SMS when start time changes for PENDING appointment")
+        void updateAppointment_startTimeChanged_reschedulesReminders() {
+            // Arrange
+            OffsetDateTime newStart = now.plusDays(3);
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName(existingAppointment.getCustomerName())
+                    .customerPhone(existingAppointment.getCustomerPhone())
+                    .startDateTime(newStart)
+                    .endDateTime(newStart.plusHours(1))
+                    .status(AppointmentStatus.PENDING)
+                    .build();
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(appointmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+            when(clock.instant()).thenReturn(now.toInstant());
+            when(clock.getZone()).thenReturn(now.getOffset());
+
+            // Act
+            appointmentService.updateAppointment(ownerId, appointmentId, request);
+
+            // Assert — cancel old + schedule new
+            verify(smsService).cancelRemindersForAppointment(appointmentId);
+            verify(smsService).scheduleRemindersForAppointment(existingAppointment);
+        }
+
+        @Test
+        @DisplayName("Should throw ForbiddenException if staff tries to update appointment in unassigned branch")
+        void updateAppointment_staffUnassignedBranch_throwsForbidden() {
+            // Arrange
+            BranchEntity otherBranch = BranchEntity.builder().name("Other").business(business).build();
+            otherBranch.setId(UUID.randomUUID());
+            staffUser.setBranches(Set.of(otherBranch)); // staff not assigned to 'branch'
+
+            UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                    .customerName("Name")
+                    .customerPhone("639000000000")
+                    .startDateTime(now.plusDays(1))
+                    .endDateTime(now.plusDays(1).plusHours(1))
+                    .status(AppointmentStatus.PENDING)
+                    .build();
+
+            when(userRepository.findById(staffId)).thenReturn(Optional.of(staffUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+
+            // Act & Assert
+            assertThatThrownBy(() -> appointmentService.updateAppointment(staffId, appointmentId, request))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("You are not assigned to this branch");
+        }
+    }
+
+    @Nested
+    @DisplayName("Update Appointment Status")
+    class UpdateAppointmentStatusTests {
+
+        private AppointmentEntity existingAppointment;
+        private UUID appointmentId;
+
+        @BeforeEach
+        void setUpAppointment() {
+            appointmentId = UUID.randomUUID();
+            existingAppointment = AppointmentEntity.builder()
+                    .business(business)
+                    .branch(branch)
+                    .customerName("John Doe")
+                    .customerPhone("639123456789")
+                    .status(AppointmentStatus.PENDING)
+                    .type(AppointmentType.SCHEDULED)
+                    .startDateTime(now.plusDays(1))
+                    .endDateTime(now.plusDays(1).plusHours(1))
+                    .build();
+            existingAppointment.setId(appointmentId);
+        }
+
+        @Test
+        @DisplayName("Should update status and cancel reminders when status changes to COMPLETED")
+        void updateAppointmentStatus_toCompleted_cancelsReminders() {
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(appointmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            appointmentService.updateAppointmentStatus(ownerId, appointmentId, AppointmentStatus.COMPLETED);
+
+            assertThat(existingAppointment.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
+            verify(smsService).cancelRemindersForAppointment(appointmentId);
+            verify(smsService, never()).scheduleRemindersForAppointment(any());
+            verify(activityLogService).logAppointmentStatusChanged(eq(ownerUser), any(), eq("PENDING"),
+                    eq("COMPLETED"));
+        }
+
+        @Test
+        @DisplayName("Should reschedule reminders when reactivating from CANCELLED to CONFIRMED")
+        void updateAppointmentStatus_reactivateFromCancelled_reschedulesReminders() {
+            existingAppointment.setStatus(AppointmentStatus.CANCELLED);
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(appointmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            appointmentService.updateAppointmentStatus(ownerId, appointmentId, AppointmentStatus.CONFIRMED);
+
+            assertThat(existingAppointment.getStatus()).isEqualTo(AppointmentStatus.CONFIRMED);
+            verify(smsService, never()).cancelRemindersForAppointment(any());
+            verify(smsService).scheduleRemindersForAppointment(existingAppointment);
+        }
+
+        @Test
+        @DisplayName("Should return current state without saving when status is unchanged")
+        void updateAppointmentStatus_sameStatus_noSave() {
+            // PENDING -> PENDING
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+
+            AppointmentResponse response = appointmentService.updateAppointmentStatus(ownerId, appointmentId,
+                    AppointmentStatus.PENDING);
+
+            assertThat(response).isNotNull();
+            verify(appointmentRepository, never()).save(any());
+            verify(smsService, never()).cancelRemindersForAppointment(any());
+        }
+
+        @Test
+        @DisplayName("Should NOT reschedule reminders when reactivating a walk-in appointment")
+        void updateAppointmentStatus_reactivateWalkIn_doesNotReschedule() {
+            existingAppointment.setType(AppointmentType.WALK_IN);
+            existingAppointment.setStatus(AppointmentStatus.CANCELLED);
+
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
+            when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(existingAppointment));
+            when(appointmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            appointmentService.updateAppointmentStatus(ownerId, appointmentId, AppointmentStatus.CONFIRMED);
+
+            // Walk-ins don't get reminders
+            verify(smsService, never()).scheduleRemindersForAppointment(any());
+            verify(smsService, never()).cancelRemindersForAppointment(any());
         }
     }
 }
