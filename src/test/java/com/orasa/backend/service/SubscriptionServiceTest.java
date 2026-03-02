@@ -88,7 +88,6 @@ public class SubscriptionServiceTest {
 
     // ─── Helper to set up Redis mocks ─────────────────────────────────────────
 
-    @SuppressWarnings("deprecation")
     private void mockRedisQueue() {
         doReturn(blockingQueue).when(redissonClient).getBlockingQueue("creditResetQueue");
         when(redissonClient.getDelayedQueue(blockingQueue)).thenReturn(delayedQueue);
