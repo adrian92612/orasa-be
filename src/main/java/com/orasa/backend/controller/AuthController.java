@@ -103,7 +103,7 @@ public class AuthController extends BaseController {
 
   private void addTokenCookie(HttpServletResponse response, String token) {
     ResponseCookie cookie = ResponseCookie.from("token", token)
-        .httpOnly(false)
+        .httpOnly(true)
         .secure(true)
         .path("/")
         .maxAge(orasaProperties.getJwt().getExpiration() / 1000)
