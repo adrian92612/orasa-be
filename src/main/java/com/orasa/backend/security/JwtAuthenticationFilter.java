@@ -13,8 +13,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.orasa.backend.service.UserService;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -22,12 +20,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserService userService;
 
     @SuppressWarnings("deprecation")
     @Override
@@ -40,19 +40,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = extractTokenFromCookie(request);
 
         if (jwt != null && jwtService.isTokenValid(jwt)) {
-            String userId = jwtService.extractUserId(jwt);
-            
-            // Fetch user data from cache (falls through to DB on cache miss)
-            AuthenticatedUser principal = userService.loadAuthenticatedUser(UUID.fromString(userId));
+            try {
+                String userIdStr = jwtService.extractUserId(jwt);
+                String username = jwtService.extractUsername(jwt);
+                String roleStr = jwtService.extractRole(jwt);
+                UUID businessId = jwtService.extractBusinessId(jwt);
+                String businessName = jwtService.extractBusinessName(jwt);
+                
+                if (userIdStr != null && roleStr != null) {
+                    AuthenticatedUser principal = new AuthenticatedUser(
+                        UUID.fromString(userIdStr),
+                        username,
+                        businessId,
+                        businessName,
+                        com.orasa.backend.common.UserRole.valueOf(roleStr)
+                    );
 
-            if (principal != null) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    principal,
-                    null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + principal.role()))
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        principal,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + principal.role()))
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (Exception e) {
+                log.error("Failed to set user authentication from JWT", e);
             }
         }
 

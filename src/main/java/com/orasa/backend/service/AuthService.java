@@ -18,6 +18,8 @@ import com.orasa.backend.dto.auth.StaffLoginRequest;
 import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
+import com.orasa.backend.security.AuthenticatedUser;
+import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.security.JwtService;
 import com.orasa.backend.dto.profile.ChangePasswordRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,7 +54,9 @@ public class AuthService {
     String token = jwtService.generateToken(
       user.getId(),
       user.getUsername(),
-      user.getRole().name()
+      user.getRole().name(),
+      user.getBusiness() != null ? user.getBusiness().getId() : null,
+      user.getBusiness() != null ? user.getBusiness().getName() : null
     );
 
     AuthResponse response = AuthResponse.builder()
@@ -85,7 +89,9 @@ public class AuthService {
     String token = jwtService.generateToken(
         user.getId(),
         user.getUsername(),
-        user.getRole().name()
+        user.getRole().name(),
+        user.getBusiness() != null ? user.getBusiness().getId() : null,
+        user.getBusiness() != null ? user.getBusiness().getName() : null
     );
 
     if (user.getBusiness() != null) {
@@ -137,24 +143,17 @@ public class AuthService {
   }
 
   @Transactional(readOnly = true)
-  public AuthResponse getCurrentUser(UUID userId) {
-
-      if (userId == null) {
-          throw new IllegalArgumentException("User ID cannot be null");
+  public AuthResponse getCurrentUserFromPrincipal(AuthenticatedUser user) {
+      if (user == null) {
+          throw new IllegalArgumentException("User principal cannot be null");
       }
       
-      UserEntity user = userRepository.findById(userId)
-          .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-      UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
-
-      
       return AuthResponse.builder()
-        .userId(user.getId())
-        .username(user.getUsername())
-        .role(user.getRole())
-        .businessId(businessId)
-        .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
+        .userId(user.userId())
+        .username(user.username())
+        .role(user.role())
+        .businessId(user.businessId())
+        .businessName(user.businessName())
         .build();
   }
 

@@ -27,10 +27,16 @@ public class JwtService {
   private final OrasaProperties orasaProperties;
   private final Clock clock;
 
-  public String generateToken(UUID userId, String username, String role) {
+  public String generateToken(UUID userId, String username, String role, UUID businessId, String businessName) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("username", username);
     claims.put("role", role);
+    if (businessId != null) {
+      claims.put("businessId", businessId.toString());
+    }
+    if (businessName != null) {
+      claims.put("businessName", businessName);
+    }
     
     return Jwts.builder()
         .subject(userId.toString())
@@ -45,8 +51,21 @@ public class JwtService {
     return extractClaim(token, Claims::getSubject);
   }
 
+  public String extractUsername(String token) {
+    return extractClaim(token, claims -> claims.get("username", String.class));
+  }
+
   public String extractRole(String token) {
     return extractClaim(token, claims -> claims.get("role", String.class));
+  }
+
+  public UUID extractBusinessId(String token) {
+    String businessId = extractClaim(token, claims -> claims.get("businessId", String.class));
+    return businessId != null ? UUID.fromString(businessId) : null;
+  }
+
+  public String extractBusinessName(String token) {
+    return extractClaim(token, claims -> claims.get("businessName", String.class));
   }
 
   public boolean isTokenValid(String token) {

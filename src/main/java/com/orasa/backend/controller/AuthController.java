@@ -75,7 +75,7 @@ public class AuthController extends BaseController {
         return ResponseEntity.status(401).body(ApiResponse.error("User not authenticated"));
     }
 
-    AuthResponse userData = authService.getCurrentUser(user.userId());
+    AuthResponse userData = authService.getCurrentUserFromPrincipal(user);
     return ResponseEntity.ok(ApiResponse.success(userData));
   }
 

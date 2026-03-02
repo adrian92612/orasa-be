@@ -108,7 +108,9 @@ public class BusinessController extends BaseController {
         String newToken = jwtService.generateToken(
                 user.getId(),
                 user.getUsername(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getBusiness() != null ? user.getBusiness().getId() : null,
+                user.getBusiness() != null ? user.getBusiness().getName() : null
         );
 
         ResponseCookie cookie = ResponseCookie.from("token", newToken)

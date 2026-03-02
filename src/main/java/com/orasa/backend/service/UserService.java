@@ -73,7 +73,9 @@ public class UserService {
             userRepository.findByIdWithRelations(id)
                 .map(user -> new AuthenticatedUser(
                     user.getId(),
+                    user.getUsername(),
                     user.getBusiness() != null ? user.getBusiness().getId() : null,
+                    user.getBusiness() != null ? user.getBusiness().getName() : null,
                     user.getRole()
                 ))
                 .orElse(null)
