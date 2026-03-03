@@ -70,7 +70,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            cd ~/orasa-deploy
-            docker-compose pull backend
-            docker-compose up -d backend
+            mkdir -p ~/orasa-deploy/orasa
+            cd ~/orasa-deploy/orasa
+            # Pull and refresh everything
+            docker-compose pull
+            docker-compose up -d
             docker image prune -f
+
+      - name: Sync Docker Compose
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "~/orasa-deploy/orasa"
