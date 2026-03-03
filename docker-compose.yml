@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:alpine
+    restart: always
+
+  backend:
+    image: ghcr.io/adrian92612/orasa-be:latest
+    # build: .
+    expose:
+      - "8080"
+    restart: always
+    env_file:
+      - .env # Now relative to the backend folder
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - FRONTEND_URL=${FRONTEND_URL:-https://orasa.app}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://orasa.app/api/auth/google/callback}
+    depends_on:
+      - redis
+
+  frontend:
+    image: ghcr.io/adrian92612/orasa-fe:latest
+    # build: ../orasa-fe
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: always
+    volumes:
+      - ../ssl:/etc/nginx/ssl:ro # Adjusted path for EC2 structure
+    depends_on:
+      - backend
