@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.dto.common.PageResponse;
+import com.orasa.backend.dto.payment.PaymentHistoryResponse;
 import com.orasa.backend.service.BusinessService;
 import com.orasa.backend.service.SubscriptionService;
+import com.orasa.backend.service.payment.PaymentService;
 import com.orasa.backend.service.DemoDataService;
 import com.orasa.backend.service.sms.SmsService;
 import com.orasa.backend.common.SubscriptionStatus;
@@ -39,6 +41,7 @@ public class PlatformAdminController extends BaseController {
     private final SubscriptionService subscriptionService;
     private final DemoDataService demoDataService;
     private final SmsService smsService;
+    private final PaymentService paymentService;
 
     @GetMapping("/businesses")
     @PreAuthorize("hasRole('ADMIN')")
@@ -60,6 +63,15 @@ public class PlatformAdminController extends BaseController {
             balance.success(),
             balance.errorMessage()
         )));
+    }
+
+    @GetMapping("/businesses/{businessId}/payments/history")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<java.util.List<PaymentHistoryResponse>>> getBusinessPaymentHistory(
+            @PathVariable UUID businessId
+    ) {
+        java.util.List<PaymentHistoryResponse> history = paymentService.getPaymentHistory(businessId);
+        return ResponseEntity.ok(ApiResponse.success("Payment history retrieved successfully", history));
     }
 
     @PostMapping("/businesses/{businessId}/subscription/extend")

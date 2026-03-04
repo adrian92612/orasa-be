@@ -6,6 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import java.util.stream.Collectors;
+
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,11 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.orasa.backend.config.OrasaProperties;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.PaymentEntity;
-import com.orasa.backend.domain.PaymentEntity.PaymentStatus;
 import com.orasa.backend.domain.UserEntity;
+import com.orasa.backend.dto.payment.PaymentStatus;
+import com.orasa.backend.dto.payment.PaymentType;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.PaymentRepository;
+import com.orasa.backend.dto.payment.PaymentHistoryResponse;
 import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.service.SubscriptionService;
 
@@ -53,7 +57,7 @@ public class PaymentService {
         BigDecimal amount = new BigDecimal("299.00").multiply(new BigDecimal(months));
         String description = String.format("Orasa Subscription Renewal - %d Month%s", months, months > 1 ? "s" : "");
 
-        return initiatePayloroPayment(business, owner, orderNo, amount, description, method, PaymentEntity.PaymentType.SUBSCRIPTION_RENEWAL);
+        return initiatePayloroPayment(business, owner, orderNo, amount, description, method, PaymentType.SUBSCRIPTION_RENEWAL);
     }
 
     @Transactional
@@ -72,7 +76,26 @@ public class PaymentService {
         BigDecimal amount = new BigDecimal(credits).setScale(2); 
         String description = "Orasa SMS Credits - " + credits + " units";
 
-        return initiatePayloroPayment(business, owner, orderNo, amount, description, method, PaymentEntity.PaymentType.CREDIT_TOPUP);
+        return initiatePayloroPayment(business, owner, orderNo, amount, description, method, PaymentType.CREDIT_TOPUP);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<PaymentHistoryResponse> getPaymentHistory(UUID businessId) {
+        return paymentRepository.findByBusinessIdOrderByCreatedAtDesc(businessId)
+                .stream()
+                .filter(payment -> payment.getStatus() == PaymentStatus.SUCCESS)
+                .map(payment -> PaymentHistoryResponse.builder()
+                        .id(payment.getId())
+                        .merchantOrderNo(payment.getMerchantOrderNo())
+                        .platOrderNo(payment.getPlatOrderNo())
+                        .amount(payment.getAmount())
+                        .description(payment.getDescription())
+                        .method(payment.getMethod())
+                        .type(payment.getType())
+                        .status(payment.getStatus())
+                        .createdAt(payment.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -123,12 +146,12 @@ public class PaymentService {
 
     private void fulfillPayment(PaymentEntity payment) {
         try {
-            if (payment.getType() == PaymentEntity.PaymentType.SUBSCRIPTION_RENEWAL) {
+            if (payment.getType() == PaymentType.SUBSCRIPTION_RENEWAL) {
                 int months = payment.getAmount().divideToIntegralValue(new BigDecimal("299")).intValue();
                 if (months < 1) months = 1;
                 subscriptionService.extendSubscription(payment.getBusinessId(), months);
                 log.info("[PAYMENT] Subscription extended by {} months for business {}", months, payment.getBusinessId());
-            } else if (payment.getType() == PaymentEntity.PaymentType.CREDIT_TOPUP) {
+            } else if (payment.getType() == PaymentType.CREDIT_TOPUP) {
                 int credits = payment.getAmount().intValue();
                 subscriptionService.addPaidCredits(payment.getBusinessId(), credits);
                 log.info("[PAYMENT] Added {} SMS credits for business {}", credits, payment.getBusinessId());
@@ -155,7 +178,7 @@ public class PaymentService {
             BigDecimal amount, 
             String description, 
             String method,
-            PaymentEntity.PaymentType type) {
+            PaymentType type) {
 
         PayloroService.PayloroRequest.PayloroRequestBuilder requestBuilder = PayloroService.PayloroRequest.builder()
                 .merchantOrderNo(orderNo)
