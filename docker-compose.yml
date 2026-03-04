@@ -1,17 +1,27 @@
 services:
+  # Global logging policy for all services
+  x-logging: &logging
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
   redis:
+    logging: *logging
     image: redis:alpine
     restart: always
 
   backend:
+    logging: *logging
     image: ghcr.io/adrian92612/orasa-be:latest
     # build: .
     expose:
       - "8080"
     restart: always
     env_file:
-      - .env # Now relative to the backend folder
+      - .env
     environment:
+      # Standard Spring Boot properties
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - FRONTEND_URL=${FRONTEND_URL:-https://orasa.app}
@@ -20,6 +30,7 @@ services:
       - redis
 
   frontend:
+    logging: *logging
     image: ghcr.io/adrian92612/orasa-fe:latest
     # build: ../orasa-fe
     ports:
@@ -27,6 +38,6 @@ services:
       - "443:443"
     restart: always
     volumes:
-      - ../ssl:/etc/nginx/ssl:ro # Adjusted path for EC2 structure
+      - ../ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
