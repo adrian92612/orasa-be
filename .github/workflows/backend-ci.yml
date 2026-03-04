@@ -65,13 +65,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Sync Docker Compose
+      - name: Sync Docker Configs
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,rotate-logs.sh"
           target: "~/orasa-deploy/orasa"
 
       - name: Deploy via SSH
