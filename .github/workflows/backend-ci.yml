@@ -73,6 +73,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "docker-compose.yml,rotate-logs.sh"
           target: "~/orasa-deploy/orasa"
+          strip_components: 1
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -84,7 +85,7 @@ jobs:
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             mkdir -p ~/orasa-deploy/orasa
             cd ~/orasa-deploy/orasa
-            # Pull and refresh everything
-            docker-compose pull
-            docker-compose up -d
+            chmod +x rotate-logs.sh
+            docker compose pull
+            docker compose up -d
             docker image prune -f
