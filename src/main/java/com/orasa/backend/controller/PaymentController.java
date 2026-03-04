@@ -4,12 +4,14 @@ package com.orasa.backend.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.orasa.backend.dto.common.ApiResponse;
+import com.orasa.backend.dto.payment.PaymentHistoryResponse;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.payment.PaymentService;
 import com.orasa.backend.service.payment.PayloroService;
@@ -65,6 +67,16 @@ public class PaymentController extends BaseController {
         } else {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to initiate payment: " + response.errorMessage()));
         }
+    }
+
+    @GetMapping("/history")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<java.util.List<PaymentHistoryResponse>>> getPaymentHistory(
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
+        validateBusinessExists(user);
+        java.util.List<PaymentHistoryResponse> history = paymentService.getPaymentHistory(user.businessId());
+        return ResponseEntity.ok(ApiResponse.success("Payment history retrieved successfully", history));
     }
 
     @Data

@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import com.orasa.backend.dto.payment.PaymentStatus;
+import com.orasa.backend.dto.payment.PaymentType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -66,16 +69,4 @@ public class PaymentEntity {
 
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
-
-    public enum PaymentStatus {
-        PENDING,
-        SUCCESS,
-        FAILED,
-        EXPIRED
-    }
-
-    public enum PaymentType {
-        SUBSCRIPTION_RENEWAL,
-        CREDIT_TOPUP
-    }
 }

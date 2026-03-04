@@ -1,0 +1,2 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+com.orasa.backend.config.DotenvEnvironmentPostProcessor
