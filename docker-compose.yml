@@ -1,36 +1,33 @@
-services:
-  # Global logging policy for all services
-  x-logging: &logging
-    driver: "json-file"
-    options:
-      max-size: "10m"
-      max-file: "3"
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 
+services:
   redis:
-    logging: *logging
     image: redis:alpine
     restart: always
+    logging: *logging
 
   backend:
-    logging: *logging
     image: ghcr.io/adrian92612/orasa-be:latest
     # build: .
     expose:
       - "8080"
     restart: always
     env_file:
-      - .env
+      - ./.env
     environment:
-      # Standard Spring Boot properties
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - FRONTEND_URL=${FRONTEND_URL:-https://orasa.app}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://orasa.app/api/auth/google/callback}
     depends_on:
       - redis
+    logging: *logging
 
   frontend:
-    logging: *logging
     image: ghcr.io/adrian92612/orasa-fe:latest
     # build: ../orasa-fe
     ports:
@@ -41,3 +38,4 @@ services:
       - ../ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
+    logging: *logging
