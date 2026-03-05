@@ -25,7 +25,6 @@ import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest.BranchData;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
-import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
@@ -129,19 +128,36 @@ public class BusinessServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw BusinessException if user already has a business")
-        void createBusinessWithBranch_alreadyHasBusiness_throwsException() {
+        @DisplayName("Should return existing business if user already has one (idempotent)")
+        void createBusinessWithBranch_alreadyHasBusiness_returnsExisting() {
             // Arrange
-            owner.setBusiness(BusinessEntity.builder().build());
+            BusinessEntity existingBusiness = BusinessEntity.builder()
+                .name("Existing Business")
+                .build();
+            UUID existingBusinessId = UUID.randomUUID();
+            existingBusiness.setId(existingBusinessId);
+            owner.setBusiness(existingBusiness);
+
+            BranchEntity existingBranch = BranchEntity.builder()
+                .name("Main Branch")
+                .business(existingBusiness)
+                .build();
+            UUID existingBranchId = UUID.randomUUID();
+            existingBranch.setId(existingBranchId);
+
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(owner));
-            
+            when(businessRepository.findById(existingBusinessId)).thenReturn(Optional.of(existingBusiness));
+            when(branchRepository.findByBusinessId(existingBusinessId)).thenReturn(java.util.List.of(existingBranch));
+
             CreateBusinessRequest request = CreateBusinessRequest.builder().build();
 
-            // Act & Assert
-            assertThatThrownBy(() -> businessService.createBusinessWithBranch(ownerId, request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("User already has a business");
-                
+            // Act
+            BusinessResponse response = businessService.createBusinessWithBranch(ownerId, request);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getId()).isEqualTo(existingBusinessId);
+            assertThat(response.getFirstBranchId()).isEqualTo(existingBranchId);
             verify(businessRepository, never()).save(any());
         }
         
