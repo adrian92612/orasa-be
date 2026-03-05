@@ -72,10 +72,10 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
 
   @Query("SELECT new com.orasa.backend.dto.analytics.DailyStatsDTO(" +
          "CAST(a.startDateTime AS LocalDate), " +
-         "COUNT(a), " +
+         "COUNT(DISTINCT a), " +
          "SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END), " +
-         "SUM(CASE WHEN a.status = 'COMPLETED' THEN a.service.basePrice ELSE 0 END)) " +
-         "FROM AppointmentEntity a " +
+         "COALESCE(SUM(CASE WHEN a.status = 'COMPLETED' THEN s.basePrice ELSE 0 END), 0)) " +
+         "FROM AppointmentEntity a LEFT JOIN a.services s " +
          "WHERE a.business.id = :businessId " +
          "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
          "AND a.startDateTime >= :start " +
@@ -93,7 +93,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
          "COUNT(a), " +
          "CAST(0 AS bigdecimal)) " + // Percentage calculated in service layer
          "FROM AppointmentEntity a " +
-         "JOIN a.service s " +
+         "JOIN a.services s " +
          "WHERE a.business.id = :businessId " +
          "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
          "AND a.startDateTime >= :start " +

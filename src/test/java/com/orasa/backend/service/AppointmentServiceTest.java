@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -157,13 +158,13 @@ public class AppointmentServiceTest {
             service.setId(UUID.randomUUID());
 
             CreateAppointmentRequest request = baseRequestBuilder()
-                    .serviceId(service.getId())
+                    .serviceIds(List.of(service.getId()))
                     .build();
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
             when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
             when(branchRepository.findById(branchId)).thenReturn(Optional.of(branch));
-            when(serviceRepository.findById(service.getId())).thenReturn(Optional.of(service));
+            when(serviceRepository.findAllById(List.of(service.getId()))).thenReturn(List.of(service));
             when(clock.instant()).thenReturn(now.toInstant());
             when(clock.getZone()).thenReturn(now.getOffset());
 
@@ -175,7 +176,7 @@ public class AppointmentServiceTest {
                     .type(AppointmentType.SCHEDULED)
                     .branch(branch)
                     .business(business)
-                    .service(service)
+                    .services(Set.of(service))
                     .build();
             savedAppointment.setId(UUID.randomUUID());
 
@@ -262,7 +263,7 @@ public class AppointmentServiceTest {
         void createAppointment_noServiceNoEndTime_throwsException() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder()
-                    .serviceId(null)
+                    .serviceIds(null)
                     .endDateTime(null)
                     .build();
 

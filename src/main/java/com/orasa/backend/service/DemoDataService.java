@@ -220,6 +220,12 @@ public class DemoDataService {
                 businessId
             );
 
+            // 4b. Delete Appointment Services
+            jdbcTemplate.update(
+                "DELETE FROM appointment_services WHERE appointment_id IN (SELECT id FROM appointments WHERE business_id = ?)",
+                businessId
+            );
+
             // 5. Delete Appointments
             jdbcTemplate.update("DELETE FROM appointments WHERE business_id = ?", businessId);
 
@@ -409,7 +415,7 @@ public class DemoDataService {
         AppointmentEntity appointment = AppointmentEntity.builder()
                 .business(business)
                 .branch(branch)
-                .service(service)
+                .services(Set.of(service))
                 .customerName(customerName)
                 .customerPhone(customerPhone)
                 .startDateTime(start)

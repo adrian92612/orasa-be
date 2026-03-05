@@ -40,7 +40,7 @@ public class CreateAppointmentRequest {
   @Builder.Default
   private Boolean isWalkin = false;
 
-  private UUID serviceId;
+  private List<UUID> serviceIds;
 
   private List<UUID> selectedReminderIds;
 
