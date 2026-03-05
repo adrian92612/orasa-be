@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS sms_logs CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS appointment_reminders CASCADE;
+DROP TABLE IF EXISTS appointment_services CASCADE;
 DROP TABLE IF EXISTS appointments CASCADE;
 DROP TABLE IF EXISTS business_reminder_configs CASCADE;
 DROP TABLE IF EXISTS branch_services CASCADE;
@@ -124,7 +125,7 @@ CREATE TABLE appointments (
     type VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
     customer_name VARCHAR(255) NOT NULL,
     customer_phone VARCHAR(50) NOT NULL,
-    service_id UUID REFERENCES services(id) ON DELETE SET NULL,
+
     start_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     end_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -250,6 +251,13 @@ CREATE TABLE appointment_reminders (
     appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
     reminder_config_id UUID NOT NULL REFERENCES business_reminder_configs(id) ON DELETE CASCADE,
     PRIMARY KEY (appointment_id, reminder_config_id)
+);
+
+-- 12b. Appointment Services (Many-to-Many Join Table)
+CREATE TABLE appointment_services (
+    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    PRIMARY KEY (appointment_id, service_id)
 );
 
 -- 13. Payments

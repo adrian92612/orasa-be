@@ -35,7 +35,7 @@ public class UpdateAppointmentRequest {
   @NotNull(message = "Appointment status is required")
   private AppointmentStatus status;
 
-  private UUID serviceId;
+  private List<UUID> serviceIds;
 
   private List<UUID> selectedReminderIds;
 

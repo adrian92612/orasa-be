@@ -29,12 +29,20 @@ public class AppointmentResponse {
   private OffsetDateTime endDateTime;
   private String notes;
   private AppointmentStatus status;
-  private UUID serviceId;
-  private String serviceName;
-  private boolean serviceDeleted;
+  private List<ServiceInfo> services;
   private List<UUID> selectedReminderIds;
   private Integer additionalReminderMinutes;
   private String additionalReminderTemplate;
   private OffsetDateTime createdAt;
   private OffsetDateTime updatedAt;
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class ServiceInfo {
+    private UUID id;
+    private String name;
+    private boolean deleted;
+  }
 }
