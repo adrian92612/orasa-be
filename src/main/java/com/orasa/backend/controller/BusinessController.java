@@ -101,7 +101,7 @@ public class BusinessController extends BaseController {
      * Called after business creation to include the new businessId.
      */
     private void refreshJwtCookie(UUID userId, HttpServletResponse response) {
-        UserEntity user = userRepository.findById(userId)
+        UserEntity user = userRepository.findByIdWithRelations(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
 
