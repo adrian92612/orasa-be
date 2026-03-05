@@ -57,13 +57,21 @@ public class BusinessService {
      */
     @Transactional
     public BusinessResponse createBusinessWithBranch(UUID ownerId, CreateBusinessRequest request) {
-        log.info("[DEBUG] createBusinessWithBranch START for ownerId={}", ownerId);
-        // Verify owner exists and doesn't already have a business
+        log.info("createBusinessWithBranch START for ownerId={}", ownerId);
         UserEntity owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Idempotent: if user already has a business, return it instead of failing.
+        // This handles the case where the business was created but the client
+        // didn't receive the response (e.g. network issue, page refresh).
         if (owner.getBusiness() != null) {
-            throw new BusinessException("User already has a business");
+            UUID existingBusinessId = owner.getBusiness().getId();
+            log.info("User {} already has business {}, returning existing", ownerId, existingBusinessId);
+            BusinessEntity existing = businessRepository.findById(existingBusinessId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+            List<BranchEntity> branches = branchRepository.findByBusinessId(existingBusinessId);
+            UUID firstBranchId = branches.isEmpty() ? null : branches.get(0).getId();
+            return mapToResponse(existing, firstBranchId);
         }
 
         BusinessEntity business = BusinessEntity.builder()
@@ -88,7 +96,7 @@ public class BusinessService {
         userRepository.save(owner);
 
         activityLogService.logBusinessCreated(owner, savedBusiness);
-        activityLogService.logBranchCreated(owner,savedBusiness, savedBranch);
+        activityLogService.logBranchCreated(owner, savedBusiness, savedBranch);
         
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -97,7 +105,7 @@ public class BusinessService {
             }
         });
 
-        log.info("[DEBUG] createBusinessWithBranch END for ownerId={}, businessId={}", ownerId, savedBusiness.getId());
+        log.info("createBusinessWithBranch END for ownerId={}, businessId={}", ownerId, savedBusiness.getId());
         return mapToResponse(savedBusiness, savedBranch.getId());
     }
 
