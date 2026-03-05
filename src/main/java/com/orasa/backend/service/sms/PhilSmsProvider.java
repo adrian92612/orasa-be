@@ -29,7 +29,8 @@ import lombok.extern.slf4j.Slf4j;
  * Official API documentation: https://dashboard.philsms.com/api/v3/
  * 
  * IMPORTANT: SMART TELCO does not allow URL shorteners.
- * Avoid sending identical messages repeatedly to the same number (spam protection).
+ * Avoid sending identical messages repeatedly to the same number (spam
+ * protection).
  */
 @Service
 @RequiredArgsConstructor
@@ -47,30 +48,24 @@ public class PhilSmsProvider {
      * @param message   SMS body text
      * @return SendSmsResult with success status and provider message ID
      */
-    @Retryable(
-        retryFor = { ResourceAccessException.class }, 
-        maxAttempts = 2, 
-        backoff = @Backoff(delay = 5000)
-    )
+    @Retryable(retryFor = { ResourceAccessException.class }, maxAttempts = 2, backoff = @Backoff(delay = 5000))
     public SendSmsResult sendSms(String recipient, String message) {
         try {
             HttpHeaders headers = createHeaders();
 
             Map<String, Object> body = Map.of(
-                "recipient", formatPhoneNumber(recipient),
-                "sender_id", orasaProperties.getPhilsms().getSenderId(),
-                "type", "plain",
-                "message", message
-            );
+                    "recipient", formatPhoneNumber(recipient),
+                    "sender_id", orasaProperties.getPhilsms().getSenderId(),
+                    "type", "plain",
+                    "message", SmsUtils.sanitizeMessage(message));
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
-                orasaProperties.getPhilsms().getBaseUrl() + "/sms/send",
-                HttpMethod.POST,
-                request,
-                String.class
-            );
+                    orasaProperties.getPhilsms().getBaseUrl() + "/sms/send",
+                    HttpMethod.POST,
+                    request,
+                    String.class);
 
             String rawResponseBody = response.getBody();
             JsonNode responseBody = objectMapper.readTree(rawResponseBody != null ? rawResponseBody : "{}");
@@ -89,13 +84,14 @@ public class PhilSmsProvider {
         } catch (ResourceAccessException e) {
             // Safety Hatch: Don't retry on Read Timeouts (potential duplicates)
             if (e.getCause() instanceof SocketTimeoutException) {
-                log.warn("Read timeout sending SMS to {} - marking as delivered (request was sent successfully)", recipient);
+                log.warn("Read timeout sending SMS to {} - marking as delivered (request was sent successfully)",
+                        recipient);
                 return SendSmsResult.success("timeout-sent", null);
             }
-            
+
             // Connection Timeouts -> Safe to retry
             log.warn("Connection error sending SMS to {} (attempting retry): {}", recipient, e.getMessage());
-            throw e; 
+            throw e;
         } catch (RestClientException e) {
             log.error("HTTP error sending SMS to {}: {}", recipient, e.getMessage());
             return SendSmsResult.failure("HTTP error: " + e.getMessage(), null);
@@ -120,25 +116,24 @@ public class PhilSmsProvider {
         try {
             HttpHeaders headers = createHeaders();
             HttpEntity<Void> request = new HttpEntity<>(headers);
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
-                orasaProperties.getPhilsms().getBaseUrl() + "/balance",
-                HttpMethod.GET,
-                request,
-                String.class
-            );
-            
+                    orasaProperties.getPhilsms().getBaseUrl() + "/balance",
+                    HttpMethod.GET,
+                    request,
+                    String.class);
+
             JsonNode responseBody = objectMapper.readTree(response.getBody());
             String status = responseBody.path("status").asText();
-            
+
             if ("success".equals(status)) {
                 JsonNode data = responseBody.path("data");
                 String balanceStr = data.path("remaining_balance").asText("0");
-                
+
                 // Extract only digits (handles currency symbols like ₱ or ?)
                 String numericBalance = balanceStr.replaceAll("[^0-9]", "");
                 int remainingCredits = numericBalance.isEmpty() ? 0 : Integer.parseInt(numericBalance);
-                
+
                 log.info("PhilSMS balance check: {} credits remaining (raw: {})", remainingCredits, balanceStr);
                 return BalanceResult.success(remainingCredits);
             } else {
@@ -166,14 +161,15 @@ public class PhilSmsProvider {
      * Handles various input formats: +639..., 09..., 639...
      */
     private String formatPhoneNumber(String phone) {
-        if (phone == null) return "";
+        if (phone == null)
+            return "";
 
         String digits = phone.replaceAll("[^0-9]", "");
 
         if (digits.startsWith("09") && digits.length() == 11) {
             return "63" + digits.substring(1);
         }
-        
+
         if (digits.startsWith("63") && digits.length() == 12) {
             return digits;
         }
@@ -181,7 +177,7 @@ public class PhilSmsProvider {
         if (digits.length() == 10 && digits.startsWith("9")) {
             return "63" + digits;
         }
-        
+
         return digits;
     }
 
@@ -191,6 +187,7 @@ public class PhilSmsProvider {
         public static SendSmsResult success(String providerId, String rawResponse) {
             return new SendSmsResult(true, providerId, null, rawResponse);
         }
+
         public static SendSmsResult failure(String errorMessage, String rawResponse) {
             return new SendSmsResult(false, null, errorMessage, rawResponse);
         }
@@ -200,6 +197,7 @@ public class PhilSmsProvider {
         public static BalanceResult success(int credits) {
             return new BalanceResult(true, credits, null);
         }
+
         public static BalanceResult failure(String errorMessage) {
             return new BalanceResult(false, 0, errorMessage);
         }
