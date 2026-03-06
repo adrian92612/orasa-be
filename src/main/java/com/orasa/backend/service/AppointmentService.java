@@ -479,9 +479,13 @@ public class AppointmentService {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     
-    // Check if user is OWNER and owns this business
-    if (user.getRole() != UserRole.OWNER || !user.getBusiness().getId().equals(businessId)) {
+    if (!user.getBusiness().getId().equals(businessId)) {
         throw new ForbiddenException("You do not have permission to access appointments for this business");
+    }
+
+    if (user.getRole() == UserRole.STAFF) {
+        List<UUID> branchIds = user.getBranches().stream().map(BranchEntity::getId).toList();
+        return appointmentRepository.findByBusinessIdAndBranchIdIn(businessId, branchIds, pageable).map(this::mapToResponse);
     }
 
     return appointmentRepository.findByBusinessId(businessId, pageable).map(this::mapToResponse);
@@ -509,7 +513,7 @@ public class AppointmentService {
     OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
 
     return appointmentRepository.findAll(
-        AppointmentSpecification.buildSearchSpec(branchId, null, search, status, type, start, end),
+        AppointmentSpecification.buildSearchSpec(branchId, null, null, search, status, type, start, end),
         pageable
     ).map(this::mapToResponse);
   }
@@ -527,15 +531,20 @@ public class AppointmentService {
     UserEntity user = userRepository.findById(userId)
         .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     
-    if (user.getRole() != UserRole.OWNER || !user.getBusiness().getId().equals(businessId)) {
+    if (!user.getBusiness().getId().equals(businessId)) {
         throw new ForbiddenException("You do not have permission to search appointments for this business");
     }
 
     OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
     OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
     
+    List<UUID> allowedBranchIds = null;
+    if (user.getRole() == UserRole.STAFF) {
+        allowedBranchIds = user.getBranches().stream().map(BranchEntity::getId).toList();
+    }
+
     Page<AppointmentEntity> page = appointmentRepository.findAll(
-        AppointmentSpecification.buildSearchSpec(null, businessId, search, status, type, start, end),
+        AppointmentSpecification.buildSearchSpec(null, allowedBranchIds, businessId, search, status, type, start, end),
         pageable
     );
     

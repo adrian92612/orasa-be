@@ -1,6 +1,7 @@
 package com.orasa.backend.repository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.domain.Specification;
@@ -17,6 +18,10 @@ public class AppointmentSpecification {
 
     public static Specification<AppointmentEntity> withBranchId(UUID branchId) {
         return (root, query, cb) -> cb.equal(root.get("branch").get("id"), branchId);
+    }
+
+    public static Specification<AppointmentEntity> withBranchIdsIn(List<UUID> branchIds) {
+        return (root, query, cb) -> root.get("branch").get("id").in(branchIds);
     }
 
     public static Specification<AppointmentEntity> withBusinessId(UUID businessId) {
@@ -51,6 +56,7 @@ public class AppointmentSpecification {
 
     public static Specification<AppointmentEntity> buildSearchSpec(
             UUID branchId,
+            List<UUID> allowedBranchIds,
             UUID businessId,
             String search,
             AppointmentStatus status,
@@ -62,6 +68,10 @@ public class AppointmentSpecification {
 
         if (branchId != null) {
             spec = spec.and(withBranchId(branchId));
+        }
+
+        if (allowedBranchIds != null && !allowedBranchIds.isEmpty()) {
+            spec = spec.and(withBranchIdsIn(allowedBranchIds));
         }
 
         if (businessId != null) {
