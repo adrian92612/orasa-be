@@ -80,6 +80,22 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
+    public PaymentStatusMessage getPaymentStatus(UUID businessId, String platOrderNo) {
+        PaymentEntity payment = paymentRepository.findByPlatOrderNo(platOrderNo)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+
+        if (!payment.getBusinessId().equals(businessId)) {
+            throw new ResourceNotFoundException("Payment not found");
+        }
+
+        return new PaymentStatusMessage(
+                payment.getMerchantOrderNo(),
+                payment.getStatus().name(),
+                payment.getType().name()
+        );
+    }
+
+    @Transactional(readOnly = true)
     public java.util.List<PaymentHistoryResponse> getPaymentHistory(UUID businessId) {
         return paymentRepository.findByBusinessIdOrderByCreatedAtDesc(businessId)
                 .stream()
