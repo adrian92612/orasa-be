@@ -28,7 +28,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             frontendUrl = "http://localhost:3000";
         }
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(frontendUrl)
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 }
