@@ -20,6 +20,7 @@ import com.orasa.backend.domain.AppointmentEntity;
 public interface AppointmentRepository extends JpaRepository<AppointmentEntity, UUID>, JpaSpecificationExecutor<AppointmentEntity> {
   Page<AppointmentEntity> findByBranchId(UUID branchId, Pageable pageable);
   Page<AppointmentEntity> findByBusinessId(UUID businessId, Pageable pageable);
+  Page<AppointmentEntity> findByBusinessIdAndBranchIdIn(UUID businessId, List<UUID> branchIds, Pageable pageable);
   Page<AppointmentEntity> findByBranchIdAndStartDateTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
 
   // Add entity graph method
