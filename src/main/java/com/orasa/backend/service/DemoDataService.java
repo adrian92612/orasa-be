@@ -103,9 +103,9 @@ public class DemoDataService {
         
         business = businessRepository.save(business);
 
-        // 2. Create Reminder Configs
-        BusinessReminderConfigEntity oneDayBefore = createReminderConfig(business, 1440, "Hello {{customer_name}}, gentle reminder for your appointment at {{business_name}} tomorrow {{appointment_date}} at {{appointment_time}}.");
-        BusinessReminderConfigEntity oneHourBefore = createReminderConfig(business, 60, "Hi {{customer_name}}, see you in an hour for your appointment at {{branch_name}}!");
+        // 2. Create Reminder Configs (Using templates from orasa-fe/src/constants/sms.ts)
+        BusinessReminderConfigEntity oneDayBefore = createReminderConfig(business, 1440, "Reminder: Appointment on {date} @ {time} at {businessName} ({branchName}). Please arrive 15 mins early.");
+        BusinessReminderConfigEntity oneHourBefore = createReminderConfig(business, 60, "{businessName}: {date} {time} at {branchName}. Please be there 15 mins early. Thank you!");
 
         Set<BusinessReminderConfigEntity> defaultReminders = new HashSet<>();
         defaultReminders.add(oneDayBefore);
@@ -208,8 +208,8 @@ public class DemoDataService {
             // 1. Delete Sms Logs
             jdbcTemplate.update("DELETE FROM sms_logs WHERE business_id = ?", businessId);
 
-            // 2. Delete Scheduled Sms Tasks (Table likely dropped or unused, but clearing for safety if still exists in DB schema)
-            // jdbcTemplate.update("DELETE FROM scheduled_sms_tasks WHERE business_id = ?", businessId);
+            // 2. Delete Scheduled Sms Tasks
+            jdbcTemplate.update("DELETE FROM scheduled_sms_tasks WHERE business_id = ?", businessId);
             
             // 3. Delete Activity Logs
             jdbcTemplate.update("DELETE FROM activity_logs WHERE business_id = ?", businessId);
@@ -348,7 +348,19 @@ public class DemoDataService {
             for (int k = 0; k < count; k++) {
                 if (currentHour >= 17) break; // Stop if past 5pm
 
-                ServiceEntity service = services.get(random.nextInt(services.size()));
+                // Randomly select 1-3 services for this appointment
+                int serviceCount = 1 + random.nextInt(Math.min(3, services.size()));
+                Set<ServiceEntity> selectedServices = new HashSet<>();
+                int totalDuration = 0;
+                
+                List<ServiceEntity> availableServices = new ArrayList<>(services);
+                Collections.shuffle(availableServices);
+                
+                for (int s = 0; s < serviceCount; s++) {
+                    ServiceEntity svc = availableServices.get(s);
+                    selectedServices.add(svc);
+                    totalDuration += svc.getDurationMinutes();
+                }
                 
                 // Get varied customer names
                 String customer = names.get(nameIndex % names.size());
@@ -373,9 +385,9 @@ public class DemoDataService {
 
                 String timeStr = String.format("%02d:00", currentHour);
                 
-                createAppointmentWithLogs(business, branch, creator, service, currentDate, timeStr, customer, "0917" + (1000000 + random.nextInt(9000000)), status, AppointmentType.SCHEDULED, notes, reminders, isPast);
+                createAppointmentWithLogs(business, branch, creator, selectedServices, currentDate, timeStr, customer, "0917" + (1000000 + random.nextInt(9000000)), status, AppointmentType.SCHEDULED, notes, reminders, isPast);
 
-                currentHour += 1 + (service.getDurationMinutes() / 60); // Advance time
+                currentHour += Math.max(1, (totalDuration / 60)); // Advance time (at least 1 hour)
             }
             
             // Add 1 random walk-in (No reminders for walk-ins)
@@ -388,34 +400,36 @@ public class DemoDataService {
                      int minHour = 9;
                      int hour = minHour + (maxHour > minHour ? random.nextInt(maxHour - minHour) : 0);
                      
-                     ServiceEntity service = services.get(random.nextInt(services.size()));
-                     String walkInCustomer = "Walk-in: " + names.get(nameIndex % names.size()); // Named walk-in
-                     nameIndex++;
-    
-                     String timeStr = String.format("%02d:30", hour);
-                     
-                     createAppointmentWithLogs(business, branch, creator, service, currentDate, timeStr, walkInCustomer, "0918" + (1000000 + random.nextInt(9000000)), 
-                        AppointmentStatus.COMPLETED, // Walk-ins today are completed or pending? Usually completed if in past
-                        AppointmentType.WALK_IN, "Walked in", null, true); // Treat today's past walk-in as "isPast=true" for logs
+                      ServiceEntity service = services.get(random.nextInt(services.size()));
+                      String walkInCustomer = "Walk-in: " + names.get(nameIndex % names.size()); // Named walk-in
+                      nameIndex++;
+     
+                      String timeStr = String.format("%02d:30", hour);
+                      
+                      createAppointmentWithLogs(business, branch, creator, Set.of(service), currentDate, timeStr, walkInCustomer, "0918" + (1000000 + random.nextInt(9000000)), 
+                         AppointmentStatus.COMPLETED, // Walk-ins today are completed or pending? Usually completed if in past
+                         AppointmentType.WALK_IN, "Walked in", null, true); // Treat today's past walk-in as "isPast=true" for logs
                  }
             }
         }
     }
 
-    private void createAppointmentWithLogs(BusinessEntity business, BranchEntity branch, UserEntity creator, ServiceEntity service, 
+    private void createAppointmentWithLogs(BusinessEntity business, BranchEntity branch, UserEntity creator, Set<ServiceEntity> services, 
             LocalDate date, String timeStr, String customerName, String customerPhone, 
             AppointmentStatus status, AppointmentType type, String notes, Set<BusinessReminderConfigEntity> reminders, boolean isPast) {
         
         LocalTime time = LocalTime.parse(timeStr);
         OffsetDateTime start = date.atTime(time).atZone(TimeConfig.PH_ZONE).toOffsetDateTime();
-        OffsetDateTime end = start.plusMinutes(service.getDurationMinutes());
+        
+        int totalDuration = services.stream().mapToInt(ServiceEntity::getDurationMinutes).sum();
+        OffsetDateTime end = start.plusMinutes(totalDuration);
 
         boolean remindersEnabled = (type == AppointmentType.SCHEDULED);
 
         AppointmentEntity appointment = AppointmentEntity.builder()
                 .business(business)
                 .branch(branch)
-                .services(Set.of(service))
+                .services(services)
                 .customerName(customerName)
                 .customerPhone(customerPhone)
                 .startDateTime(start)
@@ -444,9 +458,13 @@ public class DemoDataService {
                 // If COMPLETED, assume reminders sent successfully
                 // If CANCELLED/NOSHOW, maybe sent, maybe failed. Let's assume sent for simplicity or mixed.
                 for (BusinessReminderConfigEntity config : reminders) {
-                    createSmsLog(business, appointment, customerPhone, 
-                        config.getMessageTemplate().replace("{{customer_name}}", customerName), // Use config to make it real
-                        SmsStatus.DELIVERED);
+                    String message = config.getMessageTemplate()
+                            .replace("{date}", date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy")))
+                            .replace("{time}", time.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")))
+                            .replace("{businessName}", business.getName())
+                            .replace("{branchName}", branch.getName());
+
+                    createSmsLog(business, appointment, customerPhone, message, SmsStatus.DELIVERED);
                 }
 
             } else {
