@@ -16,6 +16,7 @@ import com.orasa.backend.dto.business.UpdateBusinessRequest;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.common.SubscriptionStatus;
 import com.orasa.backend.exception.ResourceNotFoundException;
+import com.orasa.backend.common.utils.SanitizationUtils;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
@@ -75,7 +76,7 @@ public class BusinessService {
         }
 
         BusinessEntity business = BusinessEntity.builder()
-                .name(request.getName())
+                .name(SanitizationUtils.sanitizeName(request.getName()))
                 .slug(generateSlug(request.getName()))
                 .termsAcceptedAt(request.getTermsAcceptedAt())
                 .build();
@@ -84,7 +85,7 @@ public class BusinessService {
 
         BranchEntity branch = BranchEntity.builder()
                 .business(savedBusiness)
-                .name(request.getBranch().getName())
+                .name(SanitizationUtils.sanitizeName(request.getBranch().getName()))
                 .address(request.getBranch().getAddress())
                 .phoneNumber(request.getBranch().getPhoneNumber())
                 .build();
@@ -129,9 +130,10 @@ public class BusinessService {
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
         String beforeName = business.getName();
+        String sanitizedName = SanitizationUtils.sanitizeName(request.name());
         
-        business.setName(request.name());
-        business.setSlug(generateSlug(request.name()));
+        business.setName(sanitizedName);
+        business.setSlug(generateSlug(sanitizedName));
         
         BusinessEntity savedBusiness = businessRepository.save(business);
         

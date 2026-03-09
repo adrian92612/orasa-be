@@ -3,6 +3,8 @@ package com.orasa.backend.dto.business;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +19,8 @@ import java.time.OffsetDateTime;
 public class CreateBusinessRequest {
 
     @NotBlank(message = "Business name is required")
+    @Size(max = 35, message = "Business name must not exceed 35 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9 ]*$", message = "Only alphanumeric characters and spaces are allowed")
     private String name;
 
     @NotNull(message = "Terms acceptance timestamp is required")
@@ -32,6 +36,8 @@ public class CreateBusinessRequest {
     @AllArgsConstructor
     public static class BranchData {
         @NotBlank(message = "Branch name is required")
+        @Size(max = 35, message = "Branch name must not exceed 35 characters")
+        @Pattern(regexp = "^[a-zA-Z0-9 ]*$", message = "Only alphanumeric characters and spaces are allowed")
         private String name;
 
         private String address;

@@ -26,6 +26,7 @@ import com.orasa.backend.dto.branch.UpdateBranchRequest;
 
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.exception.BusinessException;
+import com.orasa.backend.common.utils.SanitizationUtils;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessRepository;
@@ -60,7 +61,7 @@ public class BranchService {
 
         BranchEntity branch = BranchEntity.builder()
                 .business(business)
-                .name(request.getName())
+                .name(SanitizationUtils.sanitizeName(request.getName()))
                 .address(request.getAddress())
                 .phoneNumber(request.getPhoneNumber())
                 .build();
@@ -137,13 +138,14 @@ public class BranchService {
         List<FieldChange> changes = new ArrayList<>();
 
         // Check Name change
-        if (!branch.getName().equals(request.getName().trim())) {
+        String sanitizedName = SanitizationUtils.sanitizeName(request.getName());
+        if (!branch.getName().equals(sanitizedName)) {
             changes.add(FieldChange.builder()
                     .field("Name")
                     .before(branch.getName())
-                    .after(request.getName().trim())
+                    .after(sanitizedName)
                     .build());
-            branch.setName(request.getName().trim());
+            branch.setName(sanitizedName);
         }
 
         // Check Address change
