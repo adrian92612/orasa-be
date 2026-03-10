@@ -14,7 +14,7 @@ echo "Extracting logs for $DATE..."
 
 cd "$ORASA_DIR"
 # Use docker-compose to get logs for all services since 24h ago
-docker compose logs --no-color --since 24h > "$LOG_DIR/orasa-$DATE.log"
+docker compose logs --no-color > "$LOG_DIR/orasa-$DATE.log"
 
 # Step 2: Delete logs older than 7 days
 echo "Cleaning up old logs..."
