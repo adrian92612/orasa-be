@@ -117,13 +117,91 @@ public class PayloroService {
         javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RSA");
         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, privateKey);
         byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
-        byte[] encrypted = rsaSplitCodec(cipher, dataBytes, privateKey.getModulus().bitLength());
+        byte[] encrypted = rsaSplitCodec(cipher, javax.crypto.Cipher.ENCRYPT_MODE, dataBytes, privateKey.getModulus().bitLength());
 
         return Base64.getUrlEncoder().withoutPadding().encodeToString(encrypted);
     }
 
-    private byte[] rsaSplitCodec(javax.crypto.Cipher cipher, byte[] data, int keySize) throws Exception {
-        int maxBlock = keySize / 8 - 11;
+    public boolean verifyWebhookSignature(java.util.Map<String, Object> payload) {
+        if (!payload.containsKey("sign") || payload.get("sign") == null) {
+            log.warn("[PAYLORO WEBHOOK] Payload missing signature");
+            return false;
+        }
+
+        String sign = (String) payload.get("sign");
+        java.util.Map<String, Object> verifyMap = new java.util.HashMap<>(payload);
+        verifyMap.remove("sign");
+
+        String sortValue = getSortValue(verifyMap);
+
+        try {
+            String decryptedStr = decrypt(sign, orasaProperties.getPayloro().getPlatPublicKey());
+            if (sortValue.equals(decryptedStr)) {
+                return true;
+            } else {
+                log.warn("[PAYLORO WEBHOOK] Signature mismatch. Expected: {}, Actual: {}", sortValue, decryptedStr);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("[PAYLORO WEBHOOK] Failed to verify webhook signature", e);
+            return false;
+        }
+    }
+
+    private String getSortValue(java.util.Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        Object[] keys = map.keySet().toArray();
+        java.util.Arrays.sort(keys);
+        StringBuilder res = new StringBuilder();
+        for (Object key : keys) {
+            Object value = map.get(key);
+            if (value != null) {
+                res.append(value.toString());
+            }
+        }
+        return res.toString();
+    }
+
+    private String decrypt(String base64EncryptedData, String publicKeyStr) throws Exception {
+        if (publicKeyStr == null || publicKeyStr.isEmpty()) {
+            throw new IllegalArgumentException("Payloro public key is not configured");
+        }
+
+        String realPK = publicKeyStr
+            .replaceAll("-----BEGIN PUBLIC KEY-----", "")
+            .replaceAll("-----END PUBLIC KEY-----", "")
+            .replaceAll("\\s+", "");
+
+        byte[] keyBytes = Base64.getDecoder().decode(realPK);
+        java.security.spec.X509EncodedKeySpec spec = new java.security.spec.X509EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        java.security.interfaces.RSAPublicKey publicKey = 
+            (java.security.interfaces.RSAPublicKey) kf.generatePublic(spec);
+
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RSA");
+        cipher.init(javax.crypto.Cipher.DECRYPT_MODE, publicKey);
+
+        byte[] encryptedBytes;
+        try {
+            encryptedBytes = Base64.getUrlDecoder().decode(base64EncryptedData);
+        } catch (IllegalArgumentException e) {
+            encryptedBytes = Base64.getDecoder().decode(base64EncryptedData);
+        }
+
+        byte[] decryptedBytes = rsaSplitCodec(cipher, javax.crypto.Cipher.DECRYPT_MODE, encryptedBytes, publicKey.getModulus().bitLength());
+        
+        return new String(decryptedBytes, StandardCharsets.UTF_8);
+    }
+
+    private byte[] rsaSplitCodec(javax.crypto.Cipher cipher, int opmode, byte[] data, int keySize) throws Exception {
+        int maxBlock = 0;
+        if (opmode == javax.crypto.Cipher.DECRYPT_MODE) {
+            maxBlock = keySize / 8;
+        } else {
+            maxBlock = keySize / 8 - 11;
+        }
         java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
         int offSet = 0;
         int i = 0;

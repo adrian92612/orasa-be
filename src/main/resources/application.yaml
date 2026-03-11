@@ -8,12 +8,12 @@ spring:
     password: ${SUPABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10        
-      minimum-idle: 5               
-      idle-timeout: 300000          
-      max-lifetime: 1800000         
-      connection-timeout: 30000     
-      leak-detection-threshold: 5000 
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      leak-detection-threshold: 5000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -23,11 +23,11 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        '[default_batch_fetch_size]': 50
-        '[format_sql]': true
+        "[default_batch_fetch_size]": 50
+        "[format_sql]": true
         jdbc:
           lob:
-            '[non_contextual_creation]': true
+            "[non_contextual_creation]": true
   jackson:
     time-zone: Asia/Manila
   main:
@@ -58,6 +58,7 @@ orasa:
   payloro:
     merchant-no: ${PAYLORO_MERCHANT_NO}
     private-key: ${PAYLORO_PRIVATE_KEY}
+    plat-public-key: ${PAYLORO_PLAT_PUBLIC_KEY:}
     base-url: ${PAYLORO_BASE_URL:https://testgateway.payloro.ph/api}
     notify-url: ${PAYLORO_NOTIFY_URL:}
 

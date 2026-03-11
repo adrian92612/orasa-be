@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PayloroWebhookController {
 
     private final PaymentService paymentService;
+    private final com.orasa.backend.service.payment.PayloroService payloroService;
 
     @PostMapping("/payloro")
     public ResponseEntity<String> handlePayloroCallback(@RequestBody Map<String, Object> payload) {
@@ -32,6 +33,11 @@ public class PayloroWebhookController {
 
             if (merchantOrderNo == null || orderStatus == null) {
                 log.warn("[PAYLORO WEBHOOK] Missing required fields: merchantOrderNo={}, orderStatus={}", merchantOrderNo, orderStatus);
+                return ResponseEntity.ok("success");
+            }
+
+            if (!payloroService.verifyWebhookSignature(payload)) {
+                log.warn("[PAYLORO WEBHOOK] Invalid signature for merchantOrderNo={}", merchantOrderNo);
                 return ResponseEntity.ok("success");
             }
 
