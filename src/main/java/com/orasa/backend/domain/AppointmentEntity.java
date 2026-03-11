@@ -67,7 +67,7 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "additional_reminder_template", columnDefinition = "TEXT")
     private String additionalReminderTemplate;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "appointment_services",
         joinColumns = @JoinColumn(name = "appointment_id"),

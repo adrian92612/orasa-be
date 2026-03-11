@@ -514,10 +514,19 @@ public class AppointmentService {
     OffsetDateTime start = startDate != null ? startDate.atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MIN_DATE;
     OffsetDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay(TimeConfig.PH_ZONE).toOffsetDateTime() : MAX_DATE;
 
-    return appointmentRepository.findAll(
+    Page<AppointmentEntity> page = appointmentRepository.findAll(
         AppointmentSpecification.buildSearchSpec(branchId, null, null, search, status, type, start, end),
         pageable
-    ).map(this::mapToResponse);
+    );
+    
+    if (!page.getContent().isEmpty()) {
+        List<UUID> ids = page.getContent().stream()
+            .map(AppointmentEntity::getId)
+            .toList();
+        appointmentRepository.findAllByIdWithAssociations(ids);
+    }
+    
+    return page.map(this::mapToResponse);
   }
 
   public Page<AppointmentResponse> searchAppointmentsByBusiness(

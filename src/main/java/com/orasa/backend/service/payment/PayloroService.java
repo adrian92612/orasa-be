@@ -32,7 +32,7 @@ public class PayloroService {
     private final OrasaProperties orasaProperties;
 
     public PayloroResponse createPayment(PayloroRequest request) {
-        System.out.println("[PAYLORO] Initiating payment request for order: " + request.getMerchantOrderNo() + " (Amount: " + request.getPayAmount() + ")");
+        log.info("[PAYLORO] Initiating payment request for order: {} (Amount: {})", request.getMerchantOrderNo(), request.getPayAmount());
         try {
 
             request.setMerchantNo(orasaProperties.getPayloro().getMerchantNo());
@@ -50,8 +50,7 @@ public class PayloroService {
                 String.class
             );
 
-            System.out.println("[PAYLORO] Raw Response Body: " + response.getBody());
-            log.info("Payloro response: {}", response.getBody());
+            log.info("[PAYLORO] Raw Response Body: {}", response.getBody());
 
             JsonNode root = objectMapper.readTree(response.getBody());
             if ("200".equals(root.path("status").asText())) {
@@ -65,8 +64,7 @@ public class PayloroService {
                 );
             } else {
                 String error = root.path("message").asText("Unknown error from Payloro");
-                System.err.println("[PAYLORO] Error Status: " + root.path("status").asText() + ", Message: " + error);
-                log.error("Payloro error response: {}", error);
+                log.error("[PAYLORO] Error Status: {}, Message: {}", root.path("status").asText(), error);
                 return new PayloroResponse(false, null, null, null, error);
             }
 

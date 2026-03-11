@@ -18,13 +18,16 @@ import org.springframework.data.repository.query.Param;
 import com.orasa.backend.domain.AppointmentEntity;
 
 public interface AppointmentRepository extends JpaRepository<AppointmentEntity, UUID>, JpaSpecificationExecutor<AppointmentEntity> {
+  @EntityGraph(attributePaths = {"branch", "business", "services"})
   Page<AppointmentEntity> findByBranchId(UUID branchId, Pageable pageable);
-  Page<AppointmentEntity> findByBusinessId(UUID businessId, Pageable pageable);
-  Page<AppointmentEntity> findByBusinessIdAndBranchIdIn(UUID businessId, List<UUID> branchIds, Pageable pageable);
-  Page<AppointmentEntity> findByBranchIdAndStartDateTimeBetween(UUID branchId, OffsetDateTime start, OffsetDateTime end, Pageable pageable);
 
-  // Add entity graph method
-  @EntityGraph(attributePaths = {"branch", "business", "selectedReminders"})
+  @EntityGraph(attributePaths = {"branch", "business", "services"})
+  Page<AppointmentEntity> findByBusinessId(UUID businessId, Pageable pageable);
+
+  @EntityGraph(attributePaths = {"branch", "business", "services"})
+  Page<AppointmentEntity> findByBusinessIdAndBranchIdIn(UUID businessId, List<UUID> branchIds, Pageable pageable);
+
+  @EntityGraph(attributePaths = {"branch", "business", "services", "selectedReminders"})
   @Query("SELECT a FROM AppointmentEntity a WHERE a.id IN :ids")
   List<AppointmentEntity> findAllByIdWithAssociations(@Param("ids") List<UUID> ids);
 
