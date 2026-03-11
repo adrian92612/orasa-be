@@ -52,10 +52,12 @@ import com.orasa.backend.config.TimeConfig;
 import com.orasa.backend.common.CacheName;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class AppointmentService {
 
   private final AppointmentRepository appointmentRepository;
@@ -156,7 +158,7 @@ public class AppointmentService {
         } catch (Exception e) {
             // Log but don't fail the appointment creation
             // Future improvement: retry queue
-            System.err.println("Failed to schedule reminders: " + e.getMessage());
+            log.error("Failed to schedule reminders for appointment {}: {}", saved.getId(), e.getMessage(), e);
         }
     }
 
@@ -443,7 +445,7 @@ public class AppointmentService {
              try {
                 smsService.scheduleRemindersForAppointment(saved);
             } catch (Exception e) {
-                System.err.println("Failed to reschedule reminders on status update: " + e.getMessage());
+                log.error("Failed to reschedule reminders on status update for appointment {}: {}", saved.getId(), e.getMessage(), e);
             }
         }
     }
