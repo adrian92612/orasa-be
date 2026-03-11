@@ -49,7 +49,7 @@ call.
 
 Effort: Medium
 
-4. EAGER Fetch on AppointmentEntity.services
+4. [FIXED] EAGER Fetch on AppointmentEntity.services
    AppointmentEntity.java:70
 
 java

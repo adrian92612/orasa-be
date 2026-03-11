@@ -24,10 +24,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/payments")
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentController extends BaseController {
 
     private final PaymentService paymentService;
@@ -38,7 +40,7 @@ public class PaymentController extends BaseController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateSubscriptionPaymentRequest request
     ) {
-        System.out.println("[PAYMENT] Processing subscription renewal for User: " + user.userId() + " (" + request.getMonths() + " months)");
+        log.info("[PAYMENT] Processing subscription renewal for User: {} ({} months)", user.userId(), request.getMonths());
         validateBusinessExists(user);
         PayloroService.PayloroResponse response = paymentService.createSubscriptionPayment(
             user.businessId(), 
@@ -59,7 +61,7 @@ public class PaymentController extends BaseController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateCreditsPaymentRequest request
     ) {
-        System.out.println("[PAYMENT] Processing credits top-up for User: " + user.userId() + " (" + request.getCredits() + " credits)");
+        log.info("[PAYMENT] Processing credits top-up for User: {} ({} credits)", user.userId(), request.getCredits());
         validateBusinessExists(user);
         PayloroService.PayloroResponse response = paymentService.createCreditsPayment(user.businessId(), request.getCredits(), request.getMethod());
         
