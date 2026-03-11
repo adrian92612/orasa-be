@@ -106,14 +106,17 @@ public class AuthServiceTest {
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(new UsernamePasswordAuthenticationToken("staffuser", "password"));
             when(userRepository.findByUsernameWithRelations("staffuser")).thenReturn(Optional.of(staff));
-            when(jwtService.generateToken(staff.getId(), staff.getUsername(), staff.getRole().name(),
+            when(jwtService.generateAccessToken(staff.getId(), staff.getUsername(), staff.getRole().name(),
                     staff.getBusiness().getId(), staff.getBusiness().getName()))
-                    .thenReturn("mock-jwt-token");
+                    .thenReturn("mock-access-token");
+            when(jwtService.generateRefreshToken(staff.getId()))
+                    .thenReturn("mock-refresh-token");
 
             AuthService.LoginResult result = authService.loginStaff(request);
 
             assertThat(result).isNotNull();
-            assertThat(result.token()).isEqualTo("mock-jwt-token");
+            assertThat(result.accessToken()).isEqualTo("mock-access-token");
+            assertThat(result.refreshToken()).isEqualTo("mock-refresh-token");
 
             AuthResponse response = result.response();
             assertThat(response.getUserId()).isEqualTo(staffId);
@@ -159,14 +162,17 @@ public class AuthServiceTest {
 
             when(googleOAuthService.exchangeCodeForUserInfo(code)).thenReturn(mockPayload);
             when(userRepository.findByEmailWithRelations(email)).thenReturn(Optional.of(owner));
-            when(jwtService.generateToken(owner.getId(), owner.getUsername(), owner.getRole().name(),
+            when(jwtService.generateAccessToken(owner.getId(), owner.getUsername(), owner.getRole().name(),
                     owner.getBusiness().getId(), owner.getBusiness().getName()))
-                    .thenReturn("mock-jwt-token");
+                    .thenReturn("mock-access-token");
+            when(jwtService.generateRefreshToken(owner.getId()))
+                    .thenReturn("mock-refresh-token");
 
             AuthService.LoginResult result = authService.loginWithGoogle(code);
 
             assertThat(result).isNotNull();
-            assertThat(result.token()).isEqualTo("mock-jwt-token");
+            assertThat(result.accessToken()).isEqualTo("mock-access-token");
+            assertThat(result.refreshToken()).isEqualTo("mock-refresh-token");
 
             AuthResponse response = result.response();
             assertThat(response.getUserId()).isEqualTo(ownerId);
@@ -196,14 +202,17 @@ public class AuthServiceTest {
             when(googleOAuthService.exchangeCodeForUserInfo(code)).thenReturn(mockPayload);
             when(userRepository.findByEmailWithRelations(email)).thenReturn(Optional.empty());
             when(userRepository.save(any(UserEntity.class))).thenReturn(newOwner);
-            when(jwtService.generateToken(newOwner.getId(), newOwner.getUsername(), newOwner.getRole().name(), null,
+            when(jwtService.generateAccessToken(newOwner.getId(), newOwner.getUsername(), newOwner.getRole().name(), null,
                     null))
-                    .thenReturn("mock-jwt-token");
+                    .thenReturn("mock-access-token");
+            when(jwtService.generateRefreshToken(newOwner.getId()))
+                    .thenReturn("mock-refresh-token");
 
             AuthService.LoginResult result = authService.loginWithGoogle(code);
 
             assertThat(result).isNotNull();
-            assertThat(result.token()).isEqualTo("mock-jwt-token");
+            assertThat(result.accessToken()).isEqualTo("mock-access-token");
+            assertThat(result.refreshToken()).isEqualTo("mock-refresh-token");
 
             AuthResponse response = result.response();
             assertThat(response.getUserId()).isEqualTo(newOwner.getId());

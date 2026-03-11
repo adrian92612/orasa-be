@@ -38,7 +38,7 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final ActivityLogService activityLogService;
 
-  public record LoginResult(String token, AuthResponse response) {}
+  public record LoginResult(String accessToken, String refreshToken, AuthResponse response) {}
   
   public LoginResult loginStaff(StaffLoginRequest request) {
     authenticationManager.authenticate(
@@ -50,13 +50,15 @@ public class AuthService {
 
     UserEntity user = userRepository.findByUsernameWithRelations(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-    String token = jwtService.generateToken(
+    String accessToken = jwtService.generateAccessToken(
       user.getId(),
       user.getUsername(),
       user.getRole().name(),
       user.getBusiness() != null ? user.getBusiness().getId() : null,
       user.getBusiness() != null ? user.getBusiness().getName() : null
     );
+
+    String refreshToken = jwtService.generateRefreshToken(user.getId());
 
     AuthResponse response = AuthResponse.builder()
       .userId(user.getId())
@@ -68,7 +70,7 @@ public class AuthService {
 
     activityLogService.logUserLogin(user, user.getBusiness());
 
-    return new LoginResult(token, response);
+    return new LoginResult(accessToken, refreshToken, response);
   }
 
   public LoginResult loginWithGoogle(String code) {
@@ -85,7 +87,7 @@ public class AuthService {
 
     UUID businessId = user.getBusiness() != null ? user.getBusiness().getId() : null;
 
-    String token = jwtService.generateToken(
+    String accessToken = jwtService.generateAccessToken(
         user.getId(),
         user.getUsername(),
         user.getRole().name(),
@@ -93,11 +95,13 @@ public class AuthService {
         user.getBusiness() != null ? user.getBusiness().getName() : null
     );
 
+    String refreshToken = jwtService.generateRefreshToken(user.getId());
+
     if (user.getBusiness() != null) {
         activityLogService.logUserLogin(user, user.getBusiness());
     }
 
-    return new LoginResult(token, AuthResponse.builder()
+    return new LoginResult(accessToken, refreshToken, AuthResponse.builder()
         .userId(user.getId())
         .username(user.getUsername())
         .role(user.getRole())
@@ -115,6 +119,39 @@ public class AuthService {
               activityLogService.logUserLogout(user, user.getBusiness());
           }
       });
+  }
+
+  @Transactional
+  public LoginResult refreshTokens(String refreshToken) {
+    if (refreshToken == null || !jwtService.isTokenValid(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
+        throw new BadCredentialsException("Invalid refresh token");
+    }
+
+    UUID userId = UUID.fromString(jwtService.extractUserId(refreshToken));
+    UserEntity user = userRepository.findByUsernameWithRelations(userId.toString())
+        .filter(u -> u.getId().equals(userId)) // findByUsernameWithRelations is used but we need ID
+        .orElseGet(() -> userRepository.findByIdWithRelations(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+
+    String newAccessToken = jwtService.generateAccessToken(
+        user.getId(),
+        user.getUsername(),
+        user.getRole().name(),
+        user.getBusiness() != null ? user.getBusiness().getId() : null,
+        user.getBusiness() != null ? user.getBusiness().getName() : null
+    );
+
+    String newRefreshToken = jwtService.generateRefreshToken(user.getId());
+
+    AuthResponse response = AuthResponse.builder()
+        .userId(user.getId())
+        .username(user.getUsername())
+        .role(user.getRole())
+        .businessId(user.getBusiness() != null ? user.getBusiness().getId() : null)
+        .businessName(user.getBusiness() != null ? user.getBusiness().getName() : null)
+        .build();
+
+    return new LoginResult(newAccessToken, newRefreshToken, response);
   }
 
   public void changePassword(UUID userId, ChangePasswordRequest request) {

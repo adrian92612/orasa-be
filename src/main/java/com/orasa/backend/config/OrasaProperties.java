@@ -26,6 +26,7 @@ public class OrasaProperties {
     public static class Jwt {
         private String secret;
         private long expiration;
+        private long refreshExpiration;
     }
 
     @Data

@@ -27,10 +27,11 @@ public class JwtService {
   private final OrasaProperties orasaProperties;
   private final Clock clock;
 
-  public String generateToken(UUID userId, String username, String role, UUID businessId, String businessName) {
+  public String generateAccessToken(UUID userId, String username, String role, UUID businessId, String businessName) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("username", username);
     claims.put("role", role);
+    claims.put("type", "access");
     if (businessId != null) {
       claims.put("businessId", businessId.toString());
     }
@@ -45,6 +46,24 @@ public class JwtService {
         .expiration(Date.from(Instant.now(clock).plusMillis(orasaProperties.getJwt().getExpiration())))
         .signWith(getSigningKey())
         .compact();
+  }
+
+  public String generateRefreshToken(UUID userId) {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("type", "refresh");
+
+    return Jwts.builder()
+        .subject(userId.toString())
+        .claims(claims)
+        .issuedAt(Date.from(Instant.now(clock)))
+        .expiration(Date.from(Instant.now(clock).plusMillis(orasaProperties.getJwt().getRefreshExpiration())))
+        .signWith(getSigningKey())
+        .compact();
+  }
+
+  public boolean isRefreshToken(String token) {
+    String type = extractClaim(token, claims -> claims.get("type", String.class));
+    return "refresh".equals(type);
   }
 
   public String extractUserId(String token) {
