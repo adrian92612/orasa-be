@@ -30,7 +30,6 @@ import com.orasa.backend.common.CacheName;
 @Slf4j
 public class SubscriptionService {
 
-
     private final BusinessRepository businessRepository;
     private final RedissonClient redissonClient;
     private final Clock clock;
@@ -46,31 +45,7 @@ public class SubscriptionService {
 
     @Transactional
     public boolean isSubscriptionActive(BusinessEntity business) {
-        if (business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE 
-                && business.getSubscriptionEndDate() != null
-                && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now(clock))) {
-            
-            log.info("Business {} subscription expired on {}", 
-                    business.getId(), business.getSubscriptionEndDate());
-            
-            business.setSubscriptionStatus(SubscriptionStatus.EXPIRED);
-            businessRepository.save(business);
-        } else if (business.getSubscriptionStatus() != SubscriptionStatus.ACTIVE 
-                && business.getSubscriptionEndDate() != null 
-                && business.getSubscriptionEndDate().isAfter(OffsetDateTime.now(clock))) {
-            
-            log.info("Business {} subscription auto-reactivated. End date: {}", 
-                    business.getId(), business.getSubscriptionEndDate());
-            
-            business.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
-            businessRepository.save(business);
-            
-            // Re-schedule credit reset on reactivation if needed
-            if (business.getNextCreditResetDate() != null && business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
-                 scheduleCreditReset(business.getId(), business.getNextCreditResetDate());
-            }
-        }
-
+        syncSubscriptionState(business);
         return business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE;
     }
 
@@ -223,10 +198,8 @@ public class SubscriptionService {
 
     @Transactional
     public void checkAndRefreshCredits(BusinessEntity business) {
-        // 1. Check for Expiry First
-        if (handleExpiryCheck(business)) {
-            return; // If expired, stop processing
-        }
+        // 1. Sync subscription status first (auto-expire or auto-reactivate)
+        syncSubscriptionState(business);
 
         if (business.getSubscriptionStatus() != SubscriptionStatus.ACTIVE) {
             return;
@@ -236,7 +209,7 @@ public class SubscriptionService {
         if (business.getNextCreditResetDate() != null && !business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
             log.info("Lazy-refreshing credits for business {}", business.getId());
             
-            business.setFreeSmsCredits(100);
+            business.setFreeSmsCredits(BusinessEntity.DEFAULT_FREE_SMS_CREDITS);
             
             // Advance reset date by 1 month
             while (!business.getNextCreditResetDate().isAfter(OffsetDateTime.now(clock))) {
@@ -261,19 +234,32 @@ public class SubscriptionService {
         evictBusinessCache(businessId);
     }
 
-    private boolean handleExpiryCheck(BusinessEntity business) {
-        if (business.getSubscriptionStatus() == SubscriptionStatus.ACTIVE 
-            && business.getSubscriptionEndDate() != null 
-            && business.getSubscriptionEndDate().isBefore(OffsetDateTime.now(clock))) {
-            
-            log.info("Lazy-expiring subscription for business {}", business.getId());
+    /**
+     * Synchronizes the business subscription status based on current time.
+     * Handles auto-expiry (ACTIVE -> EXPIRED) and auto-reactivation (EXPIRED -> ACTIVE).
+     */
+    private void syncSubscriptionState(BusinessEntity business) {
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        SubscriptionStatus currentStatus = business.getSubscriptionStatus();
+        OffsetDateTime endDate = business.getSubscriptionEndDate();
+
+        if (currentStatus == SubscriptionStatus.ACTIVE && endDate != null && endDate.isBefore(now)) {
+            log.info("Subscription for business {} expired on {}", business.getId(), endDate);
             business.setSubscriptionStatus(SubscriptionStatus.EXPIRED);
             business.setFreeSmsCredits(0);
             businessRepository.save(business);
             evictBusinessCache(business.getId());
-            return true;
+        } else if (currentStatus == SubscriptionStatus.EXPIRED && endDate != null && endDate.isAfter(now)) {
+            log.info("Subscription for business {} auto-reactivated. End date: {}", business.getId(), endDate);
+            business.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
+            businessRepository.save(business);
+            evictBusinessCache(business.getId());
+            
+            // Re-schedule credit reset on reactivation if it's in the future
+            if (business.getNextCreditResetDate() != null && business.getNextCreditResetDate().isAfter(now)) {
+                 scheduleCreditReset(business.getId(), business.getNextCreditResetDate());
+            }
         }
-        return false;
     }
 
     private void evictBusinessCache(UUID businessId) {

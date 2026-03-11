@@ -62,7 +62,7 @@ Recommendation: Switch to FetchType.LAZY and use @EntityGraph or JOIN FETCH in t
 
 Effort: Medium
 
-5. Duplicate Subscription Expiry Logic
+5. [FIXED] Duplicate Subscription Expiry Logic
    The subscription expiry check is duplicated in three places with slightly different behavior:
 
 Location Behavior
@@ -82,7 +82,7 @@ only.
 
 Effort: Low
 
-🟡 Medium Priority 6. Inline java.util References Throughout
+🟡 Medium Priority 6. [FIXED] Inline java.util References Throughout
 Seen in
 BranchService.java:84
 ,
@@ -144,7 +144,7 @@ Recommendation: Use key-scoped eviction consistently. If the cache key scheme do
 
 Effort: Medium
 
-9.  logActionSync
+9.  [FIXED] logActionSync
     Is a Dead Code Smell —
     ActivityLogService
     ActivityLogService.java:84-101
@@ -161,7 +161,7 @@ logAction
 
 Effort: Low
 
-10. Typo in Exception Handler Log Message
+10. [FIXED] Typo in Exception Handler Log Message
     GlobalExceptionHandler.java:25
 
 java
@@ -174,7 +174,7 @@ Fix: "Resource not found" and "Unexpected error occurred".
 
 Effort: Low
 
-11. Unnecessary Exception Logging with Full Stack Trace
+11. [FIXED] Unnecessary Exception Logging with Full Stack Trace
     GlobalExceptionHandler.java:25
     and
     line 31
@@ -243,7 +243,7 @@ Recommendation: Add @Version private Long version; to BaseEntity. This is a low-
 
 Effort: Medium (requires coordination with frontend)
 
-16. Hardcoded "100" for Free SMS Credits
+16. [FIXED] Hardcoded "100" for Free SMS Credits
     SubscriptionService.java:144
     ,
     line 239

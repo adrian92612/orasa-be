@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 @SQLDelete(sql = "UPDATE businesses SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
 public class BusinessEntity extends BaseEntity {
+    public static final int DEFAULT_FREE_SMS_CREDITS = 100;
 
     @Column(nullable = false)
     private String name;
@@ -25,9 +26,10 @@ public class BusinessEntity extends BaseEntity {
     @Column(unique = true, columnDefinition = "citext")
     private String slug;
 
+
     @Column(name = "free_sms_credits", nullable = false)
     @Builder.Default
-    private int freeSmsCredits = 100;
+    private int freeSmsCredits = DEFAULT_FREE_SMS_CREDITS;
 
     @Column(name = "paid_sms_credits", nullable = false)
     @Builder.Default
@@ -50,17 +52,5 @@ public class BusinessEntity extends BaseEntity {
     @Column(name = "terms_accepted_at")
     private OffsetDateTime termsAcceptedAt;
 
-    /**
-     * Checks if subscription is currently active.
-     * Note: This is a simple check. Use SubscriptionService for full validation with auto-expiry.
-     */
-    public boolean hasActiveSubscription() {
-        if (subscriptionStatus != SubscriptionStatus.ACTIVE) {
-            return false;
-        }
-        if (subscriptionEndDate != null && subscriptionEndDate.isBefore(OffsetDateTime.now())) {
-            return false;
-        }
-        return true;
-    }
+
 }
