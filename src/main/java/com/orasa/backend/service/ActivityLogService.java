@@ -78,27 +78,6 @@ public class ActivityLogService {
         }
     }
     
-    /**
-     * Synchronous version (now same as standard logAction)
-     */
-    @Transactional
-    public void logActionSync(UserEntity user, BusinessEntity business, BranchEntity branch, 
-                              ActivityAction action, String description) {
-        try {
-            ActivityLogEntity activityLog = ActivityLogEntity.builder()
-                    .user(user)
-                    .business(business)
-                    .branch(branch)
-                    .action(action.name())
-                    .description(description)
-                    .build();
-            
-            activityLogRepository.save(activityLog);
-            log.debug("Logged action (sync): {} by user {} - {}", action, user.getId(), description);
-        } catch (Exception e) {
-            log.error("Failed to log activity: {} - {}", action, e.getMessage());
-        }
-    }
     
     // ==================== APPOINTMENT LOGGING ====================
     

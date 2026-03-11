@@ -106,7 +106,7 @@ public class SmsTaskHelper {
         BusinessEntity business = businessRepository.findById(task.getBusinessId())
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
-        if (!business.hasActiveSubscription()) {
+        if (!subscriptionService.isSubscriptionActive(business)) {
             log.warn("Skipping reminder for appointment {} - Business {} subscription expired", appointmentId, business.getId());
             scheduledTask.setStatus(SmsTaskStatus.FAILED);
             scheduledSmsTaskRepository.save(scheduledTask);

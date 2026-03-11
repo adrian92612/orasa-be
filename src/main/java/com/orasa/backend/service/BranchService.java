@@ -1,10 +1,13 @@
 package com.orasa.backend.service;
 
-import java.util.stream.Collectors;
-
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -81,9 +84,9 @@ public class BranchService {
         }
 
         // Handle Services
-        java.util.Set<UUID> serviceIds = request.getServiceIds();
+        Set<UUID> serviceIds = request.getServiceIds();
         if (serviceIds == null) {
-            serviceIds = java.util.Collections.emptySet();
+            serviceIds = Collections.emptySet();
         }
         updateBranchServices(saved, serviceIds, new ArrayList<>());
 
@@ -153,7 +156,7 @@ public class BranchService {
         String newAddress = request.getAddress();
         String addressToSet = (newAddress == null || newAddress.trim().isEmpty()) ? null : newAddress.trim();
 
-        if (!java.util.Objects.equals(oldAddress, addressToSet)) {
+        if (!Objects.equals(oldAddress, addressToSet)) {
             changes.add(FieldChange.builder()
                     .field("Address")
                     .before(oldAddress != null ? oldAddress : "") // Log "empty" if previously null
@@ -167,7 +170,7 @@ public class BranchService {
         String newPhone = request.getPhoneNumber();
         String phoneToSet = (newPhone == null || newPhone.trim().isEmpty()) ? null : newPhone.trim();
         
-        if (!java.util.Objects.equals(oldPhone, phoneToSet)) {
+        if (!Objects.equals(oldPhone, phoneToSet)) {
             changes.add(FieldChange.builder()
                     .field("Phone Number")
                     .before(oldPhone != null ? oldPhone : "")
@@ -178,8 +181,8 @@ public class BranchService {
 
         // Check Staff Assignment changes
         if (request.getStaffIds() != null) {
-            java.util.Set<UUID> newStaffIds = request.getStaffIds();
-            java.util.Set<UserEntity> currentStaff = branch.getStaff();
+            Set<UUID> newStaffIds = request.getStaffIds();
+            Set<UserEntity> currentStaff = branch.getStaff();
             
             // Identify users to remove
             List<UserEntity> toRemove = currentStaff.stream()
@@ -187,7 +190,7 @@ public class BranchService {
                     .collect(Collectors.toList());
             
             // Identify users to add
-            java.util.Set<UUID> currentStaffIds = currentStaff.stream().map(UserEntity::getId).collect(Collectors.toSet());
+            Set<UUID> currentStaffIds = currentStaff.stream().map(UserEntity::getId).collect(Collectors.toSet());
             List<UserEntity> toAdd = userRepository.findAllById(newStaffIds).stream()
                     .filter(user -> !currentStaffIds.contains(user.getId()) && user.getBusiness().getId().equals(businessId))
                     .collect(Collectors.toList());
@@ -241,10 +244,10 @@ public class BranchService {
         return mapToResponse(saved);
     }
 
-    private void updateBranchServices(BranchEntity branch, java.util.Set<UUID> requestedActiveServiceIds, List<FieldChange> changes) {
+    private void updateBranchServices(BranchEntity branch, Set<UUID> requestedActiveServiceIds, List<FieldChange> changes) {
         List<ServiceEntity> allServices = serviceRepository.findByBusinessId(branch.getBusiness().getId());
         List<BranchServiceEntity> existingOverrides = branchServiceRepository.findByBranchId(branch.getId());
-        java.util.Map<UUID, BranchServiceEntity> overrideMap = existingOverrides.stream()
+        Map<UUID, BranchServiceEntity> overrideMap = existingOverrides.stream()
                 .collect(Collectors.toMap(bs -> bs.getService().getId(), bs -> bs));
 
         List<BranchServiceEntity> toSave = new ArrayList<>();
@@ -334,16 +337,16 @@ public class BranchService {
     private BranchResponse mapToResponse(BranchEntity branch) {
         List<BranchServiceEntity> overrides = branchServiceRepository.findByBranchId(branch.getId());
 
-        java.util.Set<UUID> activeServiceIds = overrides.stream()
+        Set<UUID> activeServiceIds = overrides.stream()
                 .filter(BranchServiceEntity::isActive)
                 .map(bs -> bs.getService().getId())
                 .collect(Collectors.toSet());
 
-        java.util.Set<UserEntity> staffUsers = branch.getStaff() != null 
+        Set<UserEntity> staffUsers = branch.getStaff() != null 
                 ? branch.getStaff().stream()
                     .filter(u -> u.getRole() == UserRole.STAFF)
                     .collect(Collectors.toSet())
-                : java.util.Collections.emptySet();
+                : Collections.emptySet();
 
         return BranchResponse.builder()
                 .id(branch.getId())
