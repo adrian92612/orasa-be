@@ -104,8 +104,7 @@ public class BusinessController extends BaseController {
         UserEntity user = userRepository.findByIdWithRelations(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-
-        String newToken = jwtService.generateToken(
+        String accessToken = jwtService.generateAccessToken(
                 user.getId(),
                 user.getUsername(),
                 user.getRole().name(),
@@ -113,7 +112,9 @@ public class BusinessController extends BaseController {
                 user.getBusiness() != null ? user.getBusiness().getName() : null
         );
 
-        ResponseCookie cookie = ResponseCookie.from("token", newToken)
+        String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+        ResponseCookie accessTokenCookie = ResponseCookie.from("token", accessToken)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
@@ -121,6 +122,15 @@ public class BusinessController extends BaseController {
                 .sameSite("None")
                 .build();
 
-        response.addHeader("Set-Cookie", cookie.toString());
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(orasaProperties.getJwt().getRefreshExpiration() / 1000)
+                .sameSite("None")
+                .build();
+
+        response.addHeader("Set-Cookie", accessTokenCookie.toString());
+        response.addHeader("Set-Cookie", refreshTokenCookie.toString());
     }
 }

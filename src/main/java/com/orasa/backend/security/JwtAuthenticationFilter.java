@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.orasa.backend.common.UserRole;
-import com.orasa.backend.repository.UserRepository;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,15 +27,13 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    private final UserRepository userRepository;
     private final JwtService jwtService;
 
-    @SuppressWarnings("deprecation")
     @Override
     protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
     ) throws ServletException, IOException {
         
         String jwt = extractTokenFromCookie(request);
@@ -50,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UUID businessId = jwtService.extractBusinessId(jwt);
                 String businessName = jwtService.extractBusinessName(jwt);
                 
-                if (userIdStr != null && roleStr != null && userRepository.existsById(UUID.fromString(userIdStr))) {
+                if (userIdStr != null && roleStr != null) {
                     AuthenticatedUser principal = new AuthenticatedUser(
                         UUID.fromString(userIdStr),
                         username,

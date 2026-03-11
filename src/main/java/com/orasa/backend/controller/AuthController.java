@@ -22,6 +22,7 @@ import com.orasa.backend.config.OrasaProperties;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.CookieValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +43,21 @@ public class AuthController extends BaseController {
   ) {
     AuthService.LoginResult result = authService.loginStaff(request);
 
-    addTokenCookie(response, result.token());
+    addAuthCookies(response, result.accessToken(), result.refreshToken());
+    return ResponseEntity.ok(ApiResponse.success(result.response()));
+  }
+
+  @PostMapping("/refresh")
+  public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+      @CookieValue(value = "refresh_token", required = false) String refreshToken,
+      HttpServletResponse response
+  ) {
+    if (refreshToken == null) {
+        return ResponseEntity.status(401).body(ApiResponse.error("Refresh token missing"));
+    }
+
+    AuthService.LoginResult result = authService.refreshTokens(refreshToken);
+    addAuthCookies(response, result.accessToken(), result.refreshToken());
     return ResponseEntity.ok(ApiResponse.success(result.response()));
   }
 
@@ -55,7 +70,7 @@ public class AuthController extends BaseController {
         authService.logout(user.userId());
     }
 
-    ResponseCookie cookie = ResponseCookie.from("token", "")
+    ResponseCookie accessTokenCookie = ResponseCookie.from("token", "")
         .httpOnly(true)
         .secure(true)
         .path("/")
@@ -63,7 +78,16 @@ public class AuthController extends BaseController {
         .sameSite("None")
         .build();
 
-    response.addHeader("Set-Cookie", cookie.toString());
+    ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", "")
+        .httpOnly(true)
+        .secure(true)
+        .path("/")
+        .maxAge(0)
+        .sameSite("None")
+        .build();
+
+    response.addHeader("Set-Cookie", accessTokenCookie.toString());
+    response.addHeader("Set-Cookie", refreshTokenCookie.toString());
     return ResponseEntity.ok(ApiResponse.success(null));
   }
 
@@ -91,7 +115,7 @@ public class AuthController extends BaseController {
   ) throws IOException {
     AuthService.LoginResult result = authService.loginWithGoogle(code);
     
-    addTokenCookie(response, result.token());
+    addAuthCookies(response, result.accessToken(), result.refreshToken());
     
     // Redirect to frontend - dashboard or onboarding based on businessId
     String redirectPath = result.response().getBusinessId() != null 
@@ -101,15 +125,25 @@ public class AuthController extends BaseController {
     response.sendRedirect(orasaProperties.getApp().getFrontendUrl() + redirectPath);
   }
 
-  private void addTokenCookie(HttpServletResponse response, String token) {
-    ResponseCookie cookie = ResponseCookie.from("token", token)
+  private void addAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
+    ResponseCookie accessTokenCookie = ResponseCookie.from("token", accessToken)
         .httpOnly(true)
         .secure(true)
         .path("/")
         .maxAge(orasaProperties.getJwt().getExpiration() / 1000)
         .sameSite("None")
         .build();
-    response.addHeader("Set-Cookie", cookie.toString());
+
+    ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshToken)
+        .httpOnly(true)
+        .secure(true)
+        .path("/")
+        .maxAge(orasaProperties.getJwt().getRefreshExpiration() / 1000)
+        .sameSite("None")
+        .build();
+
+    response.addHeader("Set-Cookie", accessTokenCookie.toString());
+    response.addHeader("Set-Cookie", refreshTokenCookie.toString());
   }
 }
 
