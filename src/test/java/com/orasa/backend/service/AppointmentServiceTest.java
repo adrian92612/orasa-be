@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.orasa.backend.common.AppointmentStatus;
@@ -46,6 +47,9 @@ import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.repository.BusinessReminderConfigRepository;
 import com.orasa.backend.service.sms.SmsService;
+import com.orasa.backend.mapper.AppointmentMapper;
+import com.orasa.backend.security.SecurityValidator;
+import com.orasa.backend.service.helper.AppointmentChangeTracker;
 
 @ExtendWith(MockitoExtension.class)
 public class AppointmentServiceTest {
@@ -79,6 +83,15 @@ public class AppointmentServiceTest {
 
     @Mock
     private CacheService cacheService;
+
+    @Spy
+    private AppointmentMapper appointmentMapper = new AppointmentMapper();
+
+    @Spy
+    private SecurityValidator securityValidator = new SecurityValidator();
+
+    @Spy
+    private AppointmentChangeTracker changeTracker = new AppointmentChangeTracker();
 
     @InjectMocks
     private AppointmentService appointmentService;
