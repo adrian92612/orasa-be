@@ -17,27 +17,20 @@ Recommendation: Trust the JWT during its lifetime. If you need to handle user de
 
 Effort: Low
 
-2. System.err.println Instead of Logger —
+2. [FIXED] System.err.println Instead of Logger —
    AppointmentService
-   AppointmentService.java:159
-   and
-   line 446
+   AppointmentService.java
 
-java
-System.err.println("Failed to schedule reminders: " + e.getMessage());
-Problem: This bypasses the structured logging pipeline entirely — no timestamps, no log levels, no correlation IDs, no log aggregation visibility. Every other service uses @Slf4j properly.
-
-Fix: Add @Slf4j to
-AppointmentService
-and replace with:
+   Update: Replaced with @Slf4j logging in both scheduling and rescheduling paths.
 
 java
 log.error("Failed to schedule reminders for appointment {}", saved.getId(), e);
 Effort: Low
 
-3. @Transactional on @Cacheable Read-Only Method —
-   BusinessService
-   BusinessService.java:116-124
+3. [FIXED] @Transactional on @Cacheable Read-Only Method — BusinessService
+   BusinessService.java
+
+   Update: Removed side-effect calls to `subscriptionService.checkAndRefreshCredits` from read methods. `getBusinessById` is now strictly `readOnly = true`. Credit refreshes are handled by `CreditResetScheduler`.
 
 java
 @Transactional // ← creates a transaction

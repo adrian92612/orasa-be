@@ -43,7 +43,6 @@ public class BusinessService {
     private final BusinessRepository businessRepository;
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
-    private final SubscriptionService subscriptionService;
     private final ActivityLogService activityLogService;
     private final CacheService cacheService;
     private final UserService userService;
@@ -113,14 +112,12 @@ public class BusinessService {
     /**
      * Gets a business by ID.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     @Cacheable(value = CacheName.BUSINESS, key = "#businessId")
     public BusinessResponse getBusinessById(UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
-        subscriptionService.checkAndRefreshCredits(business);
-
         return mapToResponse(business, null);
     }
 
@@ -166,10 +163,7 @@ public class BusinessService {
             }
         }
         
-        return page.map(business -> {
-                    subscriptionService.checkAndRefreshCredits(business);
-                    return mapToResponse(business, null);
-                });
+        return page.map(business -> mapToResponse(business, null));
     }
 
 
