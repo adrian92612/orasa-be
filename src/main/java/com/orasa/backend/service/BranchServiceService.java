@@ -7,6 +7,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BranchEntity;
@@ -64,16 +65,16 @@ public class BranchServiceService {
                 .build();
 
         BranchServiceEntity saved = branchServiceRepository.save(branchService);
-        cacheService.evict(CacheName.BRANCH_SERVICES, branchId);
-        cacheService.evictAll(CacheName.SERVICES);
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evict(CacheName.BRANCH, branchId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evict(CacheName.BRANCH_SERVICES, businessId + CacheName.SEPARATOR + branchId);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchId + CacheName.SUFFIX_DETAILS);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         return mapToResponse(saved);
     }
 
-    @Cacheable(value = CacheName.BRANCH_SERVICES, key = "#branchId")
-    public List<BranchServiceResponse> getServicesByBranch(UUID branchId) {
+    @Cacheable(value = CacheName.BRANCH_SERVICES, keyGenerator = "businessKeyGenerator")
+    public List<BranchServiceResponse> getServicesByBranch(UUID branchId, @CacheBusinessId UUID businessId) {
         return branchServiceRepository.findByBranchId(branchId).stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -97,11 +98,11 @@ public class BranchServiceService {
         branchService.setActive(request.getActive());
 
         BranchServiceEntity saved = branchServiceRepository.save(branchService);
-        cacheService.evict(CacheName.BRANCH_SERVICES, branchService.getBranchId());
-        cacheService.evictAll(CacheName.SERVICES);
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evict(CacheName.BRANCH, branchService.getBranchId());
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evict(CacheName.BRANCH_SERVICES, businessId + CacheName.SEPARATOR + branchService.getBranchId());
+        cacheService.evictAll(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchService.getBranchId() + CacheName.SUFFIX_DETAILS);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         return mapToResponse(saved);
     }
 
@@ -118,11 +119,11 @@ public class BranchServiceService {
         }
 
         branchServiceRepository.delete(branchService);
-        cacheService.evict(CacheName.BRANCH_SERVICES, branchService.getBranchId());
-        cacheService.evictAll(CacheName.SERVICES);
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evict(CacheName.BRANCH, branchService.getBranchId());
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evict(CacheName.BRANCH_SERVICES, businessId + CacheName.SEPARATOR + branchService.getBranchId());
+        cacheService.evictAll(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchService.getBranchId() + CacheName.SUFFIX_DETAILS);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
     }
 
     private BranchServiceResponse mapToResponse(BranchServiceEntity branchService) {

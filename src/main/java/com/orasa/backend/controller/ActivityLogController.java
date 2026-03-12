@@ -9,6 +9,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.orasa.backend.dto.activity.ActivityLogResponse;
 import com.orasa.backend.dto.common.ApiResponse;
 import com.orasa.backend.dto.common.PageResponse;
+import com.orasa.backend.common.UserRole;
+import com.orasa.backend.security.AuthenticatedUser;
+import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.service.ActivityLogService;
 
 import lombok.RequiredArgsConstructor;
@@ -36,9 +40,13 @@ public class ActivityLogController extends BaseController {
     @GetMapping("/business/{businessId}")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> getActivityLogsByBusiness(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable UUID businessId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
+        if (authenticatedUser.role() != UserRole.ADMIN && !authenticatedUser.businessId().equals(businessId)) {
+            throw new BusinessException("You can only access logs for your own business");
+        }
         PageResponse<ActivityLogResponse> logs = activityLogService.getActivityLogsByBusiness(businessId, pageable);
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
@@ -49,10 +57,11 @@ public class ActivityLogController extends BaseController {
     @GetMapping("/branch/{branchId}")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> getActivityLogsByBranch(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable UUID branchId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        PageResponse<ActivityLogResponse> logs = activityLogService.getActivityLogsByBranch(branchId, pageable);
+        PageResponse<ActivityLogResponse> logs = activityLogService.getActivityLogsByBranch(authenticatedUser.businessId(), branchId, pageable);
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
     
@@ -81,6 +90,7 @@ public class ActivityLogController extends BaseController {
     @GetMapping("/business/{businessId}/search")
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<ActivityLogResponse>>> searchActivityLogs(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable UUID businessId,
             @RequestParam(required = false) UUID branchId,
             @RequestParam(required = false) java.util.List<String> action,
@@ -88,6 +98,9 @@ public class ActivityLogController extends BaseController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 20) Pageable pageable
     ) {
+        if (authenticatedUser.role() != UserRole.ADMIN && !authenticatedUser.businessId().equals(businessId)) {
+            throw new BusinessException("You can only search logs for your own business");
+        }
         Page<ActivityLogResponse> logs = activityLogService.searchActivityLogs(
                 businessId, branchId, action, startDate, endDate, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));

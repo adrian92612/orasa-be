@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.cache.annotation.Cacheable;
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import com.orasa.backend.dto.activity.FieldChange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -113,8 +114,8 @@ public class BusinessService {
      * Gets a business by ID.
      */
     @Transactional(readOnly = true)
-    @Cacheable(value = CacheName.BUSINESS, key = "#businessId")
-    public BusinessResponse getBusinessById(UUID businessId) {
+    @Cacheable(value = CacheName.BUSINESS, keyGenerator = "businessKeyGenerator")
+    public BusinessResponse getBusinessById(@CacheBusinessId UUID businessId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
@@ -141,7 +142,7 @@ public class BusinessService {
             activityLogService.logBusinessUpdated(actor, savedBusiness, FieldChange.toJson(changes));
         }
         
-        cacheService.evict(CacheName.BUSINESS, businessId);
+        cacheService.evict(CacheName.BUSINESS, businessId + CacheName.SUFFIX_DETAILS);
         return mapToResponse(savedBusiness, null);
     }
 

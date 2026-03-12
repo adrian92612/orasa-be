@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.cache.annotation.Cacheable;
 
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -68,9 +69,9 @@ public class ActivityLogService {
             
             activityLogRepository.save(activityLog);
             log.debug("Logged action: {} by user {} - {}", action, user.getId(), description);
-            cacheService.evict(CacheName.BUSINESS_ACTIVITY_LOGS, business.getId());
+            cacheService.evictAll(CacheName.BUSINESS_ACTIVITY_LOGS, business.getId());
             if (branch != null) {
-                cacheService.evict(CacheName.BRANCH_ACTIVITY_LOGS, branch.getId());
+                cacheService.evictAll(CacheName.BRANCH_ACTIVITY_LOGS, business.getId() + CacheName.SEPARATOR + branch.getId());
             }
         } catch (Exception e) {
             log.error("Failed to log activity: {} - {}", action, e.getMessage());
@@ -221,16 +222,16 @@ public class ActivityLogService {
     // ==================== QUERY METHODS ====================
     
     @Transactional(readOnly = true)
-    @Cacheable(value = CacheName.BUSINESS_ACTIVITY_LOGS, key = "#businessId", condition = "#pageable.pageNumber == 0")
-    public PageResponse<ActivityLogResponse> getActivityLogsByBusiness(UUID businessId, Pageable pageable) {
+    @Cacheable(value = CacheName.BUSINESS_ACTIVITY_LOGS, keyGenerator = "businessKeyGenerator", condition = "#pageable.pageNumber == 0")
+    public PageResponse<ActivityLogResponse> getActivityLogsByBusiness(@CacheBusinessId UUID businessId, Pageable pageable) {
         Page<ActivityLogResponse> page = activityLogRepository.findByBusinessIdOrderByCreatedAtDesc(businessId, pageable)
                 .map(this::mapToResponse);
         return PageResponse.from(page);
     }
     
     @Transactional(readOnly = true)
-    @Cacheable(value = CacheName.BRANCH_ACTIVITY_LOGS, key = "#branchId", condition = "#pageable.pageNumber == 0")
-    public PageResponse<ActivityLogResponse> getActivityLogsByBranch(UUID branchId, Pageable pageable) {
+    @Cacheable(value = CacheName.BRANCH_ACTIVITY_LOGS, keyGenerator = "businessKeyGenerator", condition = "#pageable.pageNumber == 0")
+    public PageResponse<ActivityLogResponse> getActivityLogsByBranch(@CacheBusinessId UUID businessId, UUID branchId, Pageable pageable) {
         Page<ActivityLogResponse> page = activityLogRepository.findByBranchIdOrderByCreatedAtDesc(branchId, pageable)
                 .map(this::mapToResponse);
         return PageResponse.from(page);

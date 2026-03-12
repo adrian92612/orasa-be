@@ -73,7 +73,8 @@ public class BranchController extends BaseController {
                 if (authenticatedUser.role() == UserRole.OWNER) {
                         branches = branchService.getBranchesByBusiness(authenticatedUser.businessId());
                 } else {
-                        branches = branchService.getBranchesForUser(authenticatedUser.userId());
+                        branches = branchService.getBranchesForUser(authenticatedUser.userId(),
+                                        authenticatedUser.businessId());
                 }
 
                 log.info("Found {} branches for user {}", branches.size(), authenticatedUser.userId());
@@ -105,7 +106,7 @@ public class BranchController extends BaseController {
                         @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
                         @PathVariable UUID branchId) {
                 log.debug("Fetching branch {}", branchId);
-                BranchResponse branch = branchService.getBranchById(branchId);
+                BranchResponse branch = branchService.getBranchById(branchId, authenticatedUser.businessId());
 
                 if (!branch.getBusinessId().equals(authenticatedUser.businessId())) {
                         log.warn("User {} attempted to access unauthorized branch {}", authenticatedUser.userId(),
@@ -153,12 +154,12 @@ public class BranchController extends BaseController {
                         @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
                         @PathVariable UUID branchId) {
                 log.debug("Fetching services for branch {}", branchId);
-                BranchResponse branch = branchService.getBranchById(branchId);
+                BranchResponse branch = branchService.getBranchById(branchId, authenticatedUser.businessId());
                 if (!branch.getBusinessId().equals(authenticatedUser.businessId())) {
                         throw new BusinessException("Branch does not belong to your business");
                 }
 
-                List<BranchServiceResponse> services = branchServiceService.getServicesByBranch(branchId);
+                List<BranchServiceResponse> services = branchServiceService.getServicesByBranch(branchId, authenticatedUser.businessId());
                 return ResponseEntity.ok(ApiResponse.success(services));
         }
 

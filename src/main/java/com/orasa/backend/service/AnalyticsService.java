@@ -10,6 +10,7 @@ import com.orasa.backend.dto.analytics.StatusStatsDTO;
 import java.util.List;
 import org.springframework.cache.annotation.Cacheable;
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import com.orasa.backend.repository.AppointmentRepository;
 import com.orasa.backend.repository.SmsLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,8 @@ public class AnalyticsService {
     private final SmsLogRepository smsLogRepository;
     private final Clock clock;
 
-    @Cacheable(value = CacheName.ANALYTICS, key = "{#businessId, #branchId, #startDate, #endDate}")
-    public DashboardStats getDashboardStats(UUID businessId, UUID branchId, LocalDate startDate, LocalDate endDate) {
+    @Cacheable(value = CacheName.ANALYTICS, keyGenerator = "businessKeyGenerator")
+    public DashboardStats getDashboardStats(@CacheBusinessId UUID businessId, UUID branchId, LocalDate startDate, LocalDate endDate) {
         ZoneId zoneId = clock.getZone();
         OffsetDateTime start = startDate.atStartOfDay(zoneId).toOffsetDateTime();
         OffsetDateTime end = endDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime().minusNanos(1);
