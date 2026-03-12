@@ -26,9 +26,9 @@ import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
+import org.springframework.cache.annotation.Cacheable;
 
 @Service
 @RequiredArgsConstructor
@@ -88,10 +88,10 @@ public class StaffService {
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
 
         // Evict branch caches
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         for (UUID branchId : request.getBranchIds()) {
-            cacheService.evict(CacheName.BRANCH, branchId);
+            cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchId + CacheName.SUFFIX_DETAILS);
         }
 
         return mapToResponse(saved);
@@ -171,29 +171,29 @@ public class StaffService {
             activityLogService.logStaffUpdated(actor, staff.getBusiness(), staff.getUsername(), details);
         }
         
-        cacheService.evict(CacheName.STAFF, staffId);
+        cacheService.evict(CacheName.STAFF, businessId + CacheName.SEPARATOR + staffId + CacheName.SUFFIX_DETAILS);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
 
         // Evict branch caches
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         for (BranchEntity branch : staff.getBranches()) {
-            cacheService.evict(CacheName.BRANCH, branch.getId());
+            cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branch.getId() + CacheName.SUFFIX_DETAILS);
         }
 
         return mapToResponse(saved);
     }
 
-    @Cacheable(value = CacheName.BUSINESS_STAFF, key = "#businessId")
-    public List<StaffResponse> getStaffByBusiness(UUID businessId) {
+    @Cacheable(value = CacheName.BUSINESS_STAFF, keyGenerator = "businessKeyGenerator")
+    public List<StaffResponse> getStaffByBusiness(@CacheBusinessId UUID businessId) {
         return userRepository.findByBusinessId(businessId).stream()
                 .filter(user -> user.getRole() == UserRole.STAFF)
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    @Cacheable(value = CacheName.STAFF, key = "#staffId")
-    public StaffResponse getStaffMember(UUID staffId, UUID businessId) {
+    @Cacheable(value = CacheName.STAFF, keyGenerator = "businessKeyGenerator")
+    public StaffResponse getStaffMember(UUID staffId, @CacheBusinessId UUID businessId) {
         UserEntity staff = getStaffById(staffId, businessId);
         return mapToResponse(staff);
     }
@@ -212,14 +212,14 @@ public class StaffService {
         userService.evictAuthenticatedUser(staffId);
         
         userRepository.delete(staff);
-        cacheService.evict(CacheName.STAFF, staffId);
+        cacheService.evict(CacheName.STAFF, businessId + CacheName.SEPARATOR + staffId + CacheName.SUFFIX_DETAILS);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
 
         // Evict branch caches
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         for (BranchEntity branch : staff.getBranches()) {
-            cacheService.evict(CacheName.BRANCH, branch.getId());
+            cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branch.getId() + CacheName.SUFFIX_DETAILS);
         }
     }
 

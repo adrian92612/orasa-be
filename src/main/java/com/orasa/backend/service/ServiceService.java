@@ -9,6 +9,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BusinessEntity;
@@ -75,11 +76,11 @@ public class ServiceService {
 
         activityLogService.logServiceCreated(actor, business, saved.getName());
         
-        cacheService.evictAll(CacheName.SERVICES);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES);
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evictAll(CacheName.BRANCH);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.BRANCH, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         return mapToResponse(saved);
     }
 
@@ -148,19 +149,19 @@ public class ServiceService {
             String details = FieldChange.toJson(changes);
             activityLogService.logServiceUpdated(actor, business, serviceOffering.getName(), details);
 
-            cacheService.evictAll(CacheName.SERVICES);
-            cacheService.evictAll(CacheName.BRANCH_SERVICES);
-            cacheService.evict(CacheName.SERVICE, serviceId);
-            cacheService.evict(CacheName.BRANCHES, businessId);
-            cacheService.evictAll(CacheName.BRANCH);
-            cacheService.evictAll(CacheName.USER_BRANCHES);
+            cacheService.evictAll(CacheName.SERVICES, businessId);
+            cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
+            cacheService.evict(CacheName.SERVICE, businessId + CacheName.SEPARATOR + serviceId + CacheName.SUFFIX_DETAILS);
+            cacheService.evictAll(CacheName.BRANCHES, businessId);
+            cacheService.evictAll(CacheName.BRANCH, businessId);
+            cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         }
 
         return mapToResponse(serviceOffering);
     }
 
-    @Cacheable(value = CacheName.SERVICES, key = "{#businessId, #branchId}")
-    public List<ServiceResponse> getServicesByBusiness(UUID businessId, UUID branchId) {
+    @Cacheable(value = CacheName.SERVICES, keyGenerator = "businessKeyGenerator")
+    public List<ServiceResponse> getServicesByBusiness(@CacheBusinessId UUID businessId, UUID branchId) {
         List<ServiceEntity> services;
         if (branchId != null) {
             services = serviceRepository.findServicesForBranch(businessId, branchId);
@@ -172,10 +173,14 @@ public class ServiceService {
                 .toList();
     }
 
-    @Cacheable(value = CacheName.SERVICE, key = "#serviceId")
-    public ServiceResponse getServiceById(UUID serviceId) {
+    @Cacheable(value = CacheName.SERVICE, keyGenerator = "businessKeyGenerator")
+    public ServiceResponse getServiceById(UUID serviceId, @CacheBusinessId UUID businessId) {
         ServiceEntity serviceOffering = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+
+        if (!serviceOffering.getBusinessId().equals(businessId)) {
+            throw new ResourceNotFoundException("Service not found in your business");
+        }
 
         return mapToResponse(serviceOffering);
     }
@@ -201,12 +206,12 @@ public class ServiceService {
         branchServiceRepository.deleteAll(branchLinks);
 
         serviceRepository.delete(serviceOffering);
-        cacheService.evictAll(CacheName.SERVICES);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES);
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evictAll(CacheName.BRANCH);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
-        cacheService.evict(CacheName.SERVICE, serviceId);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.BRANCH, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
+        cacheService.evict(CacheName.SERVICE, businessId + CacheName.SEPARATOR + serviceId + CacheName.SUFFIX_DETAILS);
     }
 
     private ServiceResponse mapToResponse(ServiceEntity serviceOffering) {

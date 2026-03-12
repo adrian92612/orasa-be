@@ -38,6 +38,7 @@ import com.orasa.backend.service.ReminderConfigService;
 import com.orasa.backend.service.SubscriptionService;
 import com.orasa.backend.service.CacheService;
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import com.orasa.backend.common.SmsTaskStatus;
 import com.orasa.backend.domain.ScheduledSmsTaskEntity;
 import com.orasa.backend.config.TimeConfig;
@@ -186,8 +187,8 @@ public class SmsService {
         // Step 4: Finalize status (Transactional via SmsTaskHelper)
         smsTaskHelper.finalizeTaskStatus(preparation.scheduledTask(), smsLog, result);
         
-        cacheService.evict(CacheName.SMS_LOGS, task.getBusinessId());
-        cacheService.evictAll(CacheName.ANALYTICS);
+        cacheService.evictAll(CacheName.SMS_LOGS, task.getBusinessId());
+        cacheService.evictAll(CacheName.ANALYTICS, task.getBusinessId());
     }
 
     /**
@@ -219,14 +220,14 @@ public class SmsService {
         smsLog.setErrorMessage(result.errorMessage());
 
         SmsLogEntity saved = smsLogRepository.save(smsLog);
-        cacheService.evict(CacheName.SMS_LOGS, business.getId());
-        cacheService.evictAll(CacheName.ANALYTICS);
+        cacheService.evictAll(CacheName.SMS_LOGS, business.getId());
+        cacheService.evictAll(CacheName.ANALYTICS, business.getId());
         return saved;
     }
 
-    @Cacheable(value = CacheName.SMS_LOGS, key = "#businessId", condition = "#pageable.pageNumber == 0 && #branchId == null && #status == null && #startDate == null && #endDate == null")
+    @Cacheable(value = CacheName.SMS_LOGS, keyGenerator = "businessKeyGenerator", condition = "#pageable.pageNumber == 0 && #branchId == null && #status == null && #startDate == null && #endDate == null")
     public com.orasa.backend.dto.common.PageResponse<SmsLogResponse> getSmsLogs(
-            UUID businessId,
+            @CacheBusinessId UUID businessId,
             UUID branchId,
             SmsStatus status,
             LocalDate startDate,

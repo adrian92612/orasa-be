@@ -210,7 +210,7 @@ public class AppointmentServiceTest {
 
             verify(activityLogService).logAppointmentCreated(eq(ownerUser), any(AppointmentEntity.class));
             verify(smsService).scheduleRemindersForAppointment(savedAppointment);
-            verify(cacheService).evictAll(com.orasa.backend.common.CacheName.ANALYTICS);
+            verify(cacheService).evictAll(com.orasa.backend.common.CacheName.ANALYTICS, businessId);
         }
 
         @Test
@@ -361,7 +361,7 @@ public class AppointmentServiceTest {
             verify(activityLogService).logAppointmentDeleted(ownerUser, appointment);
             verify(smsService).cancelRemindersForAppointment(appointment.getId());
             verify(appointmentRepository).delete(appointment);
-            verify(cacheService).evictAll(com.orasa.backend.common.CacheName.ANALYTICS);
+            verify(cacheService).evictAll(com.orasa.backend.common.CacheName.ANALYTICS, business.getId());
         }
 
         @Test

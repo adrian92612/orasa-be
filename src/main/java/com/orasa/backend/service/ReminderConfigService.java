@@ -7,6 +7,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.orasa.backend.common.CacheName;
+import com.orasa.backend.config.CacheBusinessId;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
@@ -49,7 +50,7 @@ public class ReminderConfigService {
                 .build();
 
         BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
-        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId);
+        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId + CacheName.SUFFIX_LIST);
         return mapToResponse(saved);
     }
 
@@ -78,12 +79,12 @@ public class ReminderConfigService {
         }
 
         BusinessReminderConfigEntity saved = reminderConfigRepository.save(config);
-        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId);
+        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId + CacheName.SUFFIX_LIST);
         return mapToResponse(saved);
     }
 
-    @Cacheable(value = CacheName.REMINDER_CONFIGS, key = "#businessId")
-    public List<ReminderConfigResponse> getConfigsByBusiness(UUID businessId) {
+    @Cacheable(value = CacheName.REMINDER_CONFIGS, keyGenerator = "businessKeyGenerator")
+    public List<ReminderConfigResponse> getConfigsByBusiness(@CacheBusinessId UUID businessId) {
         return reminderConfigRepository.findByBusinessId(businessId).stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -109,7 +110,7 @@ public class ReminderConfigService {
     public void deleteConfig(UUID configId, UUID businessId) {
         BusinessReminderConfigEntity config = getConfigById(configId, businessId);
         reminderConfigRepository.delete(config);
-        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId);
+        cacheService.evict(CacheName.REMINDER_CONFIGS, businessId + CacheName.SUFFIX_LIST);
     }
 
     private BusinessReminderConfigEntity getConfigById(UUID configId, UUID businessId) {

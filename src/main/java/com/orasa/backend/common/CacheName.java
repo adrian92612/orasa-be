@@ -18,4 +18,11 @@ public final class CacheName {
     public static final String ANALYTICS = "analytics";
     public static final String BUSINESS_ACTIVITY_LOGS = "business-activity-logs";
     public static final String BRANCH_ACTIVITY_LOGS = "branch-activity-logs";
+
+    // Standard suffixes and separators
+    public static final String SEPARATOR = ":";
+    public static final String REGION_SEPARATOR = "::";
+    public static final String SUFFIX_LIST = ":list";
+    public static final String SUFFIX_DETAILS = ":details";
+    public static final String SUFFIX_ALL = ":all";
 }

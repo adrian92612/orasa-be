@@ -16,6 +16,7 @@ import com.orasa.backend.common.CacheName;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.orasa.backend.common.UserRole;
+import com.orasa.backend.config.CacheBusinessId;
 import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.ServiceEntity;
@@ -96,26 +97,28 @@ public class BranchService {
         // Log branch creation
         activityLogService.logBranchCreated(owner, business, saved);
 
-        log.info("Branch created with ID: {}", saved.getId());
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
-        cacheService.evictAll(CacheName.SERVICES);
+        log.info("Branch created successfully: {}", saved.getId());
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
-        cacheService.evictAll(CacheName.STAFF);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES);
+        cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
         return mapToResponse(saved);
     }
 
-    @Cacheable(value = CacheName.BRANCHES, key = "#businessId")
-    public List<BranchResponse> getBranchesByBusiness(UUID businessId) {
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheName.BRANCHES, keyGenerator = "businessKeyGenerator")
+    public List<BranchResponse> getBranchesByBusiness(@CacheBusinessId UUID businessId) {
         List<BranchEntity> branches = branchRepository.findByBusinessId(businessId);
         return branches.stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    @Cacheable(value = CacheName.USER_BRANCHES, key = "#userId")
-    public List<BranchResponse> getBranchesForUser(UUID userId) {
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheName.USER_BRANCHES, keyGenerator = "businessKeyGenerator")
+    public List<BranchResponse> getBranchesForUser(UUID userId, @CacheBusinessId UUID businessId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
@@ -234,13 +237,13 @@ public class BranchService {
         activityLogService.logBranchUpdated(actor, branch.getBusiness(), saved, details);
 
         log.info("Branch {} updated. Changes: {}", branchId, changes.size());
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evict(CacheName.BRANCH, branchId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
-        cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchId + CacheName.SUFFIX_DETAILS);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
-        cacheService.evictAll(CacheName.STAFF);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES);
+        cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
         return mapToResponse(saved);
     }
 
@@ -317,19 +320,24 @@ public class BranchService {
         activityLogService.logBranchDeleted(actor, branch.getBusiness(), branch.getName());
 
         branchRepository.delete(branch);
-        cacheService.evict(CacheName.BRANCHES, businessId);
-        cacheService.evict(CacheName.BRANCH, branchId);
-        cacheService.evictAll(CacheName.USER_BRANCHES);
-        cacheService.evictAll(CacheName.SERVICES);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchId + CacheName.SUFFIX_DETAILS);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
-        cacheService.evictAll(CacheName.STAFF);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES);
+        cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
     }
 
-    @Cacheable(value = CacheName.BRANCH, key = "#branchId")
-    public BranchResponse getBranchById(UUID branchId) {
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheName.BRANCH, keyGenerator = "businessKeyGenerator")
+    public BranchResponse getBranchById(UUID branchId, @CacheBusinessId UUID businessId) {
         BranchEntity branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
+
+        if (!branch.getBusiness().getId().equals(businessId)) {
+            throw new ResourceNotFoundException("Branch not found in your business");
+        }
 
         return mapToResponse(branch);
     }

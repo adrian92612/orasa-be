@@ -155,7 +155,7 @@ public class AppointmentService {
         }
     }
 
-    cacheService.evictAll(CacheName.ANALYTICS);
+    cacheService.evictAll(CacheName.ANALYTICS, saved.getBusiness().getId());
     return appointmentMapper.mapToResponse(saved);
   }
 
@@ -251,7 +251,7 @@ public class AppointmentService {
     // Handle reminder scheduling
     handleReminderUpdates(saved, result);
 
-    cacheService.evictAll(CacheName.ANALYTICS);
+    cacheService.evictAll(CacheName.ANALYTICS, saved.getBusiness().getId());
     return new UpdateResult(appointmentMapper.mapToResponse(saved), true);
   }
 
@@ -292,7 +292,7 @@ public class AppointmentService {
 
     handleStatusChangeReminders(saved, beforeStatus, newStatus);
 
-    cacheService.evictAll(CacheName.ANALYTICS);
+    cacheService.evictAll(CacheName.ANALYTICS, saved.getBusiness().getId());
     return appointmentMapper.mapToResponse(saved);
   }
 
@@ -428,7 +428,7 @@ public class AppointmentService {
     smsService.cancelRemindersForAppointment(id);
 
     appointmentRepository.delete(appointment);
-    cacheService.evictAll(CacheName.ANALYTICS);
+    cacheService.evictAll(CacheName.ANALYTICS, appointment.getBusiness().getId());
   }
 
   // Safe bounds for PostgreSQL timestamptz

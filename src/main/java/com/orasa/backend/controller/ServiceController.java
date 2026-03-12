@@ -85,7 +85,7 @@ public class ServiceController extends BaseController {
         public ResponseEntity<ApiResponse<ServiceResponse>> getServiceById(
                         @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
                         @PathVariable UUID serviceId) {
-                ServiceResponse service = serviceService.getServiceById(serviceId);
+                ServiceResponse service = serviceService.getServiceById(serviceId, authenticatedUser.businessId());
 
                 if (!service.getBusinessId().equals(authenticatedUser.businessId())) {
                         throw new BusinessException("Service does not belong to your business");
