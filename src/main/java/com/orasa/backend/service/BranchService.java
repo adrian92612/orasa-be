@@ -92,7 +92,7 @@ public class BranchService {
         cacheService.evictAll(CacheName.BRANCHES, businessId);
         cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         cacheService.evictAll(CacheName.SERVICES, businessId);
-        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
         return mapToResponse(saved);
     }
@@ -228,7 +228,7 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchId + CacheName.SUFFIX_DETAILS);
         cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         cacheService.evictAll(CacheName.SERVICES, businessId);
-        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
         return mapToResponse(saved);
     }
@@ -256,7 +256,7 @@ public class BranchService {
         cacheService.evict(CacheName.BRANCH, businessId + CacheName.SEPARATOR + branchId + CacheName.SUFFIX_DETAILS);
         cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
         cacheService.evictAll(CacheName.SERVICES, businessId);
-        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
     }
 
