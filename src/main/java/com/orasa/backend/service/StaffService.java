@@ -85,7 +85,7 @@ public class StaffService {
         // Log staff creation
         activityLogService.logStaffCreated(actor, business, saved.getUsername());
         
-        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
 
         // Evict branch caches
         cacheService.evictAll(CacheName.BRANCHES, businessId);
@@ -172,7 +172,7 @@ public class StaffService {
         }
         
         cacheService.evict(CacheName.STAFF, businessId + CacheName.SEPARATOR + staffId + CacheName.SUFFIX_DETAILS);
-        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
 
         // Evict branch caches
         cacheService.evictAll(CacheName.BRANCHES, businessId);
@@ -213,7 +213,7 @@ public class StaffService {
         
         userRepository.delete(staff);
         cacheService.evict(CacheName.STAFF, businessId + CacheName.SEPARATOR + staffId + CacheName.SUFFIX_DETAILS);
-        cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
 
         // Evict branch caches
         cacheService.evictAll(CacheName.BRANCHES, businessId);
