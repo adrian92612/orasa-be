@@ -26,11 +26,10 @@ public class AppointmentResponse {
   private String customerName;
   private String customerPhone;
   private OffsetDateTime startDateTime;
-  private OffsetDateTime endDateTime;
   private String notes;
   private AppointmentStatus status;
   private List<ServiceInfo> services;
-  private List<UUID> selectedReminderIds;
+  private boolean remindersEnabled;
   private Integer additionalReminderMinutes;
   private String additionalReminderTemplate;
   private OffsetDateTime createdAt;

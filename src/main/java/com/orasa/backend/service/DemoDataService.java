@@ -1,6 +1,5 @@
 package com.orasa.backend.service;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -26,7 +25,6 @@ import com.orasa.backend.common.UserRole;
 import com.orasa.backend.domain.ActivityLogEntity;
 import com.orasa.backend.domain.AppointmentEntity;
 import com.orasa.backend.domain.BranchEntity;
-import com.orasa.backend.domain.BranchServiceEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.domain.ServiceEntity;
@@ -35,7 +33,6 @@ import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.repository.ActivityLogRepository;
 import com.orasa.backend.repository.AppointmentRepository;
 import com.orasa.backend.repository.BranchRepository;
-import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessReminderConfigRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.ServiceRepository;
@@ -55,7 +52,6 @@ public class DemoDataService {
     private final BusinessRepository businessRepository;
     private final BranchRepository branchRepository;
     private final ServiceRepository serviceRepository;
-    private final BranchServiceRepository branchServiceRepository;
     private final AppointmentRepository appointmentRepository;
     private final BusinessReminderConfigRepository reminderConfigRepository;
     private final ActivityLogRepository activityLogRepository;
@@ -137,7 +133,6 @@ public class DemoDataService {
                 .address("456 Tomas Morato, Quezon City")
                 .phoneNumber("09181234567")
                 .build();
-
         qcBranch = branchRepository.save(qcBranch);
         
         // Link owner to all branches
@@ -148,24 +143,10 @@ public class DemoDataService {
         userRepository.save(owner);
 
         // 5. Create Services
-        ServiceEntity consultation = createService(business, "General Consultation", "Standard checkup", new BigDecimal("500.00"), 30);
-        ServiceEntity followUp = createService(business, "Follow-up Checkup", "Review of previous condition", new BigDecimal("300.00"), 15);
-        ServiceEntity dental = createService(business, "Dental Cleaning", "Full prophylaxis", new BigDecimal("1500.00"), 60);
-        ServiceEntity whitening = createService(business, "Teeth Whitening", "Laser teeth whitening", new BigDecimal("5000.00"), 90);
-        ServiceEntity extraction = createService(business, "Tooth Extraction", "Simple extraction per tooth", new BigDecimal("1000.00"), 45);
-
-        // Link services to branches
-        // Makati has everything except extraction
-        linkServiceToBranch(makatiBranch, consultation);
-        linkServiceToBranch(makatiBranch, followUp);
-        linkServiceToBranch(makatiBranch, dental);
-        linkServiceToBranch(makatiBranch, whitening);
-
-        // QC has basics + extraction
-        linkServiceToBranch(qcBranch, consultation);
-        linkServiceToBranch(qcBranch, followUp);
-        linkServiceToBranch(qcBranch, dental);
-        linkServiceToBranch(qcBranch, extraction);
+        ServiceEntity consultation = createService(business, "General Consultation", "Standard checkup");
+        ServiceEntity dental = createService(business, "Dental Cleaning", "Full prophylaxis");
+        ServiceEntity whitening = createService(business, "Teeth Whitening", "Laser teeth whitening");
+        ServiceEntity extraction = createService(business, "Tooth Extraction", "Simple extraction per tooth");
 
         // 6. Create Staff
         createStaff(business, makatiBranch, "staff.makati1", "Makati Front Desk 1");
@@ -293,24 +274,13 @@ public class DemoDataService {
         return reminderConfigRepository.save(config);
     }
 
-    private ServiceEntity createService(BusinessEntity business, String name, String description, BigDecimal price, int duration) {
+    private ServiceEntity createService(BusinessEntity business, String name, String description) {
         ServiceEntity service = ServiceEntity.builder()
                 .businessId(business.getId())
                 .name(name)
                 .description(description)
-                .basePrice(price)
-                .durationMinutes(duration)
                 .build();
         return serviceRepository.save(service);
-    }
-
-    private void linkServiceToBranch(BranchEntity branch, ServiceEntity service) {
-        BranchServiceEntity link = BranchServiceEntity.builder()
-                .branchId(branch.getId())
-                .service(service)
-                .isActive(true)
-                .build();
-        branchServiceRepository.save(link);
     }
 
     private void createStaff(BusinessEntity business, BranchEntity branch, String username, String displayName) { 
@@ -359,7 +329,7 @@ public class DemoDataService {
                 for (int s = 0; s < serviceCount; s++) {
                     ServiceEntity svc = availableServices.get(s);
                     selectedServices.add(svc);
-                    totalDuration += svc.getDurationMinutes();
+                    totalDuration += 60; // Just assume 1 hour per service for demo data time progression
                 }
                 
                 // Get varied customer names
@@ -421,8 +391,7 @@ public class DemoDataService {
         LocalTime time = LocalTime.parse(timeStr);
         OffsetDateTime start = date.atTime(time).atZone(TimeConfig.PH_ZONE).toOffsetDateTime();
         
-        int totalDuration = services.stream().mapToInt(ServiceEntity::getDurationMinutes).sum();
-        OffsetDateTime end = start.plusMinutes(totalDuration);
+
 
         boolean remindersEnabled = (type == AppointmentType.SCHEDULED);
 
@@ -433,12 +402,10 @@ public class DemoDataService {
                 .customerName(customerName)
                 .customerPhone(customerPhone)
                 .startDateTime(start)
-                .endDateTime(end)
                 .status(status)
                 .type(type)
                 .notes(notes)
                 .remindersEnabled(remindersEnabled)
-                .selectedReminders(remindersEnabled ? reminders : null)
                 .build();
         
         appointment = appointmentRepository.save(appointment);

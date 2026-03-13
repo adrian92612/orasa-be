@@ -25,7 +25,7 @@ public class AppointmentChangeTracker {
     private final List<FieldChange> changes;
     private final boolean startTimeChanged;
     private final boolean additionalReminderChanged;
-    private final boolean selectedRemindersChanged;
+    private final boolean remindersEnabledChanged;
     private final boolean servicesChanged;
 
     public boolean hasChanges() {
@@ -33,11 +33,11 @@ public class AppointmentChangeTracker {
     }
   }
 
-  public ChangeResult trackChanges(AppointmentEntity appointment, UpdateAppointmentRequest request, List<ServiceEntity> beforeServices, Set<UUID> beforeReminderIds) {
+  public ChangeResult trackChanges(AppointmentEntity appointment, UpdateAppointmentRequest request, List<ServiceEntity> beforeServices) {
     List<FieldChange> changes = new ArrayList<>();
     boolean startTimeChanged = false;
     boolean additionalReminderChanged = false;
-    boolean selectedRemindersChanged = false;
+    boolean remindersEnabledChanged = false;
     boolean servicesChanged = false;
 
     // Customer Name
@@ -71,15 +71,6 @@ public class AppointmentChangeTracker {
       startTimeChanged = true;
     }
 
-    // End Time
-    if (request.getEndDateTime() != null && (appointment.getEndDateTime() == null || !request.getEndDateTime().isEqual(appointment.getEndDateTime()))) {
-      changes.add(FieldChange.builder()
-          .field("End Time")
-          .before(DateTimeUtils.formatDateTime(appointment.getEndDateTime()))
-          .after(DateTimeUtils.formatDateTime(request.getEndDateTime()))
-          .build());
-      appointment.setEndDateTime(request.getEndDateTime());
-    }
 
     // Notes
     if (request.getNotes() != null && !request.getNotes().equals(appointment.getNotes())) {
@@ -148,11 +139,10 @@ public class AppointmentChangeTracker {
       }
     }
 
-    // Selected Reminders detection (actual update happens in service)
-    if (request.getSelectedReminderIds() != null) {
-      Set<UUID> newIds = new HashSet<>(request.getSelectedReminderIds());
-      if (!beforeReminderIds.equals(newIds)) {
-        selectedRemindersChanged = true;
+    // Reminders enabled changes
+    if (request.getRemindersEnabled() != null) {
+      if (appointment.isRemindersEnabled() != request.getRemindersEnabled()) {
+        remindersEnabledChanged = true;
       }
     }
 
@@ -160,7 +150,7 @@ public class AppointmentChangeTracker {
         .changes(changes)
         .startTimeChanged(startTimeChanged)
         .additionalReminderChanged(additionalReminderChanged)
-        .selectedRemindersChanged(selectedRemindersChanged)
+        .remindersEnabledChanged(remindersEnabledChanged)
         .servicesChanged(servicesChanged)
         .build();
   }

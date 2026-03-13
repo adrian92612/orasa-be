@@ -20,13 +20,9 @@ import com.orasa.backend.dto.branch.BranchResponse;
 import com.orasa.backend.dto.branch.CreateBranchRequest;
 import com.orasa.backend.dto.branch.UpdateBranchRequest;
 import com.orasa.backend.dto.common.ApiResponse;
-
-import com.orasa.backend.dto.service.AssignServiceToBranchRequest;
-import com.orasa.backend.dto.service.BranchServiceResponse;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.security.AuthenticatedUser;
 import com.orasa.backend.service.BranchService;
-import com.orasa.backend.service.BranchServiceService;
 import com.orasa.backend.common.UserRole;
 
 import jakarta.validation.Valid;
@@ -40,7 +36,6 @@ import lombok.extern.slf4j.Slf4j;
 public class BranchController extends BaseController {
 
         private final BranchService branchService;
-        private final BranchServiceService branchServiceService;
 
         @PostMapping
         @PreAuthorize("hasRole('OWNER')")
@@ -130,67 +125,5 @@ public class BranchController extends BaseController {
                 return ResponseEntity.ok(ApiResponse.success("Branch deleted successfully"));
         }
 
-        @PostMapping("/{branchId}/services")
-        @PreAuthorize("hasRole('OWNER')")
-        public ResponseEntity<ApiResponse<BranchServiceResponse>> assignServiceToBranch(
-                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-                        @PathVariable UUID branchId,
-                        @Valid @RequestBody AssignServiceToBranchRequest request) {
-                validateBusinessExists(authenticatedUser);
-                log.info("Assigning service {} to branch {}", request.getServiceId(), branchId);
 
-                BranchServiceResponse branchService = branchServiceService.assignServiceToBranch(
-                                branchId,
-                                authenticatedUser.businessId(),
-                                request);
-
-                return ResponseEntity.status(HttpStatus.CREATED)
-                                .body(ApiResponse.success("Service assigned to branch successfully", branchService));
-        }
-
-        @GetMapping("/{branchId}/services")
-        @PreAuthorize("hasRole('OWNER') or hasRole('STAFF')")
-        public ResponseEntity<ApiResponse<List<BranchServiceResponse>>> getServicesByBranch(
-                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-                        @PathVariable UUID branchId) {
-                log.debug("Fetching services for branch {}", branchId);
-                BranchResponse branch = branchService.getBranchById(branchId, authenticatedUser.businessId());
-                if (!branch.getBusinessId().equals(authenticatedUser.businessId())) {
-                        throw new BusinessException("Branch does not belong to your business");
-                }
-
-                List<BranchServiceResponse> services = branchServiceService.getServicesByBranch(branchId, authenticatedUser.businessId());
-                return ResponseEntity.ok(ApiResponse.success(services));
-        }
-
-        @PutMapping("/{branchId}/services/{branchServiceId}")
-        @PreAuthorize("hasRole('OWNER')")
-        public ResponseEntity<ApiResponse<BranchServiceResponse>> updateBranchService(
-                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-                        @PathVariable UUID branchId,
-                        @PathVariable UUID branchServiceId,
-                        @Valid @RequestBody AssignServiceToBranchRequest request) {
-                validateBusinessExists(authenticatedUser);
-                log.info("Updating branch service assignment {}", branchServiceId);
-
-                BranchServiceResponse branchService = branchServiceService.updateBranchService(
-                                branchServiceId,
-                                authenticatedUser.businessId(),
-                                request);
-
-                return ResponseEntity.ok(ApiResponse.success("Branch service updated successfully", branchService));
-        }
-
-        @DeleteMapping("/{branchId}/services/{branchServiceId}")
-        @PreAuthorize("hasRole('OWNER')")
-        public ResponseEntity<ApiResponse<Void>> removeServiceFromBranch(
-                        @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-                        @PathVariable UUID branchId,
-                        @PathVariable UUID branchServiceId) {
-                validateBusinessExists(authenticatedUser);
-                log.info("Removing service assignment {} from branch {}", branchServiceId, branchId);
-
-                branchServiceService.removeServiceFromBranch(branchServiceId, authenticatedUser.businessId());
-                return ResponseEntity.ok(ApiResponse.success("Service removed from branch successfully"));
-        }
 }

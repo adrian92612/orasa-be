@@ -7,7 +7,6 @@ import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -28,11 +27,5 @@ public class ServiceEntity extends BaseEntity {
     private String name;
 
     private String description;
-
-    @Column(name = "base_price", nullable = false)
-    private BigDecimal basePrice;
-
-    @Column(name = "duration_minutes", nullable = false)
-    private Integer durationMinutes;
 
 }
