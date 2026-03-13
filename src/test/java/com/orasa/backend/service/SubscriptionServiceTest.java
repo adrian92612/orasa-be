@@ -262,7 +262,8 @@ public class SubscriptionServiceTest {
             assertThat(business.getSubscriptionEndDate()).isAfter(now);
             assertThat(business.getNextCreditResetDate()).isAfter(now);
             verify(businessRepository).save(business);
-            verify(cacheService).evict(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.ANALYTICS, businessId);
             verify(delayedQueue).offer(any(CreditResetTask.class), anyLong(), eq(TimeUnit.MILLISECONDS));
         }
 
@@ -309,7 +310,8 @@ public class SubscriptionServiceTest {
             assertThat(business.getSubscriptionEndDate()).isNotNull();
             assertThat(business.getNextCreditResetDate()).isNull();
             verify(businessRepository).save(business);
-            verify(cacheService).evict(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.ANALYTICS, businessId);
         }
 
         @Test
@@ -339,7 +341,8 @@ public class SubscriptionServiceTest {
 
             assertThat(business.getSubscriptionEndDate()).isEqualTo(currentEndDate.plusMonths(2));
             verify(businessRepository).save(business);
-            verify(cacheService).evict(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.ANALYTICS, businessId);
         }
 
         @Test
@@ -444,7 +447,8 @@ public class SubscriptionServiceTest {
             assertThat(business.getFreeSmsCredits()).isEqualTo(100);
             assertThat(business.getNextCreditResetDate()).isAfter(now);
             verify(businessRepository).save(business);
-            verify(cacheService).evict(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.ANALYTICS, businessId);
         }
 
         @Test
@@ -502,7 +506,8 @@ public class SubscriptionServiceTest {
 
             assertThat(business.getPaidSmsCredits()).isEqualTo(55);
             verify(businessRepository).save(business);
-            verify(cacheService).evict(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.BUSINESS, businessId);
+            verify(cacheService).evictAll(CacheName.ANALYTICS, businessId);
         }
 
         @Test
