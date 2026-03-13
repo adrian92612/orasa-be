@@ -263,7 +263,8 @@ public class SubscriptionService {
     }
 
     private void evictBusinessCache(UUID businessId) {
-        cacheService.evict(CacheName.BUSINESS, businessId);
+        cacheService.evictAll(CacheName.BUSINESS, businessId);
+        cacheService.evictAll(CacheName.ANALYTICS, businessId);
     }
 
     private void scheduleCreditReset(UUID businessId, OffsetDateTime resetDate) {
