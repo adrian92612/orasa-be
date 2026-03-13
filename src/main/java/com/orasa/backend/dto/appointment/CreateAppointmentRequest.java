@@ -32,7 +32,6 @@ public class CreateAppointmentRequest {
   @NotNull(message = "Start time is required")
   private OffsetDateTime startDateTime;
 
-  private OffsetDateTime endDateTime;
 
   private String notes;
 
@@ -42,7 +41,8 @@ public class CreateAppointmentRequest {
 
   private List<UUID> serviceIds;
 
-  private List<UUID> selectedReminderIds;
+  @Builder.Default
+  private Boolean remindersEnabled = true;
 
   @Min(value = 0, message = "Additional reminder cannot be negative")
   private Integer additionalReminderMinutes;

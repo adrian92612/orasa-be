@@ -16,7 +16,6 @@ DROP TABLE IF EXISTS appointment_reminders CASCADE;
 DROP TABLE IF EXISTS appointment_services CASCADE;
 DROP TABLE IF EXISTS appointments CASCADE;
 DROP TABLE IF EXISTS business_reminder_configs CASCADE;
-DROP TABLE IF EXISTS branch_services CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS user_branches CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -91,30 +90,12 @@ CREATE TABLE services (
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    base_price DECIMAL(10, 2) NOT NULL,
-    duration_minutes INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE
-);
-
--- 6. Branch Services
-CREATE TABLE branch_services (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
-    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
-    custom_price DECIMAL(10, 2),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE(branch_id, service_id)
 );
 
 -- 7. Appointments (Performance Core)
@@ -127,7 +108,6 @@ CREATE TABLE appointments (
     customer_phone VARCHAR(50) NOT NULL,
 
     start_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     notes TEXT,
@@ -246,12 +226,6 @@ CREATE TABLE scheduled_sms_tasks (
 CREATE INDEX idx_sms_queue_active ON scheduled_sms_tasks (scheduled_at ASC) 
 WHERE status = 'PENDING' AND is_deleted = FALSE;
 
--- 12. Appointment Reminders (Join Table)
-CREATE TABLE appointment_reminders (
-    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
-    reminder_config_id UUID NOT NULL REFERENCES business_reminder_configs(id) ON DELETE CASCADE,
-    PRIMARY KEY (appointment_id, reminder_config_id)
-);
 
 -- 12b. Appointment Services (Many-to-Many Join Table)
 CREATE TABLE appointment_services (

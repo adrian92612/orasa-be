@@ -3,7 +3,6 @@ package com.orasa.backend.service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -21,7 +20,6 @@ import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.domain.UserEntity;
-import com.orasa.backend.domain.BranchServiceEntity;
 
 import com.orasa.backend.dto.activity.FieldChange;
 import com.orasa.backend.dto.branch.BranchResponse;
@@ -32,7 +30,6 @@ import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.common.utils.SanitizationUtils;
 import com.orasa.backend.repository.BranchRepository;
-import com.orasa.backend.repository.BranchServiceRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.UserRepository;
@@ -51,7 +48,6 @@ public class BranchService {
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
     private final ServiceRepository serviceRepository;
-    private final BranchServiceRepository branchServiceRepository;
     private final CacheService cacheService;
 
     @Transactional
@@ -84,12 +80,7 @@ public class BranchService {
             userRepository.saveAll(usersToAdd);
         }
 
-        // Handle Services
-        Set<UUID> serviceIds = request.getServiceIds();
-        if (serviceIds == null) {
-            serviceIds = Collections.emptySet();
-        }
-        updateBranchServices(saved, serviceIds, new ArrayList<>());
+
 
         owner.getBranches().add(saved);
         userRepository.save(owner);
@@ -103,7 +94,6 @@ public class BranchService {
         cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
         return mapToResponse(saved);
     }
 
@@ -220,10 +210,7 @@ public class BranchService {
             }
         }
 
-        // Check Service changes
-        if (request.getServiceIds() != null) {
-            updateBranchServices(branch, request.getServiceIds(), changes);
-        }
+
 
         if (changes.isEmpty()) {
             log.info("No changes detected for branch {}", branchId);
@@ -243,65 +230,10 @@ public class BranchService {
         cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
         return mapToResponse(saved);
     }
 
-    private void updateBranchServices(BranchEntity branch, Set<UUID> requestedActiveServiceIds, List<FieldChange> changes) {
-        List<ServiceEntity> allServices = serviceRepository.findByBusinessId(branch.getBusiness().getId());
-        List<BranchServiceEntity> existingOverrides = branchServiceRepository.findByBranchId(branch.getId());
-        Map<UUID, BranchServiceEntity> overrideMap = existingOverrides.stream()
-                .collect(Collectors.toMap(bs -> bs.getService().getId(), bs -> bs));
 
-        List<BranchServiceEntity> toSave = new ArrayList<>();
-        int oldActiveCount = 0; // Count previously active services
-        int newActiveCount = 0; // Count effectively active services
-        boolean needsSave = false;
-
-        for (ServiceEntity service : allServices) {
-            // Determine current state (before this update)
-            BranchServiceEntity override = overrideMap.get(service.getId());
-            boolean wasActive = (override != null) && override.isActive();
-
-            if (wasActive) {
-                oldActiveCount++;
-            }
-
-            // Determine target state (after this update)
-            boolean shouldBeActive = requestedActiveServiceIds.contains(service.getId());
-            if (shouldBeActive) {
-                newActiveCount++;
-            }
-
-            boolean statusChanged = wasActive != shouldBeActive;
-            boolean missingRecord = override == null;
-
-            if (statusChanged || (shouldBeActive && missingRecord)) {
-                needsSave = true;
-                if (override == null) {
-                    override = BranchServiceEntity.builder()
-                            .branchId(branch.getId())
-                            .service(service)
-                            .isActive(shouldBeActive)
-                            .build();
-                } else {
-                    override.setActive(shouldBeActive);
-                }
-                toSave.add(override);
-            }
-        }
-
-        if (needsSave) {
-            branchServiceRepository.saveAll(toSave);
-            if (oldActiveCount != newActiveCount) {
-                changes.add(FieldChange.builder()
-                        .field("Services")
-                        .before(oldActiveCount + " Active")
-                        .after(newActiveCount + " Active")
-                        .build());
-            }
-        }
-    }
 
     @Transactional
     public void deleteBranch(UUID userId, UUID branchId, UUID businessId) {
@@ -326,7 +258,6 @@ public class BranchService {
         cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evict(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
-        cacheService.evictAll(CacheName.BRANCH_SERVICES, businessId);
     }
 
     @Transactional(readOnly = true)
@@ -343,11 +274,9 @@ public class BranchService {
     }
 
     private BranchResponse mapToResponse(BranchEntity branch) {
-        List<BranchServiceEntity> overrides = branchServiceRepository.findByBranchId(branch.getId());
-
-        Set<UUID> activeServiceIds = overrides.stream()
-                .filter(BranchServiceEntity::isActive)
-                .map(bs -> bs.getService().getId())
+        List<ServiceEntity> activeServices = serviceRepository.findByBusinessId(branch.getBusiness().getId());
+        Set<UUID> activeServiceIds = activeServices.stream()
+                .map(ServiceEntity::getId)
                 .collect(Collectors.toSet());
 
         Set<UserEntity> staffUsers = branch.getStaff() != null 

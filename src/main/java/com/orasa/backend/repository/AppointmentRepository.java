@@ -27,7 +27,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
   @EntityGraph(attributePaths = {"branch", "business", "services"})
   Page<AppointmentEntity> findByBusinessIdAndBranchIdIn(UUID businessId, List<UUID> branchIds, Pageable pageable);
 
-  @EntityGraph(attributePaths = {"branch", "business", "services", "selectedReminders"})
+  @EntityGraph(attributePaths = {"branch", "business", "services"})
   @Query("SELECT a FROM AppointmentEntity a WHERE a.id IN :ids")
   List<AppointmentEntity> findAllByIdWithAssociations(@Param("ids") List<UUID> ids);
 
@@ -77,13 +77,12 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
   @Query("SELECT new com.orasa.backend.dto.analytics.DailyStatsDTO(" +
          "CAST(a.startDateTime AS LocalDate), " +
          "COUNT(DISTINCT a), " +
-         "SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END), " +
-         "COALESCE(SUM(CASE WHEN a.status = 'COMPLETED' THEN s.basePrice ELSE 0 END), 0)) " +
-         "FROM AppointmentEntity a LEFT JOIN a.services s " +
+         "SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END)) " +
+         "FROM AppointmentEntity a " +
          "WHERE a.business.id = :businessId " +
          "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
          "AND a.startDateTime >= :start " +
-         "AND a.endDateTime <= :end " +
+         "AND a.startDateTime <= :end " +
          "GROUP BY CAST(a.startDateTime AS LocalDate) " +
          "ORDER BY CAST(a.startDateTime AS LocalDate) ASC")
   List<com.orasa.backend.dto.analytics.DailyStatsDTO> getDailyStats(
@@ -101,7 +100,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
          "WHERE a.business.id = :businessId " +
          "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
          "AND a.startDateTime >= :start " +
-         "AND a.endDateTime <= :end " +
+         "AND a.startDateTime <= :end " +
          "GROUP BY s.name " +
          "ORDER BY COUNT(a) DESC")
   List<com.orasa.backend.dto.analytics.ServiceStatsDTO> getServiceStats(
@@ -117,7 +116,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
          "WHERE a.business.id = :businessId " +
          "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
          "AND a.startDateTime >= :start " +
-         "AND a.endDateTime <= :end " +
+         "AND a.startDateTime <= :end " +
          "GROUP BY a.status")
   List<com.orasa.backend.dto.analytics.StatusStatsDTO> getStatusStats(
       @Param("businessId") UUID businessId, 

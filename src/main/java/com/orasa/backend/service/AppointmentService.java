@@ -7,7 +7,7 @@ import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
-import java.util.Set;
+
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -19,7 +19,7 @@ import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 import com.orasa.backend.common.UserRole;
 import com.orasa.backend.domain.AppointmentEntity;
-import com.orasa.backend.domain.BaseEntity;
+
 import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
 import com.orasa.backend.domain.UserEntity;
@@ -36,16 +36,14 @@ import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.repository.ServiceRepository;
-import com.orasa.backend.repository.BusinessReminderConfigRepository;
 import com.orasa.backend.domain.ServiceEntity;
-import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.service.sms.SmsService;
 import com.orasa.backend.config.TimeConfig;
 import com.orasa.backend.common.CacheName;
 import com.orasa.backend.mapper.AppointmentMapper;
 import com.orasa.backend.security.SecurityValidator;
 import com.orasa.backend.service.helper.AppointmentChangeTracker;
-import com.orasa.backend.util.DateTimeUtils;
+
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +61,7 @@ public class AppointmentService {
   private final ActivityLogService activityLogService;
   private final SmsService smsService;
   private final ServiceRepository serviceRepository;
-  private final BusinessReminderConfigRepository reminderConfigRepository;
+
   private final Clock clock;
   private final CacheService cacheService;
 
@@ -108,7 +106,7 @@ public class AppointmentService {
         .customerPhone(request.getCustomerPhone())
         .startDateTime(request.getStartDateTime())
         .notes(request.getNotes())
-        .remindersEnabled(true)
+        .remindersEnabled(request.getRemindersEnabled() != null ? request.getRemindersEnabled() : true)
         .status(AppointmentStatus.PENDING)
         .type(request.getIsWalkin() ? AppointmentType.WALK_IN : AppointmentType.SCHEDULED)
         .additionalReminderMinutes(reminderMinutes)
@@ -116,33 +114,14 @@ public class AppointmentService {
 
     // Resolve services
     List<UUID> serviceIds = request.getServiceIds();
-    if (serviceIds != null && !serviceIds.isEmpty()) {
-      List<ServiceEntity> serviceEntities = serviceRepository.findAllById(serviceIds);
-      if (serviceEntities.size() != serviceIds.size()) {
-        throw new ResourceNotFoundException("One or more services not found");
-      }
-      builder.services(new HashSet<>(serviceEntities));
-      
-      if (request.getEndDateTime() == null) {
-        int totalDuration = serviceEntities.stream()
-            .mapToInt(ServiceEntity::getDurationMinutes)
-            .sum();
-        builder.endDateTime(request.getStartDateTime().plusMinutes(totalDuration));
-      } else {
-        builder.endDateTime(request.getEndDateTime());
-      }
-    } else {
-      if (request.getEndDateTime() == null) {
-        throw new InvalidAppointmentException("End time or Service is required");
-      }
-      builder.endDateTime(request.getEndDateTime());
+    if (serviceIds == null || serviceIds.isEmpty()) {
+      throw new InvalidAppointmentException("At least one service is required");
     }
-
-    if (request.getSelectedReminderIds() != null) {
-      List<BusinessReminderConfigEntity> selectedReminders = 
-          reminderConfigRepository.findAllById(request.getSelectedReminderIds());
-      builder.selectedReminders(new HashSet<>(selectedReminders));
+    List<ServiceEntity> serviceEntities = serviceRepository.findAllById(serviceIds);
+    if (serviceEntities.size() != serviceIds.size()) {
+      throw new ResourceNotFoundException("One or more services not found");
     }
+    builder.services(new HashSet<>(serviceEntities));
 
     AppointmentEntity saved = appointmentRepository.save(builder.build());
     activityLogService.logAppointmentCreated(user, saved);
@@ -171,9 +150,6 @@ public class AppointmentService {
 
     // Capture state for change tracking
     List<ServiceEntity> beforeServices = appointmentMapper.resolveServices(appointment);
-    Set<UUID> beforeReminderIds = appointment.getSelectedReminders() != null 
-        ? appointment.getSelectedReminders().stream().map(BaseEntity::getId).collect(Collectors.toSet())
-        : new HashSet<>();
     AppointmentStatus beforeStatus = appointment.getStatus();
     
     // Validate type change
@@ -183,7 +159,7 @@ public class AppointmentService {
     }
 
     // Track field changes and update entity
-    AppointmentChangeTracker.ChangeResult result = changeTracker.trackChanges(appointment, request, beforeServices, beforeReminderIds);
+    AppointmentChangeTracker.ChangeResult result = changeTracker.trackChanges(appointment, request, beforeServices);
 
     if (result.isStartTimeChanged() && appointment.getStartDateTime().isBefore(OffsetDateTime.now(clock))) {
         throw new InvalidAppointmentException("Start time must be in the future");
@@ -210,32 +186,14 @@ public class AppointmentService {
           .after(afterServiceNames)
           .build());
       appointment.setServices(new HashSet<>(newServices));
-      
-      // Auto-recalculate end time if services changed and end time wasn't explicitly changed
-      if (request.getEndDateTime() == null) {
-          int totalDuration = newServices.stream().mapToInt(ServiceEntity::getDurationMinutes).sum();
-          if (totalDuration > 0) {
-            OffsetDateTime newEnd = appointment.getStartDateTime().plusMinutes(totalDuration);
-            if (!newEnd.equals(appointment.getEndDateTime())) {
-                result.getChanges().add(FieldChange.builder()
-                    .field("End Time (Calculated)")
-                    .before(DateTimeUtils.formatDateTime(appointment.getEndDateTime()))
-                    .after(DateTimeUtils.formatDateTime(newEnd))
-                    .build());
-                appointment.setEndDateTime(newEnd);
-            }
-          }
-      }
     }
 
-    if (result.isSelectedRemindersChanged()) {
-      List<BusinessReminderConfigEntity> selectedReminders = 
-          reminderConfigRepository.findAllById(request.getSelectedReminderIds());
-      appointment.setSelectedReminders(new HashSet<>(selectedReminders));
+    if (result.isRemindersEnabledChanged()) {
+      appointment.setRemindersEnabled(request.getRemindersEnabled());
       result.getChanges().add(FieldChange.builder()
-          .field("Reminders")
-          .before(beforeReminderIds.size() + " selected")
-          .after(request.getSelectedReminderIds().size() + " selected")
+          .field("Reminders Enabled")
+          .before(String.valueOf(!request.getRemindersEnabled()))
+          .after(String.valueOf(request.getRemindersEnabled()))
           .build());
     }
 
@@ -259,7 +217,7 @@ public class AppointmentService {
     boolean statusCancelledOrCompleted = saved.getStatus() == AppointmentStatus.CANCELLED || 
                                          saved.getStatus() == AppointmentStatus.COMPLETED;
     boolean reminderSettingsChanged = result.isStartTimeChanged() || 
-                                     result.isSelectedRemindersChanged() || 
+                                     result.isRemindersEnabledChanged() || 
                                      result.isAdditionalReminderChanged();
     
     if (statusCancelledOrCompleted) {

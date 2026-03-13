@@ -6,7 +6,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -86,13 +85,9 @@ public class SmsService {
             uniqueLeadTimes.add(appointment.getAdditionalReminderMinutes());
         }
 
-        // 2. Add selected or default reminder lead times
-        List<BusinessReminderConfigEntity> configsToSchedule;
-        if (appointment.getSelectedReminders() != null) {
-            configsToSchedule = new ArrayList<>(appointment.getSelectedReminders());
-        } else {
-            configsToSchedule = reminderConfigService.getEnabledConfigs(appointment.getBusiness().getId());
-        }
+        // 2. Add default reminder lead times from global config
+        List<BusinessReminderConfigEntity> configsToSchedule = 
+                reminderConfigService.getEnabledConfigs(appointment.getBusiness().getId());
 
         for (BusinessReminderConfigEntity config : configsToSchedule) {
             if (config.getLeadTimeMinutes() != null) {

@@ -1,13 +1,13 @@
 package com.orasa.backend.mapper;
 
 import java.util.ArrayList;
-import java.util.Collections;
+
 import java.util.List;
 import java.util.stream.Collectors;
 import org.hibernate.ObjectNotFoundException;
 import org.springframework.stereotype.Component;
 import com.orasa.backend.domain.AppointmentEntity;
-import com.orasa.backend.domain.BaseEntity;
+
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
 
@@ -34,13 +34,10 @@ public class AppointmentMapper {
         .customerName(appointment.getCustomerName())
         .customerPhone(appointment.getCustomerPhone())
         .startDateTime(appointment.getStartDateTime())
-        .endDateTime(appointment.getEndDateTime())
         .status(appointment.getStatus())
         .notes(appointment.getNotes())
         .services(serviceInfos)
-        .selectedReminderIds(appointment.getSelectedReminders() != null 
-            ? appointment.getSelectedReminders().stream().map(BaseEntity::getId).toList()
-            : Collections.emptyList())
+        .remindersEnabled(appointment.isRemindersEnabled())
         .additionalReminderMinutes(appointment.getAdditionalReminderMinutes())
         .additionalReminderTemplate(appointment.getAdditionalReminderTemplate())
         .createdAt(appointment.getCreatedAt())

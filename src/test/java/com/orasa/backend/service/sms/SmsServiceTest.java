@@ -109,7 +109,6 @@ class SmsServiceTest {
                 .remindersEnabled(true)
                 .type(AppointmentType.SCHEDULED)
                 .startDateTime(now.plusHours(24))
-                .endDateTime(now.plusHours(25))
                 .build();
         appointment.setId(UUID.randomUUID());
     }

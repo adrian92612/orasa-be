@@ -27,8 +27,6 @@ public class UpdateAppointmentRequest {
   @NotNull(message = "Start time is required")
   private OffsetDateTime startDateTime;
 
-  @NotNull(message = "End time is required")
-  private OffsetDateTime endDateTime;
 
   private String notes;
 
@@ -37,7 +35,7 @@ public class UpdateAppointmentRequest {
 
   private List<UUID> serviceIds;
 
-  private List<UUID> selectedReminderIds;
+  private Boolean remindersEnabled;
 
   private Integer additionalReminderMinutes;
   

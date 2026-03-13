@@ -45,7 +45,7 @@ import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.UserRepository;
-import com.orasa.backend.repository.BusinessReminderConfigRepository;
+
 import com.orasa.backend.service.sms.SmsService;
 import com.orasa.backend.mapper.AppointmentMapper;
 import com.orasa.backend.security.SecurityValidator;
@@ -75,8 +75,6 @@ public class AppointmentServiceTest {
     @Mock
     private ServiceRepository serviceRepository;
 
-    @Mock
-    private BusinessReminderConfigRepository reminderConfigRepository;
 
     @Mock
     private Clock clock;
@@ -166,7 +164,6 @@ public class AppointmentServiceTest {
             // Arrange
             ServiceEntity service = ServiceEntity.builder()
                     .name("Haircut")
-                    .durationMinutes(30)
                     .build();
             service.setId(UUID.randomUUID());
 
@@ -184,7 +181,7 @@ public class AppointmentServiceTest {
             AppointmentEntity savedAppointment = AppointmentEntity.builder()
                     .customerName(request.getCustomerName())
                     .startDateTime(request.getStartDateTime())
-                    .endDateTime(request.getStartDateTime().plusMinutes(service.getDurationMinutes()))
+
                     .status(AppointmentStatus.PENDING)
                     .type(AppointmentType.SCHEDULED)
                     .branch(branch)
@@ -205,8 +202,6 @@ public class AppointmentServiceTest {
             assertThat(response.getType()).isEqualTo(AppointmentType.SCHEDULED);
 
             verify(appointmentRepository).save(appointmentCaptor.capture());
-            AppointmentEntity captured = appointmentCaptor.getValue();
-            assertThat(captured.getEndDateTime()).isEqualTo(request.getStartDateTime().plusMinutes(30));
 
             verify(activityLogService).logAppointmentCreated(eq(ownerUser), any(AppointmentEntity.class));
             verify(smsService).scheduleRemindersForAppointment(savedAppointment);
@@ -217,24 +212,31 @@ public class AppointmentServiceTest {
         @DisplayName("Should successfully create a walkin appointment and not schedule reminders")
         void createWalkinAppointment_success() {
             // Arrange
+            ServiceEntity service = ServiceEntity.builder()
+                    .name("Walkin Service")
+                    .build();
+            service.setId(UUID.randomUUID());
+
             CreateAppointmentRequest request = baseRequestBuilder()
                     .isWalkin(true)
                     .startDateTime(now)
-                    .endDateTime(now.plusMinutes(60))
+                    .serviceIds(List.of(service.getId()))
                     .build();
 
             when(userRepository.findById(staffId)).thenReturn(Optional.of(staffUser));
             when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
             when(branchRepository.findById(branchId)).thenReturn(Optional.of(branch));
+            when(serviceRepository.findAllById(List.of(service.getId()))).thenReturn(List.of(service));
 
             AppointmentEntity savedAppointment = AppointmentEntity.builder()
                     .customerName(request.getCustomerName())
                     .startDateTime(request.getStartDateTime())
-                    .endDateTime(request.getEndDateTime())
+
                     .status(AppointmentStatus.PENDING)
                     .type(AppointmentType.WALK_IN)
                     .branch(branch)
                     .business(business)
+                    .services(Set.of(service))
                     .build();
             savedAppointment.setId(UUID.randomUUID());
 
@@ -256,7 +258,7 @@ public class AppointmentServiceTest {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder()
                     .startDateTime(now.minusHours(1)) // Past
-                    .endDateTime(now.plusHours(1))
+
                     .build();
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
@@ -272,12 +274,11 @@ public class AppointmentServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw InvalidAppointmentException if no service and no end time is provided")
-        void createAppointment_noServiceNoEndTime_throwsException() {
+        @DisplayName("Should throw InvalidAppointmentException if no service is provided")
+        void createAppointment_noService_throwsException() {
             // Arrange
             CreateAppointmentRequest request = baseRequestBuilder()
                     .serviceIds(null)
-                    .endDateTime(null)
                     .build();
 
             when(userRepository.findById(ownerId)).thenReturn(Optional.of(ownerUser));
@@ -289,7 +290,7 @@ public class AppointmentServiceTest {
             // Act & Assert
             assertThatThrownBy(() -> appointmentService.createAppointment(ownerId, request))
                     .isInstanceOf(InvalidAppointmentException.class)
-                    .hasMessage("End time or Service is required");
+                    .hasMessage("At least one service is required");
         }
 
         @Test
@@ -428,7 +429,7 @@ public class AppointmentServiceTest {
                     .status(AppointmentStatus.PENDING)
                     .type(AppointmentType.SCHEDULED)
                     .startDateTime(now.plusDays(1))
-                    .endDateTime(now.plusDays(1).plusHours(1))
+
                     .build();
             existingAppointment.setId(appointmentId);
         }
@@ -441,7 +442,7 @@ public class AppointmentServiceTest {
                     .customerName("New Name")
                     .customerPhone("639999999999")
                     .startDateTime(existingAppointment.getStartDateTime())
-                    .endDateTime(existingAppointment.getEndDateTime())
+
                     .status(AppointmentStatus.PENDING)
                     .build();
 
@@ -471,7 +472,7 @@ public class AppointmentServiceTest {
                     .customerName(existingAppointment.getCustomerName())
                     .customerPhone(existingAppointment.getCustomerPhone())
                     .startDateTime(existingAppointment.getStartDateTime())
-                    .endDateTime(existingAppointment.getEndDateTime())
+
                     .status(existingAppointment.getStatus())
                     .build();
 
@@ -496,7 +497,7 @@ public class AppointmentServiceTest {
                     .customerName(existingAppointment.getCustomerName())
                     .customerPhone(existingAppointment.getCustomerPhone())
                     .startDateTime(existingAppointment.getStartDateTime())
-                    .endDateTime(existingAppointment.getEndDateTime())
+
                     .status(AppointmentStatus.PENDING)
                     .isWalkin(true) // SCHEDULED -> WALK_IN: not allowed
                     .build();
@@ -518,7 +519,7 @@ public class AppointmentServiceTest {
                     .customerName(existingAppointment.getCustomerName())
                     .customerPhone(existingAppointment.getCustomerPhone())
                     .startDateTime(now.minusHours(1)) // past
-                    .endDateTime(existingAppointment.getEndDateTime())
+
                     .status(AppointmentStatus.PENDING)
                     .build();
 
@@ -541,7 +542,7 @@ public class AppointmentServiceTest {
                     .customerName(existingAppointment.getCustomerName())
                     .customerPhone(existingAppointment.getCustomerPhone())
                     .startDateTime(existingAppointment.getStartDateTime())
-                    .endDateTime(existingAppointment.getEndDateTime())
+
                     .status(AppointmentStatus.CANCELLED) // <- status change
                     .build();
 
@@ -568,7 +569,7 @@ public class AppointmentServiceTest {
                     .customerName(existingAppointment.getCustomerName())
                     .customerPhone(existingAppointment.getCustomerPhone())
                     .startDateTime(newStart)
-                    .endDateTime(newStart.plusHours(1))
+
                     .status(AppointmentStatus.PENDING)
                     .build();
 
@@ -598,7 +599,7 @@ public class AppointmentServiceTest {
                     .customerName("Name")
                     .customerPhone("639000000000")
                     .startDateTime(now.plusDays(1))
-                    .endDateTime(now.plusDays(1).plusHours(1))
+
                     .status(AppointmentStatus.PENDING)
                     .build();
 
@@ -630,7 +631,7 @@ public class AppointmentServiceTest {
                     .status(AppointmentStatus.PENDING)
                     .type(AppointmentType.SCHEDULED)
                     .startDateTime(now.plusDays(1))
-                    .endDateTime(now.plusDays(1).plusHours(1))
+
                     .build();
             existingAppointment.setId(appointmentId);
         }

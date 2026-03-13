@@ -96,11 +96,10 @@ public class ExportService {
 
     private String buildCsv(List<AppointmentEntity> appointments, List<SmsLogEntity> smsLogs) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Date,Time,End Time,Branch,Customer Name,Customer Phone,Type,Status,Services,Notes,SMS Count,SMS Statuses\n");
+        sb.append("Date,Time,Branch,Customer Name,Customer Phone,Type,Status,Services,Notes,SMS Count,SMS Statuses\n");
 
         for (AppointmentEntity apt : appointments) {
             OffsetDateTime startDt = apt.getStartDateTime().atZoneSameInstant(TimeConfig.PH_ZONE).toOffsetDateTime();
-            OffsetDateTime endDt = apt.getEndDateTime().atZoneSameInstant(TimeConfig.PH_ZONE).toOffsetDateTime();
 
             List<SmsLogEntity> aptSmsLogs = smsLogs.stream()
                     .filter(sms -> sms.getAppointment() != null && sms.getAppointment().getId().equals(apt.getId()))
@@ -116,7 +115,6 @@ public class ExportService {
 
             sb.append(csvEscape(startDt.format(DATE_FMT))).append(",");
             sb.append(csvEscape(startDt.format(TIME_FMT))).append(",");
-            sb.append(csvEscape(endDt.format(TIME_FMT))).append(",");
             sb.append(csvEscape(apt.getBranch().getName())).append(",");
             sb.append(csvEscape(apt.getCustomerName())).append(",");
             sb.append(csvEscape(apt.getCustomerPhone())).append(",");

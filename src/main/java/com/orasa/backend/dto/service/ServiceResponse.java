@@ -1,6 +1,5 @@
 package com.orasa.backend.dto.service;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -18,8 +17,6 @@ public class ServiceResponse {
     private UUID businessId;
     private String name;
     private String description;
-    private BigDecimal basePrice;
-    private Integer durationMinutes;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }
