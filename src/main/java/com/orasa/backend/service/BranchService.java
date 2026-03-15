@@ -18,7 +18,6 @@ import com.orasa.backend.common.UserRole;
 import com.orasa.backend.config.CacheBusinessId;
 import com.orasa.backend.domain.BranchEntity;
 import com.orasa.backend.domain.BusinessEntity;
-import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.domain.UserEntity;
 
 import com.orasa.backend.dto.activity.FieldChange;
@@ -31,7 +30,7 @@ import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.common.utils.SanitizationUtils;
 import com.orasa.backend.repository.BranchRepository;
 import com.orasa.backend.repository.BusinessRepository;
-import com.orasa.backend.repository.ServiceRepository;
+
 import com.orasa.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -47,7 +46,6 @@ public class BranchService {
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
-    private final ServiceRepository serviceRepository;
     private final CacheService cacheService;
 
     @Transactional
@@ -55,7 +53,7 @@ public class BranchService {
         log.info("Creating new branch '{}' for business {}", request.getName(), businessId);
         UserEntity owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
-        
+
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
@@ -79,8 +77,6 @@ public class BranchService {
             }
             userRepository.saveAll(usersToAdd);
         }
-
-
 
         owner.getBranches().add(saved);
         userRepository.save(owner);
@@ -111,7 +107,7 @@ public class BranchService {
     public List<BranchResponse> getBranchesForUser(UUID userId, @CacheBusinessId UUID businessId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        
+
         return user.getBranches().stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -162,7 +158,7 @@ public class BranchService {
         String oldPhone = branch.getPhoneNumber();
         String newPhone = request.getPhoneNumber();
         String phoneToSet = (newPhone == null || newPhone.trim().isEmpty()) ? null : newPhone.trim();
-        
+
         if (!Objects.equals(oldPhone, phoneToSet)) {
             changes.add(FieldChange.builder()
                     .field("Phone Number")
@@ -176,16 +172,17 @@ public class BranchService {
         if (request.getStaffIds() != null) {
             Set<UUID> newStaffIds = request.getStaffIds();
             Set<UserEntity> currentStaff = branch.getStaff();
-            
+
             // Identify users to remove
             List<UserEntity> toRemove = currentStaff.stream()
                     .filter(staff -> !newStaffIds.contains(staff.getId()))
                     .collect(Collectors.toList());
-            
+
             // Identify users to add
             Set<UUID> currentStaffIds = currentStaff.stream().map(UserEntity::getId).collect(Collectors.toSet());
             List<UserEntity> toAdd = userRepository.findAllById(newStaffIds).stream()
-                    .filter(user -> !currentStaffIds.contains(user.getId()) && user.getBusiness().getId().equals(businessId))
+                    .filter(user -> !currentStaffIds.contains(user.getId())
+                            && user.getBusiness().getId().equals(businessId))
                     .collect(Collectors.toList());
 
             if (!toRemove.isEmpty() || !toAdd.isEmpty()) {
@@ -194,7 +191,7 @@ public class BranchService {
                         .before(currentStaff.size() + " assigned")
                         .after(newStaffIds.size() + " assigned")
                         .build());
-                
+
                 // Apply changes
                 for (UserEntity u : toRemove) {
                     u.getBranches().remove(branch);
@@ -209,8 +206,6 @@ public class BranchService {
                 userRepository.saveAll(toAdd);
             }
         }
-
-
 
         if (changes.isEmpty()) {
             log.info("No changes detected for branch {}", branchId);
@@ -233,8 +228,6 @@ public class BranchService {
         return mapToResponse(saved);
     }
 
-
-
     @Transactional
     public void deleteBranch(UUID userId, UUID branchId, UUID businessId) {
         log.info("Deleting branch {} for business {}", branchId, businessId);
@@ -245,7 +238,7 @@ public class BranchService {
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
 
         if (!branch.getBusiness().getId().equals(businessId)) {
-             throw new BusinessException("Branch does not belong to your business");
+            throw new BusinessException("Branch does not belong to your business");
         }
 
         // Log before deletion
@@ -274,15 +267,10 @@ public class BranchService {
     }
 
     private BranchResponse mapToResponse(BranchEntity branch) {
-        List<ServiceEntity> activeServices = serviceRepository.findByBusinessId(branch.getBusiness().getId());
-        Set<UUID> activeServiceIds = activeServices.stream()
-                .map(ServiceEntity::getId)
-                .collect(Collectors.toSet());
-
-        Set<UserEntity> staffUsers = branch.getStaff() != null 
+        Set<UserEntity> staffUsers = branch.getStaff() != null
                 ? branch.getStaff().stream()
-                    .filter(u -> u.getRole() == UserRole.STAFF)
-                    .collect(Collectors.toSet())
+                        .filter(u -> u.getRole() == UserRole.STAFF)
+                        .collect(Collectors.toSet())
                 : Collections.emptySet();
 
         return BranchResponse.builder()
@@ -295,8 +283,6 @@ public class BranchService {
                 .updatedAt(branch.getUpdatedAt())
                 .staffCount(staffUsers.size())
                 .staffIds(staffUsers.stream().map(UserEntity::getId).collect(Collectors.toSet()))
-                .serviceCount(activeServiceIds.size())
-                .activeServiceIds(activeServiceIds)
                 .build();
     }
 }
