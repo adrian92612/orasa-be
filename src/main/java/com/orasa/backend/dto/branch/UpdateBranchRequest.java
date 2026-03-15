@@ -24,6 +24,4 @@ public class UpdateBranchRequest {
     private String phoneNumber;
 
     private java.util.Set<java.util.UUID> staffIds;
-
-    private java.util.Set<java.util.UUID> serviceIds;
 }

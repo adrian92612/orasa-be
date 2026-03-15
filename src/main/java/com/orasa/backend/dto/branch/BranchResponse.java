@@ -22,6 +22,4 @@ public class BranchResponse {
     private OffsetDateTime updatedAt;
     private int staffCount;
     private java.util.Set<java.util.UUID> staffIds;
-    private int serviceCount;
-    private java.util.Set<java.util.UUID> activeServiceIds;
 }
