@@ -82,8 +82,8 @@ public class AppointmentServiceTest {
     @Mock
     private CacheService cacheService;
 
-    @Spy
-    private AppointmentMapper appointmentMapper = new AppointmentMapper();
+    @InjectMocks
+    private AppointmentMapper appointmentMapper;
 
     @Spy
     private SecurityValidator securityValidator = new SecurityValidator();

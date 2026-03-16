@@ -7,7 +7,7 @@ _Currently no high priority issues pending._
 
 🟡 Medium Priority
 
-### 3. resolveServices Using Exception-Driven Control Flow
+### 3. [FIXED] resolveServices Using Exception-Driven Control Flow
 
 AppointmentService.java
 
