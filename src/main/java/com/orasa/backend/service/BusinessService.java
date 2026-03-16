@@ -13,7 +13,6 @@ import com.orasa.backend.domain.UserEntity;
 import com.orasa.backend.dto.business.BusinessResponse;
 import com.orasa.backend.dto.business.CreateBusinessRequest;
 import com.orasa.backend.dto.business.UpdateBusinessRequest;
-import com.orasa.backend.exception.BusinessException;
 import com.orasa.backend.common.SubscriptionStatus;
 import com.orasa.backend.exception.ResourceNotFoundException;
 import com.orasa.backend.common.utils.SanitizationUtils;
@@ -22,8 +21,8 @@ import com.orasa.backend.repository.BusinessRepository;
 import com.orasa.backend.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+// Remove unused SecurityContextHolder and Authentication imports if not needed elsewhere
+// Checking if needed... not needed
 
 
 import org.springframework.cache.annotation.Cacheable;
@@ -123,7 +122,7 @@ public class BusinessService {
     }
 
     @Transactional
-    public BusinessResponse updateBusiness(UUID businessId, UpdateBusinessRequest request) {
+    public BusinessResponse updateBusiness(UUID businessId, UpdateBusinessRequest request, UUID actorId) {
         BusinessEntity business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         
@@ -135,7 +134,8 @@ public class BusinessService {
         
         BusinessEntity savedBusiness = businessRepository.save(business);
         
-        UserEntity actor = getCurrentUser();
+        UserEntity actor = userRepository.findById(actorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Actor not found"));
         
         if (!beforeName.equals(savedBusiness.getName())) {
             List<FieldChange> changes = List.of(new FieldChange("Business Name", beforeName, savedBusiness.getName()));
@@ -169,21 +169,6 @@ public class BusinessService {
 
 
 
-    public UUID getCurrentUserBusinessId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-             throw new BusinessException("User not authenticated");
-        }
-        
-        String username = authentication.getName();
-        UserEntity user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-            
-        if (user.getBusiness() == null) {
-            throw new ResourceNotFoundException("User does not have a business");
-        }
-        return user.getBusiness().getId();
-    }
 
     /**
      * Generates a URL-friendly slug from the business name.
@@ -215,12 +200,4 @@ public class BusinessService {
                 .build();
     }
 
-    private UserEntity getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-             throw new BusinessException("User not authenticated");
-        }
-        return userRepository.findByUsername(authentication.getName())
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-    }
 }
