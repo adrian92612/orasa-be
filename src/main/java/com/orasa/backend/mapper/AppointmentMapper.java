@@ -1,18 +1,24 @@
 package com.orasa.backend.mapper;
 
 import java.util.ArrayList;
-
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
-import org.hibernate.ObjectNotFoundException;
-import org.springframework.stereotype.Component;
-import com.orasa.backend.domain.AppointmentEntity;
 
+import org.springframework.stereotype.Component;
+
+import com.orasa.backend.domain.AppointmentEntity;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.dto.appointment.AppointmentResponse;
+import com.orasa.backend.repository.ServiceRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class AppointmentMapper {
+
+  private final ServiceRepository serviceRepository;
 
   public AppointmentResponse mapToResponse(AppointmentEntity appointment) {
     List<ServiceEntity> resolvedServices = resolveServices(appointment);
@@ -46,16 +52,16 @@ public class AppointmentMapper {
   }
 
   public List<ServiceEntity> resolveServices(AppointmentEntity appointment) {
-    List<ServiceEntity> resolved = new ArrayList<>();
-    if (appointment.getServices() == null) return resolved;
-    for (ServiceEntity service : appointment.getServices()) {
-      try {
-        service.getId(); // force proxy initialization
-        resolved.add(service);
-      } catch (ObjectNotFoundException e) {
-        // Service was soft-deleted, skip
-      }
+    if (appointment.getServices() == null || appointment.getServices().isEmpty()) {
+      return new ArrayList<>();
     }
-    return resolved;
+    
+    List<UUID> serviceIds = appointment.getServices().stream()
+        .map(ServiceEntity::getId)
+        .collect(Collectors.toList());
+        
+    // ServiceRepository.findAllById handles soft-deleted filtering automatically 
+    // due to @SQLRestriction on ServiceEntity
+    return serviceRepository.findAllById(serviceIds);
   }
 }

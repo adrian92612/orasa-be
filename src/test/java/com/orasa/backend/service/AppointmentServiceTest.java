@@ -82,8 +82,7 @@ public class AppointmentServiceTest {
     @Mock
     private CacheService cacheService;
 
-    @Spy
-    private AppointmentMapper appointmentMapper = new AppointmentMapper();
+    private AppointmentMapper appointmentMapper;
 
     @Spy
     private SecurityValidator securityValidator = new SecurityValidator();
@@ -91,7 +90,6 @@ public class AppointmentServiceTest {
     @Spy
     private AppointmentChangeTracker changeTracker = new AppointmentChangeTracker();
 
-    @InjectMocks
     private AppointmentService appointmentService;
 
     @Captor
@@ -126,6 +124,22 @@ public class AppointmentServiceTest {
                 .business(business)
                 .build();
         branch.setId(branchId);
+
+        appointmentMapper = spy(new AppointmentMapper(serviceRepository));
+        appointmentService = new AppointmentService(
+                appointmentRepository,
+                branchRepository,
+                businessRepository,
+                userRepository,
+                activityLogService,
+                smsService,
+                serviceRepository,
+                clock,
+                cacheService,
+                appointmentMapper,
+                securityValidator,
+                changeTracker
+        );
 
         ownerUser = UserEntity.builder()
                 .username("owneruser")
