@@ -174,4 +174,73 @@ public class BusinessServiceTest {
                 .hasMessage("User not found");
         }
     }
+
+    @Nested
+    @DisplayName("Update Business")
+    class UpdateBusinessTests {
+
+        @Test
+        @DisplayName("Should successfully update business and log activity")
+        void updateBusiness_success() {
+            // Arrange
+            UUID businessId = UUID.randomUUID();
+            com.orasa.backend.dto.business.UpdateBusinessRequest request = new com.orasa.backend.dto.business.UpdateBusinessRequest("Updated Name");
+            
+            BusinessEntity business = BusinessEntity.builder()
+                .name("Old Name")
+                .build();
+            business.setId(businessId);
+            
+            when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
+            when(businessRepository.save(any(BusinessEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(userRepository.findById(ownerId)).thenReturn(Optional.of(owner));
+            
+            // Act
+            BusinessResponse response = businessService.updateBusiness(businessId, request, ownerId);
+            
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getName()).isEqualTo("Updated Name");
+            verify(businessRepository).save(any(BusinessEntity.class));
+            verify(activityLogService).logBusinessUpdated(eq(owner), eq(business), anyString());
+            verify(cacheService).evict(eq(com.orasa.backend.common.CacheName.BUSINESS), anyString());
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException if business doesn't exist")
+        void updateBusiness_businessNotFound_throwsException() {
+            // Arrange
+            UUID businessId = UUID.randomUUID();
+            com.orasa.backend.dto.business.UpdateBusinessRequest request = new com.orasa.backend.dto.business.UpdateBusinessRequest("Updated Name");
+            
+            when(businessRepository.findById(businessId)).thenReturn(Optional.empty());
+            
+            // Act & Assert
+            assertThatThrownBy(() -> businessService.updateBusiness(businessId, request, ownerId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Business not found");
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException if actor doesn't exist")
+        void updateBusiness_actorNotFound_throwsException() {
+            // Arrange
+            UUID businessId = UUID.randomUUID();
+            com.orasa.backend.dto.business.UpdateBusinessRequest request = new com.orasa.backend.dto.business.UpdateBusinessRequest("Updated Name");
+            
+            BusinessEntity business = BusinessEntity.builder()
+                .name("Old Name")
+                .build();
+            business.setId(businessId);
+            
+            when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
+            when(businessRepository.save(any(BusinessEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(userRepository.findById(ownerId)).thenReturn(Optional.empty());
+            
+            // Act & Assert
+            assertThatThrownBy(() -> businessService.updateBusiness(businessId, request, ownerId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Actor not found");
+        }
+    }
 }

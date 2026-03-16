@@ -90,7 +90,7 @@ public class BusinessController extends BaseController {
     ) {
         validateBusinessExists(authenticatedUser);
 
-        BusinessResponse business = businessService.updateBusiness(authenticatedUser.businessId(), request);
+        BusinessResponse business = businessService.updateBusiness(authenticatedUser.businessId(), request, authenticatedUser.userId());
         return ResponseEntity.ok(ApiResponse.success(business));
     }
 
