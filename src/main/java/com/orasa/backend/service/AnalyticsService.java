@@ -6,9 +6,11 @@ import com.orasa.backend.common.SmsStatus;
 import com.orasa.backend.dto.analytics.DashboardStats;
 import com.orasa.backend.dto.analytics.DailyStatsDTO;
 import com.orasa.backend.dto.analytics.ServiceStatsDTO;
+import com.orasa.backend.dto.analytics.ServiceNoShowStatsDTO;
 import com.orasa.backend.dto.analytics.StatusStatsDTO;
-import com.orasa.backend.dto.analytics.HourStatsDTO;
 import com.orasa.backend.dto.analytics.WeekdayStatsDTO;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import org.springframework.cache.annotation.Cacheable;
 import com.orasa.backend.common.CacheName;
@@ -63,7 +65,6 @@ public class AnalyticsService {
         List<DailyStatsDTO> dailyStats = appointmentRepository.getDailyStats(businessId, branchId, start, end);
         List<ServiceStatsDTO> serviceStats = appointmentRepository.getServiceStats(businessId, branchId, start, end);
         List<StatusStatsDTO> statusStats = appointmentRepository.getStatusStats(businessId, branchId, start, end);
-        List<HourStatsDTO> peakHourStats = appointmentRepository.getPeakHourStats(businessId, branchId, start, end);
         List<Object[]> weekdayResults = appointmentRepository.getWeekdayStats(businessId, branchId, start, end);
         List<WeekdayStatsDTO> busiestDayStats = weekdayResults.stream()
                 .map(row -> new WeekdayStatsDTO(
@@ -72,14 +73,27 @@ public class AnalyticsService {
                 ))
                 .toList();
 
+        List<ServiceNoShowStatsDTO> serviceNoShowStats = appointmentRepository.getServiceNoShowStats(businessId, branchId, start, end, AppointmentStatus.NO_SHOW);
+        serviceNoShowStats = serviceNoShowStats.stream()
+            .map(stat -> {
+                BigDecimal rate = BigDecimal.ZERO;
+                if (stat.totalAppointments() > 0) {
+                    rate = BigDecimal.valueOf(stat.noShowCount())
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(stat.totalAppointments()), 1, RoundingMode.HALF_UP);
+                }
+                return new ServiceNoShowStatsDTO(stat.serviceName(), stat.totalAppointments(), stat.noShowCount(), rate);
+            })
+            .toList();
+
         if (totalAppointments > 0) {
             serviceStats = serviceStats.stream()
                 .map(stat -> new ServiceStatsDTO(
                     stat.serviceName(),
                     stat.count(),
-                    java.math.BigDecimal.valueOf(stat.count())
-                        .multiply(java.math.BigDecimal.valueOf(100))
-                        .divide(java.math.BigDecimal.valueOf(totalAppointments), 1, java.math.RoundingMode.HALF_UP)
+                    BigDecimal.valueOf(stat.count())
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(totalAppointments), 1, RoundingMode.HALF_UP)
                 ))
                 .toList();
         }
@@ -95,8 +109,8 @@ public class AnalyticsService {
                 .dailyStats(dailyStats)
                 .serviceStats(serviceStats)
                 .statusStats(statusStats)
-                .peakHourStats(peakHourStats)
                 .busiestDayStats(busiestDayStats)
+                .serviceNoShowStats(serviceNoShowStats)
                 .build();
     }
 }
