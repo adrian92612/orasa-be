@@ -16,6 +16,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.orasa.backend.domain.AppointmentEntity;
+import com.orasa.backend.dto.analytics.DailyStatsDTO;
+import com.orasa.backend.dto.analytics.HourStatsDTO;
+import com.orasa.backend.dto.analytics.ServiceStatsDTO;
+import com.orasa.backend.dto.analytics.StatusStatsDTO;
 
 public interface AppointmentRepository extends JpaRepository<AppointmentEntity, UUID>, JpaSpecificationExecutor<AppointmentEntity> {
   @EntityGraph(attributePaths = {"branch", "business", "services"})
@@ -74,53 +78,94 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
       @Param("start") OffsetDateTime start, 
       @Param("end") OffsetDateTime end);
 
-  @Query("SELECT new com.orasa.backend.dto.analytics.DailyStatsDTO(" +
-         "CAST(a.startDateTime AS LocalDate), " +
-         "COUNT(DISTINCT a), " +
-         "SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END)) " +
-         "FROM AppointmentEntity a " +
-         "WHERE a.business.id = :businessId " +
-         "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
-         "AND a.startDateTime >= :start " +
-         "AND a.startDateTime <= :end " +
-         "GROUP BY CAST(a.startDateTime AS LocalDate) " +
-         "ORDER BY CAST(a.startDateTime AS LocalDate) ASC")
-  List<com.orasa.backend.dto.analytics.DailyStatsDTO> getDailyStats(
+  @Query("""
+      SELECT new com.orasa.backend.dto.analytics.DailyStatsDTO(
+          CAST(a.startDateTime AS LocalDate), 
+          COUNT(DISTINCT a), 
+          SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END)) 
+      FROM AppointmentEntity a 
+      WHERE a.business.id = :businessId 
+      AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) 
+      AND a.startDateTime >= :start 
+      AND a.startDateTime <= :end 
+      GROUP BY CAST(a.startDateTime AS LocalDate) 
+      ORDER BY CAST(a.startDateTime AS LocalDate) ASC
+  """)
+  List<DailyStatsDTO> getDailyStats(
       @Param("businessId") UUID businessId, 
       @Param("branchId") UUID branchId, 
       @Param("start") OffsetDateTime start, 
       @Param("end") OffsetDateTime end);
 
-  @Query("SELECT new com.orasa.backend.dto.analytics.ServiceStatsDTO(" +
-         "s.name, " +
-         "COUNT(a), " +
-         "CAST(0 AS bigdecimal)) " + // Percentage calculated in service layer
-         "FROM AppointmentEntity a " +
-         "JOIN a.services s " +
-         "WHERE a.business.id = :businessId " +
-         "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
-         "AND a.startDateTime >= :start " +
-         "AND a.startDateTime <= :end " +
-         "GROUP BY s.name " +
-         "ORDER BY COUNT(a) DESC")
-  List<com.orasa.backend.dto.analytics.ServiceStatsDTO> getServiceStats(
+  @Query("""
+      SELECT new com.orasa.backend.dto.analytics.ServiceStatsDTO(
+          s.name, 
+          COUNT(a), 
+          CAST(0 AS bigdecimal)) 
+      FROM AppointmentEntity a 
+      JOIN a.services s 
+      WHERE a.business.id = :businessId 
+      AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) 
+      AND a.startDateTime >= :start 
+      AND a.startDateTime <= :end 
+      GROUP BY s.name 
+      ORDER BY COUNT(a) DESC
+  """)
+  List<ServiceStatsDTO> getServiceStats(
       @Param("businessId") UUID businessId, 
       @Param("branchId") UUID branchId, 
       @Param("start") OffsetDateTime start, 
       @Param("end") OffsetDateTime end);
 
-  @Query("SELECT new com.orasa.backend.dto.analytics.StatusStatsDTO(" +
-         "a.status, " +
-         "COUNT(a)) " +
-         "FROM AppointmentEntity a " +
-         "WHERE a.business.id = :businessId " +
-         "AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) " +
-         "AND a.startDateTime >= :start " +
-         "AND a.startDateTime <= :end " +
-         "GROUP BY a.status")
-  List<com.orasa.backend.dto.analytics.StatusStatsDTO> getStatusStats(
+  @Query("""
+      SELECT new com.orasa.backend.dto.analytics.StatusStatsDTO(
+          a.status, 
+          COUNT(a)) 
+      FROM AppointmentEntity a 
+      WHERE a.business.id = :businessId 
+      AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) 
+      AND a.startDateTime >= :start 
+      AND a.startDateTime <= :end 
+      GROUP BY a.status
+  """)
+  List<StatusStatsDTO> getStatusStats(
       @Param("businessId") UUID businessId, 
       @Param("branchId") UUID branchId, 
       @Param("start") OffsetDateTime start, 
       @Param("end") OffsetDateTime end);
+
+  @Query("""
+      SELECT new com.orasa.backend.dto.analytics.HourStatsDTO(
+          CAST(hour(a.startDateTime) AS Integer), 
+          COUNT(a)) 
+      FROM AppointmentEntity a 
+      WHERE a.business.id = :businessId 
+      AND (CAST(:branchId AS uuid) IS NULL OR a.branch.id = :branchId) 
+      AND a.startDateTime >= :start 
+      AND a.startDateTime <= :end 
+      GROUP BY extract(hour from a.startDateTime) 
+      ORDER BY extract(hour from a.startDateTime) ASC
+  """)
+  List<HourStatsDTO> getPeakHourStats(
+      @Param("businessId") UUID businessId, 
+      @Param("branchId") UUID branchId, 
+      @Param("start") OffsetDateTime start, 
+      @Param("end") OffsetDateTime end);
+
+    @Query(value = """
+        SELECT EXTRACT(DOW FROM start_date_time)::int AS day_of_week, COUNT(*) AS count 
+        FROM appointments 
+        WHERE is_deleted = false 
+        AND business_id = :businessId 
+        AND (:branchId IS NULL OR branch_id = CAST(:branchId AS uuid)) 
+        AND start_date_time >= :start 
+        AND start_date_time <= :end 
+        GROUP BY EXTRACT(DOW FROM start_date_time) 
+        ORDER BY EXTRACT(DOW FROM start_date_time) ASC
+        """, nativeQuery = true)
+    List<Object[]> getWeekdayStats(
+        @Param("businessId") UUID businessId,
+        @Param("branchId") UUID branchId,
+        @Param("start") OffsetDateTime start,
+        @Param("end") OffsetDateTime end);
 }

@@ -21,4 +21,6 @@ public class DashboardStats {
     private List<DailyStatsDTO> dailyStats;
     private List<ServiceStatsDTO> serviceStats;
     private List<StatusStatsDTO> statusStats;
+    private List<HourStatsDTO> peakHourStats;
+    private List<WeekdayStatsDTO> busiestDayStats;
 }
