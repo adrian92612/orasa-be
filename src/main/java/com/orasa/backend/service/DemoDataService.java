@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -12,6 +13,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
+import org.redisson.api.RBlockingQueue;
+import org.redisson.api.RDelayedQueue;
+import org.redisson.api.RedissonClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +34,8 @@ import com.orasa.backend.domain.BusinessReminderConfigEntity;
 import com.orasa.backend.domain.ServiceEntity;
 import com.orasa.backend.domain.SmsLogEntity;
 import com.orasa.backend.domain.UserEntity;
+import com.orasa.backend.dto.CreditResetTask;
+import com.orasa.backend.dto.sms.SmsReminderTask;
 import com.orasa.backend.repository.ActivityLogRepository;
 import com.orasa.backend.repository.AppointmentRepository;
 import com.orasa.backend.repository.BranchRepository;
@@ -56,7 +62,7 @@ public class DemoDataService {
     private final BusinessReminderConfigRepository reminderConfigRepository;
     private final ActivityLogRepository activityLogRepository;
     private final SmsLogRepository smsLogRepository;
-    private final org.redisson.api.RedissonClient redissonClient;
+    private final RedissonClient redissonClient;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final JdbcTemplate jdbcTemplate;
@@ -195,11 +201,6 @@ public class DemoDataService {
             // 3. Delete Activity Logs
             jdbcTemplate.update("DELETE FROM activity_logs WHERE business_id = ?", businessId);
 
-            // 4. Delete Appointment Reminders
-            jdbcTemplate.update(
-                "DELETE FROM appointment_reminders WHERE appointment_id IN (SELECT id FROM appointments WHERE business_id = ?)",
-                businessId
-            );
 
             // 4b. Delete Appointment Services
             jdbcTemplate.update(
@@ -210,11 +211,6 @@ public class DemoDataService {
             // 5. Delete Appointments
             jdbcTemplate.update("DELETE FROM appointments WHERE business_id = ?", businessId);
 
-            // 6. Delete Branch Services
-            jdbcTemplate.update(
-                "DELETE FROM branch_services WHERE branch_id IN (SELECT id FROM branches WHERE business_id = ?)",
-                businessId
-            );
 
             // 7. Delete Reminder Configs
             jdbcTemplate.update("DELETE FROM business_reminder_configs WHERE business_id = ?", businessId);
@@ -239,17 +235,17 @@ public class DemoDataService {
 
             // 13. Clear Redis Delay Queue (prevent zombie tasks)
             try {
-                org.redisson.api.RBlockingQueue<com.orasa.backend.dto.sms.SmsReminderTask> blockingQueue = redissonClient.getBlockingQueue("smsRemindersQueue");
+                RBlockingQueue<SmsReminderTask> blockingQueue = redissonClient.getBlockingQueue("smsRemindersQueue");
                 @SuppressWarnings("deprecation")
-                org.redisson.api.RDelayedQueue<com.orasa.backend.dto.sms.SmsReminderTask> delayedQueue = redissonClient.getDelayedQueue(blockingQueue);
+                RDelayedQueue<SmsReminderTask> delayedQueue = redissonClient.getDelayedQueue(blockingQueue);
                 
                 delayedQueue.destroy();
                 blockingQueue.delete();
 
                 // Clear Credit Reset Queue
-                org.redisson.api.RBlockingQueue<com.orasa.backend.dto.CreditResetTask> creditBlockingQueue = redissonClient.getBlockingQueue("creditResetQueue");
+                RBlockingQueue<CreditResetTask> creditBlockingQueue = redissonClient.getBlockingQueue("creditResetQueue");
                 @SuppressWarnings("deprecation")
-                org.redisson.api.RDelayedQueue<com.orasa.backend.dto.CreditResetTask> creditDelayedQueue = redissonClient.getDelayedQueue(creditBlockingQueue);
+                RDelayedQueue<CreditResetTask> creditDelayedQueue = redissonClient.getDelayedQueue(creditBlockingQueue);
 
                 creditDelayedQueue.destroy();
                 creditBlockingQueue.delete();
@@ -361,25 +357,34 @@ public class DemoDataService {
             }
             
             // Add 1 random walk-in (No reminders for walk-ins)
-            // Walk-ins only for today, and MUST be in the past (before current time)
-            if (currentDate.equals(today) && random.nextBoolean()) {
-                 LocalTime now = LocalTime.now(clock);
-                 // Only add walk-in if current time is reasonably into the day (e.g. past 10am)
-                 if (now.getHour() > 10) {
-                     int maxHour = now.getHour() - 1;
-                     int minHour = 9;
-                     int hour = minHour + (maxHour > minHour ? random.nextInt(maxHour - minHour) : 0);
-                     
-                      ServiceEntity service = services.get(random.nextInt(services.size()));
-                      String walkInCustomer = "Walk-in: " + names.get(nameIndex % names.size()); // Named walk-in
-                      nameIndex++;
-     
-                      String timeStr = String.format("%02d:30", hour);
-                      
-                      createAppointmentWithLogs(business, branch, creator, Set.of(service), currentDate, timeStr, walkInCustomer, "0918" + (1000000 + random.nextInt(9000000)), 
-                         AppointmentStatus.COMPLETED, // Walk-ins today are completed or pending? Usually completed if in past
-                         AppointmentType.WALK_IN, "Walked in", null, true); // Treat today's past walk-in as "isPast=true" for logs
-                 }
+            // Walk-ins only for past dates or today
+            if (!currentDate.isAfter(today) && random.nextBoolean()) {
+                LocalTime walkInTime;
+                if (currentDate.equals(today)) {
+                    LocalTime now = LocalTime.now(clock);
+                    if (now.getHour() > 10) {
+                        int maxHour = now.getHour() - 1;
+                        int minHour = 9;
+                        int hour = minHour + (maxHour > minHour ? random.nextInt(maxHour - minHour) : 0);
+                        walkInTime = LocalTime.of(hour, 30);
+                    } else {
+                        walkInTime = null;
+                    }
+                } else {
+                    // Past date: any working hour
+                    walkInTime = LocalTime.of(9 + random.nextInt(8), 30);
+                }
+
+                if (walkInTime != null) {
+                    ServiceEntity service = services.get(random.nextInt(services.size()));
+                    String walkInCustomer = "Walk-in: " + names.get(nameIndex % names.size());
+                    nameIndex++;
+
+                    String timeStr = walkInTime.toString();
+                    createAppointmentWithLogs(business, branch, creator, Set.of(service), currentDate, timeStr, walkInCustomer, 
+                        "0918" + (1000000 + random.nextInt(9000000)), 
+                        AppointmentStatus.COMPLETED, AppointmentType.WALK_IN, "Walked in", null, true);
+                }
             }
         }
     }
@@ -426,8 +431,8 @@ public class DemoDataService {
                 // If CANCELLED/NOSHOW, maybe sent, maybe failed. Let's assume sent for simplicity or mixed.
                 for (BusinessReminderConfigEntity config : reminders) {
                     String message = config.getMessageTemplate()
-                            .replace("{date}", date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy")))
-                            .replace("{time}", time.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")))
+                            .replace("{date}", date.format(DateTimeFormatter.ofPattern("MMM d, yyyy")))
+                            .replace("{time}", time.format(DateTimeFormatter.ofPattern("h:mm a")))
                             .replace("{businessName}", business.getName())
                             .replace("{branchName}", branch.getName());
 
