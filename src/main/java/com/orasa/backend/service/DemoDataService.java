@@ -105,13 +105,13 @@ public class DemoDataService {
         
         business = businessRepository.save(business);
 
-        // 2. Create Reminder Configs (Using templates from orasa-fe/src/constants/sms.ts)
-        BusinessReminderConfigEntity oneDayBefore = createReminderConfig(business, 1440, "Reminder: Appointment on {date} @ {time} at {businessName} ({branchName}). Please arrive 15 mins early.");
-        BusinessReminderConfigEntity oneHourBefore = createReminderConfig(business, 60, "{businessName}: {date} {time} at {branchName}. Please be there 15 mins early. Thank you!");
+        // 2. Create Reminder Configs (Using Professional and Friendly templates from frontend)
+        BusinessReminderConfigEntity professionalRem = createReminderConfig(business, 1440, "Reminder for your appointment at {businessName} ({branchName}) on {date} at {time}. Arrive 15 mins early.");
+        BusinessReminderConfigEntity friendlyRem = createReminderConfig(business, 60, "Hi! Friendly reminder for your visit to {businessName} ({branchName}) on {date} at {time}. Arrive 15 mins early");
 
         Set<BusinessReminderConfigEntity> defaultReminders = new HashSet<>();
-        defaultReminders.add(oneDayBefore);
-        defaultReminders.add(oneHourBefore);
+        defaultReminders.add(professionalRem);
+        defaultReminders.add(friendlyRem);
 
         // 3. Create Owner
         UserEntity owner = UserEntity.builder()
@@ -126,16 +126,15 @@ public class DemoDataService {
         // 4. Create Branches
         BranchEntity makatiBranch = BranchEntity.builder()
                 .business(business)
-                .name("Main Branch (Makati)")
+                .name("Makati Main Branch")
                 .address("123 Ayala Ave, Makati City")
                 .phoneNumber("09171234567")
                 .build();
-        
         makatiBranch = branchRepository.save(makatiBranch);
 
         BranchEntity qcBranch = BranchEntity.builder()
                 .business(business)
-                .name("QC Branch (Tomas Morato)")
+                .name("QC Tomas Morato Branch")
                 .address("456 Tomas Morato, Quezon City")
                 .phoneNumber("09181234567")
                 .build();
