@@ -276,7 +276,7 @@ public class SmsService {
             // Fallback to default
             if (template == null) {
                 template = (configs == null || configs.isEmpty())
-                        ? "Reminder: Appointment on {date} @ {time} at {businessName} ({branchName}). Please arrive 15 mins early."
+                        ? "Reminder for your appointment at {businessName} ({branchName}) on {date} at {time}. Arrive 15 mins early."
                         : configs.get(0).getMessageTemplate();
             }
         }
