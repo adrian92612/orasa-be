@@ -28,7 +28,7 @@ Effort: Medium
 
 🟢 Low Priority / Nice-to-Have
 
-### 5. BusinessService.getCurrentUser() Duplicates getCurrentUserBusinessId() Pattern
+### 5. [FIXED] BusinessService.getCurrentUser() Duplicates getCurrentUserBusinessId() Pattern
 
 BusinessService.java
 

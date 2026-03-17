@@ -7,6 +7,8 @@ import com.orasa.backend.dto.analytics.DashboardStats;
 import com.orasa.backend.dto.analytics.DailyStatsDTO;
 import com.orasa.backend.dto.analytics.ServiceStatsDTO;
 import com.orasa.backend.dto.analytics.StatusStatsDTO;
+import com.orasa.backend.dto.analytics.HourStatsDTO;
+import com.orasa.backend.dto.analytics.WeekdayStatsDTO;
 import java.util.List;
 import org.springframework.cache.annotation.Cacheable;
 import com.orasa.backend.common.CacheName;
@@ -61,10 +63,18 @@ public class AnalyticsService {
         List<DailyStatsDTO> dailyStats = appointmentRepository.getDailyStats(businessId, branchId, start, end);
         List<ServiceStatsDTO> serviceStats = appointmentRepository.getServiceStats(businessId, branchId, start, end);
         List<StatusStatsDTO> statusStats = appointmentRepository.getStatusStats(businessId, branchId, start, end);
+        List<HourStatsDTO> peakHourStats = appointmentRepository.getPeakHourStats(businessId, branchId, start, end);
+        List<Object[]> weekdayResults = appointmentRepository.getWeekdayStats(businessId, branchId, start, end);
+        List<WeekdayStatsDTO> busiestDayStats = weekdayResults.stream()
+                .map(row -> new WeekdayStatsDTO(
+                        ((Number) row[0]).intValue(), // Map Postgres DOW (0-6) directly
+                        ((Number) row[1]).longValue()
+                ))
+                .toList();
 
         if (totalAppointments > 0) {
             serviceStats = serviceStats.stream()
-                .map(stat -> new com.orasa.backend.dto.analytics.ServiceStatsDTO(
+                .map(stat -> new ServiceStatsDTO(
                     stat.serviceName(),
                     stat.count(),
                     java.math.BigDecimal.valueOf(stat.count())
@@ -85,6 +95,8 @@ public class AnalyticsService {
                 .dailyStats(dailyStats)
                 .serviceStats(serviceStats)
                 .statusStats(statusStats)
+                .peakHourStats(peakHourStats)
+                .busiestDayStats(busiestDayStats)
                 .build();
     }
 }
