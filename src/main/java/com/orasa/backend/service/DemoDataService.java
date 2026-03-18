@@ -101,6 +101,8 @@ public class DemoDataService {
                 .subscriptionEndDate(OffsetDateTime.now(clock).plusMonths(12))
                 .freeSmsCredits(100)
                 .paidSmsCredits(50)
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         
         business = businessRepository.save(business);
@@ -119,6 +121,8 @@ public class DemoDataService {
                 .username(DEMO_OWNER_EMAIL)
                 .role(UserRole.OWNER)
                 .business(business)
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         
         owner = userRepository.save(owner); // Capture updated entity
@@ -129,6 +133,8 @@ public class DemoDataService {
                 .name("Makati Main Branch")
                 .address("123 Ayala Ave, Makati City")
                 .phoneNumber("09171234567")
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         makatiBranch = branchRepository.save(makatiBranch);
 
@@ -137,6 +143,8 @@ public class DemoDataService {
                 .name("QC Tomas Morato Branch")
                 .address("456 Tomas Morato, Quezon City")
                 .phoneNumber("09181234567")
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         qcBranch = branchRepository.save(qcBranch);
         
@@ -265,6 +273,8 @@ public class DemoDataService {
                 .leadTimeMinutes(minutes)
                 .messageTemplate(template)
                 .isEnabled(true)
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         return reminderConfigRepository.save(config);
     }
@@ -274,6 +284,8 @@ public class DemoDataService {
                 .businessId(business.getId())
                 .name(name)
                 .description(description)
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         return serviceRepository.save(service);
     }
@@ -285,6 +297,8 @@ public class DemoDataService {
                 .role(UserRole.STAFF)
                 .business(business)
                 .email(username + "@demo.com") 
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         
         Set<BranchEntity> staffBranches = new HashSet<>();
@@ -410,6 +424,8 @@ public class DemoDataService {
                 .type(type)
                 .notes(notes)
                 .remindersEnabled(remindersEnabled)
+                .createdBy(creator.getDisplayName())
+                .updatedBy(creator.getDisplayName())
                 .build();
         
         appointment = appointmentRepository.save(appointment);
@@ -453,6 +469,8 @@ public class DemoDataService {
                 .action(action)
                 .description(description)
                 .details("{}") // Empty details for demo
+                .createdBy(user.getDisplayName())
+                .updatedBy(user.getDisplayName())
                 .build();
         activityLogRepository.save(log);
     }
@@ -465,6 +483,8 @@ public class DemoDataService {
                 .messageBody(body)
                 .status(status)
                 .providerId("demo-provider-id-" + System.currentTimeMillis())
+                .createdBy("System")
+                .updatedBy("System")
                 .build();
         smsLogRepository.save(log);
     }

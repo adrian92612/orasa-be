@@ -48,6 +48,8 @@ public class AppointmentMapper {
         .additionalReminderTemplate(appointment.getAdditionalReminderTemplate())
         .createdAt(appointment.getCreatedAt())
         .updatedAt(appointment.getUpdatedAt())
+        .createdBy(appointment.getCreatedBy())
+        .updatedBy(appointment.getUpdatedBy())
         .build();
   }
 

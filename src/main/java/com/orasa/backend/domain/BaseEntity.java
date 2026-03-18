@@ -3,13 +3,17 @@ package com.orasa.backend.domain;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @MappedSuperclass
 @Getter
 @Setter
-public abstract class BaseEntity { // Made abstract so it can't be instantiated alone
+@SuperBuilder
+@NoArgsConstructor
+public abstract class BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
