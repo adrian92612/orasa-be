@@ -34,6 +34,8 @@ public class AppointmentResponse {
   private String additionalReminderTemplate;
   private OffsetDateTime createdAt;
   private OffsetDateTime updatedAt;
+  private String createdBy;
+  private String updatedBy;
 
   @Data
   @Builder

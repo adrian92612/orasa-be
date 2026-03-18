@@ -99,7 +99,17 @@ public class AppointmentService {
         ? null 
         : request.getAdditionalReminderMinutes();
         
-    AppointmentEntity.AppointmentEntityBuilder builder = AppointmentEntity.builder()
+    // Resolve services
+    List<UUID> serviceIds = request.getServiceIds();
+    if (serviceIds == null || serviceIds.isEmpty()) {
+      throw new InvalidAppointmentException("At least one service is required");
+    }
+    List<ServiceEntity> serviceEntities = serviceRepository.findAllById(serviceIds);
+    if (serviceEntities.size() != serviceIds.size()) {
+      throw new ResourceNotFoundException("One or more services not found");
+    }
+
+    AppointmentEntity entity = AppointmentEntity.builder()
         .business(business)
         .branch(branch)
         .customerName(request.getCustomerName())
@@ -110,20 +120,13 @@ public class AppointmentService {
         .status(AppointmentStatus.PENDING)
         .type(request.getIsWalkin() ? AppointmentType.WALK_IN : AppointmentType.SCHEDULED)
         .additionalReminderMinutes(reminderMinutes)
-        .additionalReminderTemplate(request.getAdditionalReminderTemplate());
+        .additionalReminderTemplate(request.getAdditionalReminderTemplate())
+        .services(new HashSet<>(serviceEntities))
+        .createdBy(user.getDisplayName())
+        .updatedBy(user.getDisplayName())
+        .build();
 
-    // Resolve services
-    List<UUID> serviceIds = request.getServiceIds();
-    if (serviceIds == null || serviceIds.isEmpty()) {
-      throw new InvalidAppointmentException("At least one service is required");
-    }
-    List<ServiceEntity> serviceEntities = serviceRepository.findAllById(serviceIds);
-    if (serviceEntities.size() != serviceIds.size()) {
-      throw new ResourceNotFoundException("One or more services not found");
-    }
-    builder.services(new HashSet<>(serviceEntities));
-
-    AppointmentEntity saved = appointmentRepository.save(builder.build());
+    AppointmentEntity saved = appointmentRepository.save(entity);
     activityLogService.logAppointmentCreated(user, saved);
 
     if (!request.getIsWalkin()) {
@@ -168,6 +171,8 @@ public class AppointmentService {
     if (!result.hasChanges()) {
       return new UpdateResult(appointmentMapper.mapToResponse(appointment), false);
     }
+
+    appointment.setUpdatedBy(user.getDisplayName());
 
     // Handle complex updates (services and reminders) which need repository access
     if (result.isServicesChanged()) {
@@ -245,6 +250,7 @@ public class AppointmentService {
     }
 
     appointment.setStatus(newStatus);
+    appointment.setUpdatedBy(user.getDisplayName());
     AppointmentEntity saved = appointmentRepository.save(appointment);
     activityLogService.logAppointmentStatusChanged(user, saved, beforeStatus.name(), newStatus.name());
 

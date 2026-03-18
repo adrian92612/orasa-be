@@ -4,6 +4,7 @@ import com.orasa.backend.common.AppointmentStatus;
 import com.orasa.backend.common.AppointmentType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -18,7 +19,7 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @SQLDelete(sql = "UPDATE appointments SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
 public class AppointmentEntity extends BaseEntity {
