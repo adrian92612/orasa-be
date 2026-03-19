@@ -4,6 +4,8 @@ import com.orasa.backend.common.SmsStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -24,6 +26,7 @@ public class SmsLogEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")
+    @NotFound(action = NotFoundAction.IGNORE)
     private AppointmentEntity appointment;
 
     @Column(name = "recipient_phone", nullable = false)
