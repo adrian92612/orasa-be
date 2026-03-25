@@ -90,6 +90,8 @@ public class BranchService {
         cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.ANALYTICS, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_ACTIVITY_LOGS, businessId);
         return mapToResponse(saved);
     }
 
@@ -225,6 +227,8 @@ public class BranchService {
         cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.ANALYTICS, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_ACTIVITY_LOGS, businessId);
         return mapToResponse(saved);
     }
 
@@ -251,6 +255,8 @@ public class BranchService {
         cacheService.evictAll(CacheName.SERVICES, businessId);
         cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
         cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.ANALYTICS, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_ACTIVITY_LOGS, businessId);
     }
 
     @Transactional(readOnly = true)

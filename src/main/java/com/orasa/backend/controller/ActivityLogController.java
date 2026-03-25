@@ -101,8 +101,8 @@ public class ActivityLogController extends BaseController {
         if (authenticatedUser.role() != UserRole.ADMIN && !authenticatedUser.businessId().equals(businessId)) {
             throw new BusinessException("You can only search logs for your own business");
         }
-        Page<ActivityLogResponse> logs = activityLogService.searchActivityLogs(
+        PageResponse<ActivityLogResponse> logs = activityLogService.searchActivityLogs(
                 businessId, branchId, action, startDate, endDate, pageable);
-        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(logs)));
+        return ResponseEntity.ok(ApiResponse.success(logs));
     }
 }
