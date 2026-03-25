@@ -244,7 +244,8 @@ public class ActivityLogService {
     }
     
     @Transactional(readOnly = true)
-    public Page<ActivityLogResponse> searchActivityLogs(
+    @Cacheable(value = CacheName.BUSINESS_ACTIVITY_LOGS, keyGenerator = "businessKeyGenerator", condition = "#pageable.pageNumber == 0")
+    public PageResponse<ActivityLogResponse> searchActivityLogs(
             UUID businessId,
             UUID branchId,
             java.util.List<String> actions,
@@ -261,9 +262,10 @@ public class ActivityLogService {
             
         boolean hasActions = actions != null && !actions.isEmpty();
         
-        return activityLogRepository.searchActivityLogs(
+        Page<ActivityLogResponse> page = activityLogRepository.searchActivityLogs(
                 businessId, branchId, hasActions, actions, start, end, pageable)
                 .map(this::mapToResponse);
+        return PageResponse.from(page);
     }
     
     // ==================== HELPER METHODS ====================

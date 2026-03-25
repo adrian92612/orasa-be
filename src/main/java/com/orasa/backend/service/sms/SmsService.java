@@ -159,31 +159,33 @@ public class SmsService {
     }
 
     public void processScheduledTask(SmsReminderTask task) {
-        // Step 1: Build the reminder message (read-only, no transaction needed)
-        String message = buildReminderMessageForTask(task);
-        if (message == null) return;
-
-        // Step 2: Prepare - validate, consume credit, create log (Transactional via SmsTaskHelper)
-        SmsTaskHelper.TaskPreparationResult preparation = smsTaskHelper.prepareTask(task, message);
-        if (preparation == null) return;
-
-        SmsLogEntity smsLog = preparation.smsLog();
-
-        // Step 3: External API Call (No transaction - DB connection is free)
-        PhilSmsProvider.SendSmsResult result;
         try {
-            log.debug("Sending SMS for appointment {} (log ID: {})", task.getAppointmentId(), smsLog.getId());
-            result = philSmsProvider.sendSms(smsLog.getRecipientPhone(), smsLog.getMessageBody());
-        } catch (Exception e) {
-            log.error("Unexpected error calling PhilSMS for appointment {}", task.getAppointmentId(), e);
-            result = PhilSmsProvider.SendSmsResult.failure("Unexpected API error: " + e.getMessage(), null);
-        }
+            // Step 1: Build the reminder message (read-only, no transaction needed)
+            String message = buildReminderMessageForTask(task);
+            if (message == null) return;
 
-        // Step 4: Finalize status (Transactional via SmsTaskHelper)
-        smsTaskHelper.finalizeTaskStatus(preparation.scheduledTask(), smsLog, result);
-        
-        cacheService.evictAll(CacheName.SMS_LOGS, task.getBusinessId());
-        cacheService.evictAll(CacheName.ANALYTICS, task.getBusinessId());
+            // Step 2: Prepare - validate, consume credit, create log (Transactional via SmsTaskHelper)
+            SmsTaskHelper.TaskPreparationResult preparation = smsTaskHelper.prepareTask(task, message);
+            if (preparation == null) return;
+
+            SmsLogEntity smsLog = preparation.smsLog();
+
+            // Step 3: External API Call (No transaction - DB connection is free)
+            PhilSmsProvider.SendSmsResult result;
+            try {
+                log.debug("Sending SMS for appointment {} (log ID: {})", task.getAppointmentId(), smsLog.getId());
+                result = philSmsProvider.sendSms(smsLog.getRecipientPhone(), smsLog.getMessageBody());
+            } catch (Exception e) {
+                log.error("Unexpected error calling PhilSMS for appointment {}", task.getAppointmentId(), e);
+                result = PhilSmsProvider.SendSmsResult.failure("Unexpected API error: " + e.getMessage(), null);
+            }
+
+            // Step 4: Finalize status (Transactional via SmsTaskHelper)
+            smsTaskHelper.finalizeTaskStatus(preparation.scheduledTask(), smsLog, result);
+        } finally {
+            cacheService.evictAll(CacheName.SMS_LOGS, task.getBusinessId());
+            cacheService.evictAll(CacheName.ANALYTICS, task.getBusinessId());
+        }
     }
 
     /**
@@ -220,7 +222,8 @@ public class SmsService {
         return saved;
     }
 
-    @Cacheable(value = CacheName.SMS_LOGS, keyGenerator = "businessKeyGenerator", condition = "#pageable.pageNumber == 0 && #branchId == null && #status == null && #startDate == null && #endDate == null")
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheName.SMS_LOGS, keyGenerator = "businessKeyGenerator", condition = "#pageable.pageNumber == 0")
     public com.orasa.backend.dto.common.PageResponse<SmsLogResponse> getSmsLogs(
             @CacheBusinessId UUID businessId,
             UUID branchId,
@@ -299,7 +302,7 @@ public class SmsService {
                 .replace("{date}", dateString)
                 .replace("{time}", appointment.getStartDateTime().atZoneSameInstant(zoneId).format(TIME_FORMATTER))
                 .replace("{businessName}", appointment.getBusiness().getName())
-                .replace("{branchName}", appointment.getBranch().getName());
+                .replace("{branchName}", appointment.getBranch() != null ? appointment.getBranch().getName() : "Deleted Branch");
     }
 
     private SmsLogResponse mapToResponse(SmsLogEntity smsLog) {

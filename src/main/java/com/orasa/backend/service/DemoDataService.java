@@ -45,6 +45,7 @@ import com.orasa.backend.repository.ServiceRepository;
 import com.orasa.backend.repository.SmsLogRepository;
 import com.orasa.backend.repository.UserRepository;
 import com.orasa.backend.config.TimeConfig;
+import com.orasa.backend.common.CacheName;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +67,7 @@ public class DemoDataService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final JdbcTemplate jdbcTemplate;
+    private final CacheService cacheService;
 
     private static final String DEMO_OWNER_EMAIL = "adrianvillamin0612@gmail.com";
     private static final String DEMO_PASSWORD = "demo123";
@@ -183,7 +185,25 @@ public class DemoDataService {
             List.of(consultation, extraction, dental), 
             defaultReminders);
 
+        // Clear all business-related caches after seeding
+        clearBusinessCaches(business.getId());
+
         log.info("Demo data reset and seeded successfully.");
+    }
+
+    private void clearBusinessCaches(UUID businessId) {
+        cacheService.evictAll(CacheName.BUSINESS, businessId);
+        cacheService.evictAll(CacheName.BRANCHES, businessId);
+        cacheService.evictAll(CacheName.BRANCH, businessId);
+        cacheService.evictAll(CacheName.USER_BRANCHES, businessId);
+        cacheService.evictAll(CacheName.SERVICES, businessId);
+        cacheService.evictAll(CacheName.SERVICE, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_STAFF, businessId);
+        cacheService.evictAll(CacheName.STAFF, businessId);
+        cacheService.evictAll(CacheName.SMS_LOGS, businessId);
+        cacheService.evictAll(CacheName.ANALYTICS, businessId);
+        cacheService.evictAll(CacheName.BUSINESS_ACTIVITY_LOGS, businessId);
+        cacheService.evictAll(CacheName.BRANCH_ACTIVITY_LOGS, businessId);
     }
 
     private void clearDemoData() {
@@ -261,6 +281,9 @@ public class DemoDataService {
             } catch (Exception e) {
                 log.warn("Failed to clear Redis queues: {}", e.getMessage());
             }
+
+            // Clear all business-related caches after clearing DB
+            clearBusinessCaches(businessId);
 
         } catch (Exception e) {
             log.warn("Could not clear demo data (likely didn't exist): {}", e.getMessage());

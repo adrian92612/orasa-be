@@ -115,7 +115,7 @@ public class ExportService {
 
             sb.append(csvEscape(startDt.format(DATE_FMT))).append(",");
             sb.append(csvEscape(startDt.format(TIME_FMT))).append(",");
-            sb.append(csvEscape(apt.getBranch().getName())).append(",");
+            sb.append(csvEscape(apt.getBranch() != null ? apt.getBranch().getName() : "Deleted Branch")).append(",");
             sb.append(csvEscape(apt.getCustomerName())).append(",");
             sb.append(csvEscape(apt.getCustomerPhone())).append(",");
             sb.append(apt.getType().name()).append(",");

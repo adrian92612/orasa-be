@@ -21,8 +21,9 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLogEntity, 
     
     @Query("""
         SELECT a FROM ActivityLogEntity a
+        LEFT JOIN a.branch b
         WHERE a.business.id = :businessId
-        AND (cast(:branchId as uuid) IS NULL OR a.branch.id = :branchId)
+        AND (cast(:branchId as uuid) IS NULL OR b.id = :branchId)
         AND (:hasActions = false OR a.action IN :actions)
         AND (cast(:startDate as offsetdatetime) IS NULL OR a.createdAt >= :startDate)
         AND (cast(:endDate as offsetdatetime) IS NULL OR a.createdAt <= :endDate)
